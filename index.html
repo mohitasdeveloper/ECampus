@@ -243,9 +243,37 @@
 
         </div>
 
-        <div id="view-ebots" class="tab-content pt-4">
-            <h2 class="text-2xl font-extrabold text-on-surface mb-2">EBots</h2>
-            <p class="text-sm text-on-surface-variant">Your AI assistants are loading...</p>
+        <div id="view-updates" class="tab-content pt-4">
+            <h2 class="text-2xl font-extrabold text-on-surface mb-6">Campus Updates</h2>
+            
+            <div class="space-y-4">
+                <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-3xl p-5 border border-surface-variant/60 shadow-sm cursor-pointer active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Event</span>
+                        <span class="text-[11px] text-on-surface-variant font-medium">2 hours ago</span>
+                    </div>
+                    <h3 class="text-[16px] font-bold text-on-surface mb-1">Annual Tech Symposium 2026</h3>
+                    <p class="text-[13px] text-on-surface-variant leading-relaxed">Join us for a 3-day tech extravaganza starting this Friday at the Main Auditorium. Guest speakers from top tech firms will be present.</p>
+                </div>
+
+                <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-3xl p-5 border border-surface-variant/60 shadow-sm cursor-pointer active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="bg-[#e65100]/10 text-[#e65100] text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Notice</span>
+                        <span class="text-[11px] text-on-surface-variant font-medium">Yesterday</span>
+                    </div>
+                    <h3 class="text-[16px] font-bold text-on-surface mb-1">Library Maintenance Closure</h3>
+                    <p class="text-[13px] text-on-surface-variant leading-relaxed">The Central Library will be closed for HVAC maintenance on Sunday, May 24th. Online digital resources will remain accessible.</p>
+                </div>
+
+                <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-3xl p-5 border border-surface-variant/60 shadow-sm cursor-pointer active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="bg-secondary/10 text-secondary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Academic</span>
+                        <span class="text-[11px] text-on-surface-variant font-medium">May 20</span>
+                    </div>
+                    <h3 class="text-[16px] font-bold text-on-surface mb-1">Fall Semester Registration</h3>
+                    <p class="text-[13px] text-on-surface-variant leading-relaxed">Course registration for the upcoming Fall semester opens next Monday. Please clear any pending dues in the portal to avoid registration blocks.</p>
+                </div>
+            </div>
         </div>
 
         <div id="view-efind" class="tab-content pt-4">
@@ -364,9 +392,9 @@
             <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Dashboard</span>
         </button>
 
-        <button onclick="switchTab('ebots')" id="nav-ebots" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
-            <span class="material-symbols-outlined text-[24px]">smart_toy</span>
-            <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">EBots</span>
+        <button onclick="switchTab('updates')" id="nav-updates" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
+            <span class="material-symbols-outlined text-[24px]">campaign</span>
+            <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Updates</span>
         </button>
 
         <button onclick="switchTab('efind')" id="nav-efind" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
