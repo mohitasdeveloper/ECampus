@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-    <title>EcoCampus - App</title>
+    <title>ECampus - App</title>
     
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -102,7 +102,7 @@
             </div>
 
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">EcoCampus</span>
+                <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
             </div>
 
             <div class="flex-none ml-auto z-10 relative">
@@ -114,6 +114,41 @@
             
         </div>
     </header>
+
+    <div id="full-notif-panel" class="fixed inset-0 z-[100] bg-surface dark:bg-[#121212] transition-transform duration-300 translate-x-full flex flex-col">
+        <div class="h-16 border-b border-surface-variant/50 flex items-center px-4 bg-surface/80 backdrop-blur-xl shrink-0">
+            <button id="close-notif-btn" class="p-2 mr-2 rounded-full hover:bg-surface-variant active:scale-95 transition-transform text-on-surface">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <h2 class="text-lg font-bold text-on-surface flex-1">Notifications</h2>
+            <span class="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-bold uppercase tracking-wider">2 New</span>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-5 border-b border-surface-variant/50 active:bg-surface-container-low cursor-pointer bg-primary/5 transition-colors">
+                <div class="flex gap-4">
+                    <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined">eco</span>
+                    </div>
+                    <div>
+                        <p class="text-[14px] text-on-surface leading-snug"><span class="font-bold">Zero-Waste Week</span> starts tomorrow! Log your activities to earn double EcoPoints.</p>
+                        <span class="text-[11px] text-on-surface-variant mt-2 block font-medium">10 mins ago</span>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5 border-b border-surface-variant/50 active:bg-surface-container-low cursor-pointer transition-colors">
+                <div class="flex gap-4">
+                    <div class="w-12 h-12 rounded-full bg-surface-variant/50 text-on-surface-variant flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined">assignment</span>
+                    </div>
+                    <div>
+                        <p class="text-[14px] text-on-surface leading-snug"><span class="font-bold">Hostel Renewal Form</span> is pending. Due in 2 days.</p>
+                        <span class="text-[11px] text-on-surface-variant mt-2 block font-medium">Yesterday</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <main class="pt-20 px-5 max-w-screen-md mx-auto relative z-10 pb-6">
         
@@ -128,7 +163,7 @@
                 
                 <div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2 pt-1">
                     
-                    <!-- Share Button (Add your own) -->
+                    <!-- Share Button -->
                     <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
                         <div class="w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary">
                             <span class="material-symbols-outlined text-[26px]">add_a_photo</span>
@@ -179,7 +214,7 @@
                 </div>
             </section>
 
-            <!-- TIME TABLE CARD (Separated from ESchedule concept) -->
+            <!-- TIME TABLE CARD -->
             <section class="mt-2">
                 <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-7 border border-surface-variant/60 shadow-sm relative overflow-hidden">
                     
@@ -303,18 +338,263 @@
             </section>
         </div>
 
+        <!-- UPDATES VIEW -->
         <div id="view-updates" class="tab-content pt-4 hidden">
             <h2 class="text-2xl font-extrabold text-on-surface mb-6">Campus Updates</h2>
-            <!-- Updates Content... -->
+            
+            <div class="space-y-4">
+                <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-3xl p-5 border border-surface-variant/60 shadow-sm cursor-pointer active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Event</span>
+                        <span class="text-[11px] text-on-surface-variant font-medium">2 hours ago</span>
+                    </div>
+                    <h3 class="text-[16px] font-bold text-on-surface mb-1">Annual Tech Symposium 2026</h3>
+                    <p class="text-[13px] text-on-surface-variant leading-relaxed">Join us for a 3-day tech extravaganza starting this Friday at the Main Auditorium. Guest speakers from top tech firms will be present.</p>
+                </div>
+
+                <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-3xl p-5 border border-surface-variant/60 shadow-sm cursor-pointer active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="bg-[#e65100]/10 text-[#e65100] text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Notice</span>
+                        <span class="text-[11px] text-on-surface-variant font-medium">Yesterday</span>
+                    </div>
+                    <h3 class="text-[16px] font-bold text-on-surface mb-1">Library Maintenance Closure</h3>
+                    <p class="text-[13px] text-on-surface-variant leading-relaxed">The Central Library will be closed for HVAC maintenance on Sunday, May 24th. Online digital resources will remain accessible.</p>
+                </div>
+
+                <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-3xl p-5 border border-surface-variant/60 shadow-sm cursor-pointer active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="bg-secondary/10 text-secondary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Academic</span>
+                        <span class="text-[11px] text-on-surface-variant font-medium">May 20</span>
+                    </div>
+                    <h3 class="text-[16px] font-bold text-on-surface mb-1">Fall Semester Registration</h3>
+                    <p class="text-[13px] text-on-surface-variant leading-relaxed">Course registration for the upcoming Fall semester opens next Monday. Please clear any pending dues in the portal to avoid registration blocks.</p>
+                </div>
+            </div>
         </div>
 
-        <div id="view-efind" class="tab-content pt-4 hidden">
-             <!-- EFind Content... -->
+        <!-- SEARCH VIEW (Formerly EFind) -->
+        <div id="view-search" class="tab-content pt-4 hidden">
+            <div class="relative mb-6 mt-2">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[20px]">search</span>
+                </div>
+                <input type="text" class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 text-on-surface text-sm rounded-2xl focus:ring-primary focus:border-primary block pl-11 p-3.5 shadow-sm placeholder-on-surface-variant/70 transition-colors" placeholder="Search apps, students, or resources...">
+            </div>
+
+            <div class="mb-8">
+                <div class="flex justify-between items-end mb-4">
+                    <h3 class="text-lg font-bold text-on-surface">Mini Apps</h3>
+                    <span class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">See All</span>
+                </div>
+                <!-- Updated Mini Apps Grid -->
+                <div class="grid grid-cols-4 gap-4">
+                    <!-- Timetable -->
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-14 h-14 rounded-2xl bg-[#e3f2fd] dark:bg-[#1565c0]/30 text-[#1565c0] dark:text-[#90caf9] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                            <span class="material-symbols-outlined text-[26px]">calendar_month</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface text-center">Timetable</span>
+                    </div>
+                    <!-- Plastic Log -->
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-14 h-14 rounded-2xl bg-[#e8f5e9] dark:bg-[#2e7d32]/30 text-[#2e7d32] dark:text-[#a5d6a7] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                            <span class="material-symbols-outlined text-[26px]">recycling</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface text-center">Plastic Log</span>
+                    </div>
+                    <!-- Elections -->
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-14 h-14 rounded-2xl bg-[#f3e5f5] dark:bg-[#6a1b9a]/30 text-[#6a1b9a] dark:text-[#ce93d8] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                            <span class="material-symbols-outlined text-[26px]">how_to_vote</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface text-center">Elections</span>
+                    </div>
+                    <!-- Movies Booking -->
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-14 h-14 rounded-2xl bg-[#ffebee] dark:bg-[#c62828]/30 text-[#c62828] dark:text-[#ef9a9a] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                            <span class="material-symbols-outlined text-[26px]">theaters</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface text-center">Movies</span>
+                    </div>
+                    <!-- Sports -->
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-14 h-14 rounded-2xl bg-[#fff3e0] dark:bg-[#ef6c00]/30 text-[#ef6c00] dark:text-[#ffcc80] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                            <span class="material-symbols-outlined text-[26px]">sports_soccer</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface text-center">Sports</span>
+                    </div>
+                    <!-- AI Bots -->
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-14 h-14 rounded-2xl bg-[#e0f7fa] dark:bg-[#00838f]/30 text-[#00838f] dark:text-[#80deea] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                            <span class="material-symbols-outlined text-[26px]">smart_toy</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface text-center">AI Bots</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-end mb-4">
+                    <h3 class="text-lg font-bold text-on-surface">Discover Students</h3>
+                    <span class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">Explore</span>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer">
+                        <div class="relative shrink-0">
+                            <div class="w-[52px] h-[52px] rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500">
+                                <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                    <img src="https://i.pravatar.cc/150?img=47" alt="Student" class="w-full h-full object-cover">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-[15px] font-bold text-on-surface leading-tight">Sarah Jenkins</h4>
+                            <p class="text-[12px] text-on-surface-variant mt-0.5">B.Sc Environmental Science</p>
+                        </div>
+                        <button class="bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide active:scale-95 shrink-0">
+                            Connect
+                        </button>
+                    </div>
+
+                    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer">
+                        <div class="relative shrink-0">
+                            <div class="w-[52px] h-[52px] rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500">
+                                <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                    <img src="https://i.pravatar.cc/150?img=11" alt="Student" class="w-full h-full object-cover">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-[15px] font-bold text-on-surface leading-tight">Rahul Sharma</h4>
+                            <p class="text-[12px] text-on-surface-variant mt-0.5">B.Tech Computer Eng</p>
+                        </div>
+                        <button class="bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide active:scale-95 shrink-0">
+                            Connect
+                        </button>
+                    </div>
+
+                    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer">
+                        <div class="relative shrink-0">
+                            <div class="w-[52px] h-[52px] rounded-full p-[2px] bg-surface-variant">
+                                <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                    <img src="https://i.pravatar.cc/150?img=32" alt="Student" class="w-full h-full object-cover">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-[15px] font-bold text-on-surface leading-tight">Maya Lin</h4>
+                            <p class="text-[12px] text-on-surface-variant mt-0.5">M.A. Design</p>
+                        </div>
+                        <button class="bg-surface-variant/50 text-on-surface-variant hover:bg-surface-variant transition-colors px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide active:scale-95 shrink-0">
+                            Pending
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        <!-- PROFILE VIEW -->
         <div id="view-profile" class="tab-content pt-4 hidden">
             <h2 class="text-2xl font-extrabold text-on-surface mb-6">My Profile</h2>
-             <!-- Profile Content... -->
+            
+            <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-6 shadow-sm border border-surface-variant/60 text-center relative overflow-hidden mb-6">
+                <div class="absolute -top-20 -left-10 w-full h-40 bg-gradient-to-b from-primary/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div class="relative z-10 flex flex-col items-center mt-2">
+                    <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface shadow-md mb-4 bg-surface-variant">
+                        <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover" src="https://via.placeholder.com/150"/>
+                    </div>
+                    <h3 id="profile-name" class="text-xl font-extrabold text-on-surface tracking-tight">Loading...</h3>
+                    <div class="flex items-center gap-2 mt-2 mb-5">
+                        <span id="profile-role" class="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-widest border border-primary/20">Student</span>
+                    </div>
+                    <p id="profile-email" class="text-[13px] font-medium text-on-surface-variant flex items-center justify-center gap-1.5 bg-surface-variant/30 px-4 py-2 rounded-xl">
+                        <span class="material-symbols-outlined text-[16px]">mail</span> loading...
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[28px] border border-surface-variant/60 overflow-hidden mb-6 shadow-sm">
+                <div class="p-5 flex items-center gap-4 border-b border-surface-variant/50">
+                    <div class="w-10 h-10 bg-secondary/10 rounded-xl text-secondary flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[20px]">badge</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-0.5">Student ID</p>
+                        <p id="profile-id" class="text-[15px] font-bold text-on-surface">---</p>
+                    </div>
+                </div>
+                <div class="p-5 flex items-center gap-4">
+                    <div class="w-10 h-10 bg-[#e65100]/10 rounded-xl text-[#e65100] flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[20px]">menu_book</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-0.5">Course</p>
+                        <p id="profile-course" class="text-[15px] font-bold text-on-surface">---</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3 mb-8">
+                <div class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-8 h-8 rounded-full bg-surface-variant/50 flex items-center justify-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[18px]">dark_mode</span>
+                        </div>
+                        <span class="font-bold text-[14px] text-on-surface">Dark Theme</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="theme-toggle-switch" class="sr-only peer">
+                        <div class="w-11 h-6 bg-surface-variant rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                    </label>
+                </div>
+
+                <button class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-8 h-8 rounded-full bg-surface-variant/50 flex items-center justify-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[18px]">settings</span>
+                        </div>
+                        <span class="font-bold text-[14px] text-on-surface">General Settings</span>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+                </button>
+                
+                <button class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-8 h-8 rounded-full bg-surface-variant/50 flex items-center justify-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[18px]">lock_reset</span>
+                        </div>
+                        <span class="font-bold text-[14px] text-on-surface">Change Password</span>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+                </button>
+                
+                <button class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-8 h-8 rounded-full bg-surface-variant/50 flex items-center justify-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[18px]">info</span>
+                        </div>
+                        <span class="font-bold text-[14px] text-on-surface">About ECampus</span>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+                </button>
+
+                <button class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform duration-200">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-8 h-8 rounded-full bg-surface-variant/50 flex items-center justify-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[18px]">help_center</span>
+                        </div>
+                        <span class="font-bold text-[14px] text-on-surface">Help & Support</span>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+                </button>
+
+                <button onclick="logout()" class="w-full bg-error/10 border border-error/20 p-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform mt-8 shadow-sm">
+                    <span class="material-symbols-outlined text-error text-[20px]">logout</span>
+                    <span class="font-bold text-[15px] text-error">Sign Out</span>
+                </button>
+            </div>
         </div>
 
     </main>
@@ -331,9 +611,9 @@
             <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Updates</span>
         </button>
 
-        <button onclick="switchTab('efind')" id="nav-efind" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
+        <button onclick="switchTab('search')" id="nav-search" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
             <span class="material-symbols-outlined text-[24px]">search</span>
-            <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">EFind</span>
+            <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Search</span>
         </button>
         
         <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
@@ -343,7 +623,7 @@
         
     </nav>
 
-    <!-- Schedule Toggle Script -->
+    <!-- UI Scripts -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const toggleBtn = document.getElementById('toggleScheduleBtn');
