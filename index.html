@@ -79,7 +79,6 @@
     </script>
 
     <style>
-        /* Custom utility to hide scrollbar for the Hotposts slider */
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -91,30 +90,27 @@
 </head>
 <body class="bg-surface text-on-surface antialiased mb-24 relative overflow-x-hidden selection:bg-primary/20">
 
+    <!-- HEADER -->
     <header class="fixed top-0 w-full z-[40] bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-surface-variant/40 shadow-sm transition-colors duration-300">
         <div class="flex items-center px-6 h-16 w-full max-w-screen-xl mx-auto relative">
-            
             <div class="flex-none z-10">
                 <div class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-surface-variant shadow-sm shrink-0">
                     <img id="header-avatar" alt="Profile picture" class="w-full h-full object-cover" src="https://via.placeholder.com/150"/>
                 </div>
-                 <span id="header-name" class="hidden"></span>
             </div>
-
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
             </div>
-
             <div class="flex-none ml-auto z-10 relative">
                 <button id="notif-btn" class="p-2 rounded-full hover:bg-surface-variant/50 transition-all active:scale-95 duration-200 relative text-on-surface-variant">
                     <span class="material-symbols-outlined">notifications</span>
                     <span class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface"></span>
                 </button>
             </div>
-            
         </div>
     </header>
 
+    <!-- NOTIFICATIONS PANEL -->
     <div id="full-notif-panel" class="fixed inset-0 z-[100] bg-surface dark:bg-[#121212] transition-transform duration-300 translate-x-full flex flex-col">
         <div class="h-16 border-b border-surface-variant/50 flex items-center px-4 bg-surface/80 backdrop-blur-xl shrink-0">
             <button id="close-notif-btn" class="p-2 mr-2 rounded-full hover:bg-surface-variant active:scale-95 transition-transform text-on-surface">
@@ -123,7 +119,6 @@
             <h2 class="text-lg font-bold text-on-surface flex-1">Notifications</h2>
             <span class="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-bold uppercase tracking-wider">2 New</span>
         </div>
-        
         <div class="flex-1 overflow-y-auto">
             <div class="p-5 border-b border-surface-variant/50 active:bg-surface-container-low cursor-pointer bg-primary/5 transition-colors">
                 <div class="flex gap-4">
@@ -150,17 +145,16 @@
         </div>
     </div>
 
+    <!-- MAIN CONTENT -->
     <main class="pt-20 px-5 max-w-screen-md mx-auto relative z-10 pb-6">
         
         <!-- DASHBOARD VIEW -->
         <div id="view-dashboard" class="tab-content active">
-            
-            <!-- HOTPOSTS (Instagram Stories Style for Places) -->
+            <!-- HOTPOSTS -->
             <section class="mb-6">
                 <h3 class="text-[14px] font-bold text-on-surface mb-3 flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[#e65100] text-[18px]">local_fire_department</span> Hotposts
                 </h3>
-                
                 <div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2 pt-1">
                     
                     <!-- Share Button -->
@@ -170,8 +164,8 @@
                         </div>
                         <span class="text-[11px] font-bold text-on-surface-variant">Share</span>
                     </div>
-
-                    <!-- Location 1: Main Canteen -->
+                    
+                    <!-- Canteen -->
                     <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
                         <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-sm">
                             <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
@@ -181,34 +175,84 @@
                         <span class="text-[11px] font-bold text-on-surface">Canteen</span>
                     </div>
 
-                    <!-- Location 2: Central Library -->
+                    <!-- NR Lawn -->
                     <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
                         <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-primary via-[#34d399] to-blue-500 shadow-sm">
                             <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
-                                <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=150" alt="Library" class="w-full h-full object-cover">
+                                <img src="https://images.unsplash.com/photo-1588698188151-5121bdfc0da0?w=150" alt="NR Lawn" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface">NR Lawn</span>
+                    </div>
+
+                    <!-- Main Lawn -->
+                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-green-400 to-emerald-600 shadow-sm">
+                            <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                <img src="https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=150" alt="Main Lawn" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface">Main Lawn</span>
+                    </div>
+
+                    <!-- Gymkhana -->
+                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#8b5cf6] to-[#ec4899] shadow-sm">
+                            <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=150" alt="Gymkhana" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface">Gymkhana</span>
+                    </div>
+
+                    <!-- IT Building -->
+                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#3b82f6] to-[#0ea5e9] shadow-sm">
+                            <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=150" alt="IT Building" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface">IT Building</span>
+                    </div>
+
+                    <!-- Central Library -->
+                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#f59e0b] to-[#ea580c] shadow-sm">
+                            <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=150" alt="Central Library" class="w-full h-full object-cover">
                             </div>
                         </div>
                         <span class="text-[11px] font-bold text-on-surface">Library</span>
                     </div>
 
-                    <!-- Location 3: Eco Park -->
+                    <!-- Parking -->
                     <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-green-400 to-emerald-600 shadow-sm">
+                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#64748b] to-[#475569] shadow-sm">
                             <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
-                                <img src="https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=150" alt="Eco Park" class="w-full h-full object-cover">
+                                <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=150" alt="Parking" class="w-full h-full object-cover">
                             </div>
                         </div>
-                        <span class="text-[11px] font-bold text-on-surface">Eco Park</span>
+                        <span class="text-[11px] font-bold text-on-surface">Parking</span>
                     </div>
 
-                    <!-- Location 4: Sports Ground (Viewed / No Gradient) -->
+                    <!-- Main Gate -->
                     <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-surface-variant shadow-sm">
+                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-red-500 to-[#9f1239] shadow-sm">
                             <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
-                                <img src="https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=150" alt="Sports Ground" class="w-full h-full object-cover grayscale-[30%]">
+                                <img src="https://images.unsplash.com/photo-1566416194723-e18e3845b412?w=150" alt="Main Gate" class="w-full h-full object-cover">
                             </div>
                         </div>
-                        <span class="text-[11px] font-bold text-on-surface-variant">Grounds</span>
+                        <span class="text-[11px] font-bold text-on-surface">Main Gate</span>
+                    </div>
+
+                    <!-- Ground -->
+                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
+                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#84cc16] to-[#22c55e] shadow-sm">
+                            <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                <img src="https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=150" alt="Ground" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface">Ground</span>
                     </div>
 
                 </div>
@@ -217,11 +261,7 @@
             <!-- TIME TABLE CARD -->
             <section class="mt-2">
                 <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-7 border border-surface-variant/60 shadow-sm relative overflow-hidden">
-                    
-                    <!-- Top Right Decorative Blur -->
                     <div class="absolute -right-12 -top-12 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-
-                    <!-- Header -->
                     <div class="flex justify-between items-start mb-8 relative z-10">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center shadow-inner">
@@ -235,7 +275,6 @@
                         <span class="text-[10px] font-bold text-secondary tracking-widest uppercase bg-secondary/10 px-3 py-1.5 rounded-full border border-secondary/20">Active</span>
                     </div>
 
-                    <!-- Progress Bar Section -->
                     <div class="mb-8 bg-surface-variant/20 p-5 rounded-[20px] border border-surface-variant/40 relative z-10">
                         <div class="flex justify-between items-center mb-3">
                             <span class="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
@@ -250,12 +289,9 @@
                         </div>
                     </div>
 
-                    <!-- Up Next Timetable -->
                     <div class="mb-2 relative z-10">
                         <h3 class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-4 ml-1">Up Next</h3>
-                        
                         <div class="flex flex-col gap-3.5">
-                            <!-- Active Class -->
                             <div class="flex items-center p-4 bg-secondary/5 border-l-4 border-secondary rounded-r-2xl rounded-l-sm shadow-sm transition-transform active:scale-[0.98] cursor-pointer">
                                 <div class="w-[85px] shrink-0 border-r border-secondary/20 pr-3">
                                     <span class="text-[14px] font-black text-secondary block leading-none mb-1">10:00</span>
@@ -269,7 +305,6 @@
                                 </div>
                             </div>
 
-                            <!-- Next Class -->
                             <div class="flex items-center p-4 bg-surface-variant/10 border-l-4 border-surface-variant/50 rounded-r-2xl rounded-l-sm transition-transform active:scale-[0.98] cursor-pointer">
                                 <div class="w-[85px] shrink-0 border-r border-surface-variant/50 pr-3">
                                     <span class="text-[14px] font-black text-on-surface-variant block leading-none mb-1">11:30</span>
@@ -285,18 +320,14 @@
                         </div>
                     </div>
 
-                    <!-- Toggle Button -->
                     <button id="toggleScheduleBtn" class="w-full mt-6 py-3.5 rounded-xl border border-surface-variant/50 bg-surface hover:bg-surface-variant/40 transition-colors active:scale-[0.98] flex items-center justify-center gap-2 relative z-10 shadow-sm">
                         <span id="toggleScheduleText" class="text-[13px] font-bold text-on-surface-variant">View Full Time Table</span>
                         <span class="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-300" id="toggleScheduleIcon">expand_more</span>
                     </button>
-
-                    <!-- Full Schedule Hidden Content -->
+                    
                     <div id="fullScheduleContent" class="hidden mt-6 pt-6 border-t border-surface-variant/40 transition-opacity duration-300 relative z-10">
                         <h3 class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-4 ml-1">Earlier Today</h3>
-                        
                         <div class="flex flex-col gap-3 mb-6 opacity-60">
-                            <!-- Completed Class -->
                             <div class="flex items-center p-3.5 bg-surface-variant/10 rounded-xl">
                                 <div class="w-[85px] shrink-0 pr-3 border-r border-surface-variant/30">
                                     <span class="text-[13px] font-bold text-on-surface-variant line-through">08:00 AM</span>
@@ -309,9 +340,7 @@
                         </div>
 
                         <h3 class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-4 ml-1">Later Today</h3>
-                        
                         <div class="flex flex-col gap-3">
-                            <!-- Future Class -->
                             <div class="flex items-center p-3.5 bg-surface-variant/10 border-l-4 border-surface-variant/50 rounded-r-xl rounded-l-sm">
                                 <div class="w-[85px] shrink-0 pr-3 border-r border-surface-variant/30">
                                     <span class="text-[13px] font-bold text-on-surface-variant">01:00 PM</span>
@@ -320,8 +349,6 @@
                                     <h4 class="text-[14px] font-semibold text-on-surface">Lunch Break</h4>
                                 </div>
                             </div>
-
-                            <!-- Future Class -->
                             <div class="flex items-center p-3.5 bg-surface-variant/10 border-l-4 border-surface-variant/50 rounded-r-xl rounded-l-sm">
                                 <div class="w-[85px] shrink-0 pr-3 border-r border-surface-variant/30">
                                     <span class="text-[13px] font-bold text-on-surface-variant">02:30 PM</span>
@@ -333,7 +360,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </section>
         </div>
@@ -341,7 +367,6 @@
         <!-- UPDATES VIEW -->
         <div id="view-updates" class="tab-content pt-4 hidden">
             <h2 class="text-2xl font-extrabold text-on-surface mb-6">Campus Updates</h2>
-            
             <div class="space-y-4">
                 <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-3xl p-5 border border-surface-variant/60 shadow-sm cursor-pointer active:scale-[0.98] transition-transform duration-200">
                     <div class="flex justify-between items-center mb-3">
@@ -372,7 +397,7 @@
             </div>
         </div>
 
-        <!-- SEARCH VIEW (Formerly EFind) -->
+        <!-- SEARCH VIEW -->
         <div id="view-search" class="tab-content pt-4 hidden">
             <div class="relative mb-6 mt-2">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-on-surface-variant">
@@ -386,46 +411,39 @@
                     <h3 class="text-lg font-bold text-on-surface">Mini Apps</h3>
                     <span class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">See All</span>
                 </div>
-                <!-- Updated Mini Apps Grid -->
                 <div class="grid grid-cols-4 gap-4">
-                    <!-- Timetable -->
-                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-14 h-14 rounded-2xl bg-[#e3f2fd] dark:bg-[#1565c0]/30 text-[#1565c0] dark:text-[#90caf9] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
+                        <div class="w-14 h-14 rounded-2xl bg-[#e3f2fd] text-[#1565c0] flex items-center justify-center shadow-sm border border-surface-variant/30">
                             <span class="material-symbols-outlined text-[26px]">calendar_month</span>
                         </div>
                         <span class="text-[11px] font-bold text-on-surface text-center">Timetable</span>
                     </div>
-                    <!-- Plastic Log -->
-                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-14 h-14 rounded-2xl bg-[#e8f5e9] dark:bg-[#2e7d32]/30 text-[#2e7d32] dark:text-[#a5d6a7] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
+                        <div class="w-14 h-14 rounded-2xl bg-[#e8f5e9] text-[#2e7d32] flex items-center justify-center shadow-sm border border-surface-variant/30">
                             <span class="material-symbols-outlined text-[26px]">recycling</span>
                         </div>
                         <span class="text-[11px] font-bold text-on-surface text-center">Plastic Log</span>
                     </div>
-                    <!-- Elections -->
-                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-14 h-14 rounded-2xl bg-[#f3e5f5] dark:bg-[#6a1b9a]/30 text-[#6a1b9a] dark:text-[#ce93d8] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
+                        <div class="w-14 h-14 rounded-2xl bg-[#f3e5f5] text-[#6a1b9a] flex items-center justify-center shadow-sm border border-surface-variant/30">
                             <span class="material-symbols-outlined text-[26px]">how_to_vote</span>
                         </div>
                         <span class="text-[11px] font-bold text-on-surface text-center">Elections</span>
                     </div>
-                    <!-- Movies Booking -->
-                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-14 h-14 rounded-2xl bg-[#ffebee] dark:bg-[#c62828]/30 text-[#c62828] dark:text-[#ef9a9a] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
+                        <div class="w-14 h-14 rounded-2xl bg-[#ffebee] text-[#c62828] flex items-center justify-center shadow-sm border border-surface-variant/30">
                             <span class="material-symbols-outlined text-[26px]">theaters</span>
                         </div>
                         <span class="text-[11px] font-bold text-on-surface text-center">Movies</span>
                     </div>
-                    <!-- Sports -->
-                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-14 h-14 rounded-2xl bg-[#fff3e0] dark:bg-[#ef6c00]/30 text-[#ef6c00] dark:text-[#ffcc80] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
+                        <div class="w-14 h-14 rounded-2xl bg-[#fff3e0] text-[#ef6c00] flex items-center justify-center shadow-sm border border-surface-variant/30">
                             <span class="material-symbols-outlined text-[26px]">sports_soccer</span>
                         </div>
                         <span class="text-[11px] font-bold text-on-surface text-center">Sports</span>
                     </div>
-                    <!-- AI Bots -->
-                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-14 h-14 rounded-2xl bg-[#e0f7fa] dark:bg-[#00838f]/30 text-[#00838f] dark:text-[#80deea] flex items-center justify-center shadow-sm border border-surface-variant/30">
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
+                        <div class="w-14 h-14 rounded-2xl bg-[#e0f7fa] text-[#00838f] flex items-center justify-center shadow-sm border border-surface-variant/30">
                             <span class="material-symbols-outlined text-[26px]">smart_toy</span>
                         </div>
                         <span class="text-[11px] font-bold text-on-surface text-center">AI Bots</span>
@@ -433,48 +451,34 @@
                 </div>
             </div>
 
+            <!-- DISCOVER STUDENTS -->
             <div>
                 <div class="flex justify-between items-end mb-4">
                     <h3 class="text-lg font-bold text-on-surface">Discover Students</h3>
                     <span class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">Explore</span>
                 </div>
-                
                 <div class="space-y-4">
-                    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer">
+                    
+                    <!-- Student: Private Account (No blur or lock on avatar) -->
+                    <div onclick="openProfileModal('private')" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform">
                         <div class="relative shrink-0">
                             <div class="w-[52px] h-[52px] rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500">
                                 <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
-                                    <img src="https://i.pravatar.cc/150?img=47" alt="Student" class="w-full h-full object-cover">
+                                    <img src="https://i.pravatar.cc/150?img=12" alt="Student" class="w-full h-full object-cover">
                                 </div>
                             </div>
                         </div>
                         <div class="flex-1">
-                            <h4 class="text-[15px] font-bold text-on-surface leading-tight">Sarah Jenkins</h4>
-                            <p class="text-[12px] text-on-surface-variant mt-0.5">B.Sc Environmental Science</p>
-                        </div>
-                        <button class="bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide active:scale-95 shrink-0">
-                            Connect
-                        </button>
-                    </div>
-
-                    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer">
-                        <div class="relative shrink-0">
-                            <div class="w-[52px] h-[52px] rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500">
-                                <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
-                                    <img src="https://i.pravatar.cc/150?img=11" alt="Student" class="w-full h-full object-cover">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="text-[15px] font-bold text-on-surface leading-tight">Rahul Sharma</h4>
+                            <h4 class="text-[15px] font-bold text-on-surface leading-tight">Alex Carter</h4>
                             <p class="text-[12px] text-on-surface-variant mt-0.5">B.Tech Computer Eng</p>
                         </div>
-                        <button class="bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide active:scale-95 shrink-0">
+                        <button class="bg-primary/10 text-primary px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide shrink-0">
                             Connect
                         </button>
                     </div>
 
-                    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer">
+                    <!-- Student: Pending Connection (No blur or lock on avatar) -->
+                    <div onclick="openProfileModal('private')" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-surface-variant/60 shadow-sm flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform">
                         <div class="relative shrink-0">
                             <div class="w-[52px] h-[52px] rounded-full p-[2px] bg-surface-variant">
                                 <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
@@ -486,35 +490,85 @@
                             <h4 class="text-[15px] font-bold text-on-surface leading-tight">Maya Lin</h4>
                             <p class="text-[12px] text-on-surface-variant mt-0.5">M.A. Design</p>
                         </div>
-                        <button class="bg-surface-variant/50 text-on-surface-variant hover:bg-surface-variant transition-colors px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide active:scale-95 shrink-0">
-                            Pending
+                        <button class="bg-surface-variant/50 text-on-surface-variant px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide shrink-0">
+                            Requested
                         </button>
                     </div>
+
+                    <!-- Student: Connected / Public -->
+                    <div onclick="openProfileModal('public')" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[24px] p-4 border border-primary/30 shadow-sm flex items-center gap-4 cursor-pointer bg-primary/5 active:scale-[0.98] transition-transform">
+                        <div class="relative shrink-0">
+                            <div class="w-[52px] h-[52px] rounded-full p-[2px] bg-gradient-to-tr from-primary to-blue-500">
+                                <div class="w-full h-full rounded-full border-2 border-surface overflow-hidden bg-surface-variant">
+                                    <img src="https://i.pravatar.cc/150?img=47" alt="Student" class="w-full h-full object-cover">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-[15px] font-bold text-on-surface leading-tight">David Kim</h4>
+                            <p class="text-[12px] text-on-surface-variant mt-0.5">M.Sc Physics</p>
+                        </div>
+                        <button class="bg-transparent text-primary border border-primary/30 px-4 py-2 rounded-xl text-[12px] font-bold tracking-wide shrink-0 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">check</span> Connected
+                        </button>
+                    </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- PROFILE VIEW -->
+        <!-- MY PROFILE VIEW -->
         <div id="view-profile" class="tab-content pt-4 hidden">
-            <h2 class="text-2xl font-extrabold text-on-surface mb-6">My Profile</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-extrabold text-on-surface">My Profile</h2>
+                <button class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[12px] font-bold tracking-wide active:scale-95 transition-transform">
+                    Edit Profile
+                </button>
+            </div>
             
             <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-6 shadow-sm border border-surface-variant/60 text-center relative overflow-hidden mb-6">
                 <div class="absolute -top-20 -left-10 w-full h-40 bg-gradient-to-b from-primary/10 to-transparent rounded-full blur-2xl"></div>
-                
                 <div class="relative z-10 flex flex-col items-center mt-2">
-                    <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface shadow-md mb-4 bg-surface-variant">
+                    <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface shadow-md mb-4 bg-surface-variant relative">
                         <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover" src="https://via.placeholder.com/150"/>
+                        <div class="absolute bottom-0 right-0 bg-primary w-6 h-6 rounded-full border-2 border-surface flex items-center justify-center">
+                            <span class="material-symbols-outlined text-white text-[12px]">edit</span>
+                        </div>
                     </div>
                     <h3 id="profile-name" class="text-xl font-extrabold text-on-surface tracking-tight">Loading...</h3>
-                    <div class="flex items-center gap-2 mt-2 mb-5">
+                    <div class="flex items-center gap-2 mt-2 mb-3">
                         <span id="profile-role" class="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-widest border border-primary/20">Student</span>
                     </div>
-                    <p id="profile-email" class="text-[13px] font-medium text-on-surface-variant flex items-center justify-center gap-1.5 bg-surface-variant/30 px-4 py-2 rounded-xl">
+                    <!-- RESTORED EMAIL -->
+                    <p id="profile-email" class="text-[13px] font-medium text-on-surface-variant flex items-center justify-center gap-1.5 bg-surface-variant/30 px-4 py-2 rounded-xl mb-4">
                         <span class="material-symbols-outlined text-[16px]">mail</span> loading...
+                    </p>
+                    <p id="profile-bio" class="text-[13px] text-on-surface-variant mb-2 px-4">
+                        Passionate about sustainability, UI/UX design, and renewable energy. Always open to collaborate! 🌱
                     </p>
                 </div>
             </div>
 
+            <!-- Social Media Management -->
+            <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[28px] border border-surface-variant/60 overflow-hidden mb-6 shadow-sm p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-[14px] font-bold text-on-surface">Social Profiles</h3>
+                    <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider cursor-pointer">Manage</span>
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-[#0077b5]/10 text-[#0077b5] flex items-center justify-center cursor-pointer">
+                        <span class="font-extrabold text-[18px]">in</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] text-white flex items-center justify-center cursor-pointer opacity-90">
+                        <span class="font-extrabold text-[16px]">IG</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-surface border-2 border-dashed border-surface-variant text-on-surface-variant flex items-center justify-center cursor-pointer">
+                        <span class="material-symbols-outlined text-[20px]">add</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESTORED ACADEMIC INFO -->
             <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[28px] border border-surface-variant/60 overflow-hidden mb-6 shadow-sm">
                 <div class="p-5 flex items-center gap-4 border-b border-surface-variant/50">
                     <div class="w-10 h-10 bg-secondary/10 rounded-xl text-secondary flex items-center justify-center">
@@ -537,6 +591,24 @@
             </div>
 
             <div class="space-y-3 mb-8">
+                <!-- Privacy Toggle -->
+                <div class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-primary/30 p-4 rounded-2xl flex items-center justify-between shadow-sm bg-primary/5">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-[18px]">lock</span>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[14px] text-on-surface block">Private Account</span>
+                            <span class="text-[10px] text-on-surface-variant">Only connections see full profile</span>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="privacy-toggle-switch" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-surface-variant rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                    </label>
+                </div>
+
+                <!-- Dark Mode -->
                 <div class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 p-4 rounded-2xl flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3.5">
                         <div class="w-8 h-8 rounded-full bg-surface-variant/50 flex items-center justify-center text-on-surface-variant">
@@ -550,6 +622,7 @@
                     </label>
                 </div>
 
+                <!-- RESTORED SETTINGS MENUS -->
                 <button class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform duration-200">
                     <div class="flex items-center gap-3.5">
                         <div class="w-8 h-8 rounded-full bg-surface-variant/50 flex items-center justify-center text-on-surface-variant">
@@ -590,7 +663,7 @@
                     <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
                 </button>
 
-                <button onclick="logout()" class="w-full bg-error/10 border border-error/20 p-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform mt-8 shadow-sm">
+                <button onclick="logout()" class="w-full bg-error/10 border border-error/20 p-4 rounded-2xl flex items-center justify-center gap-2 mt-8 shadow-sm">
                     <span class="material-symbols-outlined text-error text-[20px]">logout</span>
                     <span class="font-bold text-[15px] text-error">Sign Out</span>
                 </button>
@@ -599,32 +672,107 @@
 
     </main>
 
+    <!-- STUDENT PROFILE MODALS (Viewable Overlays) -->
+    
+    <!-- 1. Private Profile Overlay (No blur or avatar lock) -->
+    <div id="modal-profile-private" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModal('private')" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            
+            <div class="flex flex-col items-center text-center">
+                <div class="relative mb-4">
+                    <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface shadow-md bg-surface-variant">
+                        <img src="https://i.pravatar.cc/150?img=12" alt="Student" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <h3 class="text-xl font-extrabold text-on-surface">Alex Carter</h3>
+                <p class="text-[12px] font-medium text-on-surface-variant mb-6">B.Tech Computer Eng</p>
+                
+                <div class="w-full bg-surface-variant/20 border border-surface-variant/50 p-5 rounded-2xl mb-6">
+                    <span class="material-symbols-outlined text-[32px] text-on-surface-variant opacity-50 mb-2 block">lock</span>
+                    <h4 class="text-[14px] font-bold text-on-surface mb-1">This Account is Private</h4>
+                    <p class="text-[12px] text-on-surface-variant px-4">Connect with Alex to see their full profile, bio, and social media links.</p>
+                </div>
+                
+                <button class="w-full bg-primary text-white py-3.5 rounded-xl font-bold tracking-wide active:scale-95 transition-transform">
+                    Request to Connect
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Public / Connected Profile Overlay -->
+    <div id="modal-profile-public" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModal('public')" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            
+            <div class="flex flex-col items-center text-center">
+                <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4">
+                    <div class="w-full h-full rounded-full border-[3px] border-surface overflow-hidden bg-surface-variant">
+                        <img src="https://i.pravatar.cc/150?img=47" alt="Student" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <h3 class="text-xl font-extrabold text-on-surface">David Kim</h3>
+                <p class="text-[12px] font-medium text-on-surface-variant mb-4">M.Sc Physics</p>
+                <p class="text-[13px] text-on-surface-variant mb-6 px-4">Researching quantum computing. I love playing football and building side projects in my free time. 🚀</p>
+                
+                <!-- Visible Social Links -->
+                <div class="flex gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-full bg-[#0077b5]/10 text-[#0077b5] flex items-center justify-center cursor-pointer">
+                        <span class="font-extrabold text-[16px]">in</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-[#333]/10 dark:bg-white/10 text-[#333] dark:text-white flex items-center justify-center cursor-pointer">
+                        <span class="font-extrabold text-[14px]">&lt;/&gt;</span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 w-full">
+                    <button class="flex-1 bg-surface-variant/40 text-on-surface py-3.5 rounded-xl font-bold tracking-wide active:scale-95 transition-transform flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">mail</span> Message
+                    </button>
+                    <button class="flex-1 bg-transparent text-primary border-2 border-primary/30 py-3.5 rounded-xl font-bold tracking-wide active:scale-95 transition-transform flex justify-center items-center gap-1">
+                        <span class="material-symbols-outlined text-[18px]">check</span> Connected
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
     <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-surface/80 dark:bg-[#121212]/90 backdrop-blur-2xl rounded-t-[32px] border-t border-surface-variant/40 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.2)] z-[40]">
-        
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex flex-col items-center justify-center bg-[#006e1c] dark:bg-primary text-white rounded-2xl px-5 py-2 transition-all active:scale-95 duration-200">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex flex-col items-center justify-center bg-[#006e1c] dark:bg-primary text-white rounded-2xl px-5 py-2 transition-all active:scale-95">
             <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">dashboard</span>
             <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Dashboard</span>
         </button>
-
-        <button onclick="switchTab('updates')" id="nav-updates" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
+        <button onclick="switchTab('updates')" id="nav-updates" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95">
             <span class="material-symbols-outlined text-[24px]">campaign</span>
             <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Updates</span>
         </button>
-
-        <button onclick="switchTab('search')" id="nav-search" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
+        <button onclick="switchTab('search')" id="nav-search" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95">
             <span class="material-symbols-outlined text-[24px]">search</span>
             <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Search</span>
         </button>
-        
-        <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95 transition-all duration-200">
+        <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant/40 rounded-2xl active:scale-95">
             <span class="material-symbols-outlined text-[24px]">person</span>
             <span class="text-[10px] font-bold font-['Inter'] mt-0.5 tracking-wide">Profile</span>
         </button>
-        
     </nav>
 
-    <!-- UI Scripts -->
+    <!-- INLINE STYLES FOR ANIMATIONS -->
+    <style>
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+    </style>
+
+    <!-- SCRIPTS -->
     <script>
+        // Schedule Toggle Logic
         document.addEventListener('DOMContentLoaded', () => {
             const toggleBtn = document.getElementById('toggleScheduleBtn');
             const fullSchedule = document.getElementById('fullScheduleContent');
@@ -645,7 +793,7 @@
             }
         });
 
-        // Basic Tab Switch Logic
+        // Tab Switching Logic
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
@@ -657,6 +805,23 @@
             const activeNav = document.getElementById(`nav-${tabId}`);
             activeNav.classList.remove('text-on-surface-variant');
             activeNav.classList.add('bg-[#006e1c]', 'dark:bg-primary', 'text-white');
+        }
+
+        // Profile Modal Logic
+        function openProfileModal(type) {
+            const modal = document.getElementById(`modal-profile-${type}`);
+            if(modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeProfileModal(type) {
+            const modal = document.getElementById(`modal-profile-${type}`);
+            if(modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
         }
     </script>
 </body>
