@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en" class="light">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-    <title>ECampus - App</title>
+    <title>ECampus Professional</title>
     
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -30,6 +29,7 @@
         }
     </script>
     <style>
+        body { font-family: 'Inter', sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes slideUp {
@@ -38,27 +38,26 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden selection:bg-primary/20 transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100 transition-colors duration-300 antialiased mb-24">
 
     <header class="fixed top-0 w-full z-[40] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-neutral-800 shadow-sm transition-colors duration-300">
-        <div class="flex items-center px-6 h-16 w-full max-w-screen-xl mx-auto relative">
-            <div class="flex-none z-10">
-                <div class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-gray-100 dark:bg-neutral-800 shadow-sm shrink-0">
-                    <img id="header-avatar" alt="Profile picture" class="w-full h-full object-cover" src="https://via.placeholder.com/150"/>
+        <div class="max-w-md mx-auto h-16 flex items-center justify-between px-5 relative">
+            <div class="flex-none">
+                <div class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-gray-100 dark:bg-neutral-800 shadow-sm">
+                    <img id="header-avatar" alt="Profile" class="w-full h-full object-cover" src="https://via.placeholder.com/150"/>
                 </div>
             </div>
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
+                <h1 class="text-xl font-black text-primary">ECampus</h1>
             </div>
-            <div class="flex-none ml-auto z-10 relative">
-                <button id="notif-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-all active:scale-95 duration-200 relative text-gray-500 dark:text-gray-400">
+            <div class="flex-none">
+                <button id="notif-btn" class="p-2 relative text-gray-500 dark:text-gray-400">
                     <span class="material-symbols-outlined">notifications</span>
-                    <span id="notif-badge" class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-red-600 rounded-full border-2 border-white dark:border-neutral-900 hidden"></span>
+                    <span id="notif-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-600 rounded-full border-2 border-white dark:border-neutral-900 hidden"></span>
                 </button>
             </div>
         </div>
     </header>
-
     <div id="full-notif-panel" class="fixed inset-0 z-[100] bg-gray-50 dark:bg-neutral-950 transition-transform duration-300 translate-x-full flex flex-col">
         <div class="h-16 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl shrink-0">
             <button id="close-notif-btn" class="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 active:scale-95 transition-transform">
@@ -95,7 +94,6 @@
                     </div>
                 </div>
             </section>
-
             <section class="mt-4">
                 <div class="bg-white dark:bg-neutral-900 rounded-[32px] p-4 border border-gray-200 dark:border-neutral-800 shadow-sm mb-6 flex gap-3 items-center">
                     <div class="w-10 h-10 rounded-full border border-gray-200 dark:border-neutral-700 shadow-sm overflow-hidden shrink-0">
@@ -157,7 +155,6 @@
             <div class="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-gray-200 dark:border-neutral-800 text-center relative overflow-hidden mb-6 transition-colors">
                 <div class="absolute -top-20 -left-10 w-full h-40 bg-gradient-to-b from-primary/10 to-transparent rounded-full blur-2xl"></div>
                 <div class="relative z-10 flex flex-col items-center mt-2">
-                    
                     <div id="profile-avatar-container" class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 shadow-md mb-4 bg-gray-100 dark:bg-neutral-800 relative cursor-pointer active:scale-95 transition-transform group">
                         <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover" src="https://via.placeholder.com/150"/>
                         <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -176,9 +173,7 @@
                     <p id="profile-email" class="text-[13px] font-medium text-gray-600 dark:text-gray-400 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-neutral-800 px-4 py-2 rounded-xl mb-4">
                         <span class="material-symbols-outlined text-[16px]">mail</span> loading...
                     </p>
-                    <p id="profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-2 px-4">
-                        Loading bio...
-                    </p>
+                    <p id="profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-2 px-4">Loading bio...</p>
                 </div>
             </div>
 
@@ -229,24 +224,6 @@
                         <div class="w-11 h-6 bg-gray-300 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                     </label>
                 </div>
-
-                <div class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm transition-colors">
-                    <div class="flex items-center gap-3.5">
-                        <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center text-gray-600 dark:text-gray-400">
-                            <span class="material-symbols-outlined text-[18px]">dark_mode</span>
-                        </div>
-                        <span class="font-bold text-[14px]">Dark Theme</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="theme-toggle-switch" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-300 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                    </label>
-                </div>
-
-                <button onclick="logout()" class="w-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-4 rounded-2xl flex items-center justify-center gap-2 mt-8 shadow-sm hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors">
-                    <span class="material-symbols-outlined text-red-600 dark:text-red-500 text-[20px]">logout</span>
-                    <span class="font-bold text-[15px] text-red-600 dark:text-red-500">Sign Out</span>
-                </button>
             </div>
         </div>
     </main>
@@ -260,15 +237,15 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">Instagram URL</label>
-                    <input type="url" id="input-social-instagram" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+                    <input type="url" id="input-social-instagram" class="w-full bg-gray-100 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
                 </div>
                 <div>
                     <label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">LinkedIn URL</label>
-                    <input type="url" id="input-social-linkedin" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+                    <input type="url" id="input-social-linkedin" class="w-full bg-gray-100 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
                 </div>
                 <div>
                     <label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">GitHub URL</label>
-                    <input type="url" id="input-social-github" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+                    <input type="url" id="input-social-github" class="w-full bg-gray-100 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
                 </div>
                 <button onclick="saveSocialLinks()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform mt-2">
                     Save Links
@@ -276,7 +253,6 @@
             </div>
         </div>
     </div>
-
     <div id="modal-profile-private" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
         <div class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
             <button onclick="closeProfileModals()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
