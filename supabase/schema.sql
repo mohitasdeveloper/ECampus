@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS public.users (
   tick_type text DEFAULT 'blue'::text,
   role text DEFAULT 'student'::text,
   is_volunteer boolean DEFAULT false,
+  bio text DEFAULT 'Passionate about sustainability... 🌱',
+  social_links jsonb DEFAULT '{}'::jsonb,
   created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
@@ -91,10 +93,10 @@ ALTER TABLE public.colleges ENABLE ROW LEVEL SECURITY;
 -- -------------------------
 -- POLICIES FOR 'users' TABLE
 -- -------------------------
--- Read own profile
-CREATE POLICY "Users can read own profile" 
+-- Read all profiles (needed for discover/hotposts feeds)
+CREATE POLICY "Users can read all profiles" 
 ON public.users FOR SELECT TO authenticated 
-USING (auth.uid() = auth_user_id);
+USING (true);
 
 -- Update own profile
 CREATE POLICY "Users can update own profile" 
@@ -111,17 +113,14 @@ WITH CHECK (auth.uid() = auth_user_id);
 -- -------------------------
 -- POLICIES FOR 'colleges' TABLE
 -- -------------------------
--- Anyone can read the college list (for the signup dropdown)
 CREATE POLICY "Allow public read access on colleges" 
 ON public.colleges FOR SELECT 
 USING (true);
 
--- Anyone can add a new college (when "Other" is typed)
 CREATE POLICY "Allow public insert access on colleges" 
 ON public.colleges FOR INSERT 
 WITH CHECK (true);
 
--- Anyone can update (Required for the `upsert` command to not fail)
 CREATE POLICY "Allow public update access on colleges" 
 ON public.colleges FOR UPDATE 
 USING (true);
