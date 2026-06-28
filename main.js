@@ -30,23 +30,42 @@ async function fetchUserProfile(authUserId, fallbackEmail) {
             const name = userProfile.full_name || fallbackEmail;
             
             // Header
-            document.getElementById('header-name').innerText = name;
+            const headerNameEl = document.getElementById('header-name');
+            if (headerNameEl) headerNameEl.innerText = name;
+            
             if (userProfile.profile_img_url) {
-                document.getElementById('header-avatar').src = userProfile.profile_img_url;
-                document.getElementById('profile-avatar-large').src = userProfile.profile_img_url;
+                const headerAvatarEl = document.getElementById('header-avatar');
+                if (headerAvatarEl) headerAvatarEl.src = userProfile.profile_img_url;
+                
+                const profileAvatarLargeEl = document.getElementById('profile-avatar-large');
+                if (profileAvatarLargeEl) profileAvatarLargeEl.src = userProfile.profile_img_url;
             }
 
             // Full Profile Tab Data Mapping
-            document.getElementById('profile-name').innerText = name;
-            document.getElementById('profile-role').innerText = userProfile.role || 'Student';
-            document.getElementById('profile-email').innerHTML = `<span class="material-symbols-outlined text-[16px]">mail</span> ${userProfile.email || fallbackEmail}`;
-            document.getElementById('profile-id').innerText = userProfile.student_id || 'Not Assigned';
-            document.getElementById('profile-course').innerText = userProfile.course || 'Not Assigned';
+            const profileNameEl = document.getElementById('profile-name');
+            if (profileNameEl) profileNameEl.innerText = name;
+            
+            const profileRoleEl = document.getElementById('profile-role');
+            if (profileRoleEl) profileRoleEl.innerText = userProfile.role || 'Student';
+            
+            const profileEmailEl = document.getElementById('profile-email');
+            if (profileEmailEl) profileEmailEl.innerHTML = `<span class="material-symbols-outlined text-[16px]">mail</span> ${userProfile.email || fallbackEmail}`;
+            
+            const profileIdEl = document.getElementById('profile-id');
+            if (profileIdEl) profileIdEl.innerText = userProfile.student_id || 'Not Assigned';
+            
+            const profileCourseEl = document.getElementById('profile-course');
+            if (profileCourseEl) profileCourseEl.innerText = userProfile.course || 'Not Assigned';
         }
     } catch (err) {
         console.error("Error fetching profile:", err.message);
-        document.getElementById('header-name').innerText = fallbackEmail;
-        document.getElementById('profile-name').innerText = fallbackEmail;
+        
+        // Safely apply fallbacks if elements exist
+        const headerNameEl = document.getElementById('header-name');
+        if (headerNameEl) headerNameEl.innerText = fallbackEmail;
+        
+        const profileNameEl = document.getElementById('profile-name');
+        if (profileNameEl) profileNameEl.innerText = fallbackEmail;
     }
 }
 
