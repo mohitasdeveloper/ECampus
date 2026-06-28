@@ -14,7 +14,6 @@
     <script src="supabase.js"></script>
     <script src="main.js" defer></script>
 
-    <!-- Cleaned up Tailwind Config -->
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -30,10 +29,17 @@
             },
         }
     </script>
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+    </style>
 </head>
 <body class="bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden selection:bg-primary/20 transition-colors duration-300">
 
-    <!-- HEADER -->
     <header class="fixed top-0 w-full z-[40] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-neutral-800 shadow-sm transition-colors duration-300">
         <div class="flex items-center px-6 h-16 w-full max-w-screen-xl mx-auto relative">
             <div class="flex-none z-10">
@@ -53,7 +59,6 @@
         </div>
     </header>
 
-    <!-- NOTIFICATIONS PANEL -->
     <div id="full-notif-panel" class="fixed inset-0 z-[100] bg-gray-50 dark:bg-neutral-950 transition-transform duration-300 translate-x-full flex flex-col">
         <div class="h-16 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl shrink-0">
             <button id="close-notif-btn" class="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 active:scale-95 transition-transform">
@@ -66,12 +71,9 @@
         </div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <main class="pt-20 px-5 max-w-screen-md mx-auto relative z-10 pb-6">
         
-        <!-- DASHBOARD VIEW -->
         <div id="view-dashboard" class="tab-content active">
-            <!-- HOTPOSTS -->
             <section class="mb-4">
                 <h3 class="text-[14px] font-bold mb-3 flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[#e65100] text-[18px]">local_fire_department</span> Hotposts
@@ -83,7 +85,6 @@
                         </div>
                         <span class="text-[11px] font-bold text-gray-600 dark:text-gray-400">Your Story</span>
                     </div>
-                    <!-- Demo Story 1 -->
                     <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
                         <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-sm">
                             <div class="w-full h-full rounded-full border-[3px] border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
@@ -95,7 +96,6 @@
                 </div>
             </section>
 
-            <!-- POST CREATOR -->
             <section class="mt-4">
                 <div class="bg-white dark:bg-neutral-900 rounded-[32px] p-4 border border-gray-200 dark:border-neutral-800 shadow-sm mb-6 flex gap-3 items-center">
                     <div class="w-10 h-10 rounded-full border border-gray-200 dark:border-neutral-700 shadow-sm overflow-hidden shrink-0">
@@ -107,14 +107,12 @@
                     </button>
                 </div>
                 
-                <!-- FEED POSTS CONTAINER -->
-                <div id="feed-posts-container">
+                <div id="feed-posts-container" class="space-y-5">
                     <p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Loading feed...</p>
                 </div>
             </section>
         </div>
 
-        <!-- SEARCH VIEW -->
         <div id="view-efind" class="tab-content pt-4 hidden">
             <div class="relative mb-6 mt-2">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-500 dark:text-gray-400">
@@ -123,7 +121,6 @@
                 <input type="text" class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-gray-100 text-sm rounded-2xl focus:ring-primary focus:border-primary block pl-11 p-3.5 shadow-sm placeholder-gray-500 dark:placeholder-gray-400 transition-colors" placeholder="Search apps, students, or resources...">
             </div>
 
-            <!-- DISCOVER STUDENTS -->
             <div>
                 <div class="flex justify-between items-end mb-4">
                     <h3 class="text-lg font-bold">Discover Students</h3>
@@ -135,7 +132,6 @@
             </div>
         </div>
 
-        <!-- UPDATES VIEW -->
         <div id="view-updates" class="tab-content pt-4 hidden">
             <h2 class="text-2xl font-extrabold mb-6">Campus Updates</h2>
             <div class="space-y-4">
@@ -150,7 +146,6 @@
             </div>
         </div>
 
-        <!-- MY PROFILE VIEW -->
         <div id="view-profile" class="tab-content pt-4 hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-extrabold">My Profile</h2>
@@ -162,7 +157,7 @@
             <div class="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-gray-200 dark:border-neutral-800 text-center relative overflow-hidden mb-6 transition-colors">
                 <div class="absolute -top-20 -left-10 w-full h-40 bg-gradient-to-b from-primary/10 to-transparent rounded-full blur-2xl"></div>
                 <div class="relative z-10 flex flex-col items-center mt-2">
-                    <!-- Avatar Upload -->
+                    
                     <div id="profile-avatar-container" class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 shadow-md mb-4 bg-gray-100 dark:bg-neutral-800 relative cursor-pointer active:scale-95 transition-transform group">
                         <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover" src="https://via.placeholder.com/150"/>
                         <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -187,7 +182,6 @@
                 </div>
             </div>
 
-            <!-- Dynamic Social Media Links -->
             <div class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm p-5 transition-colors">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-[14px] font-bold">Social Profiles</h3>
@@ -198,7 +192,27 @@
                 </div>
             </div>
 
-            <!-- Settings (Privacy & Theme) -->
+            <div class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm transition-colors">
+                <div class="p-5 flex items-center gap-4 border-b border-gray-200 dark:border-neutral-800">
+                    <div class="w-10 h-10 bg-blue-500/10 rounded-xl text-blue-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[20px]">badge</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">Student ID</p>
+                        <p id="profile-id" class="text-[15px] font-bold">---</p>
+                    </div>
+                </div>
+                <div class="p-5 flex items-center gap-4">
+                    <div class="w-10 h-10 bg-orange-500/10 rounded-xl text-orange-500 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[20px]">menu_book</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">Course</p>
+                        <p id="profile-course" class="text-[15px] font-bold">---</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="space-y-3 mb-8">
                 <div class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm transition-colors">
                     <div class="flex items-center gap-3.5">
@@ -237,11 +251,8 @@
         </div>
     </main>
 
-    <!-- MODALS & NAVIGATION (Truncated for space, keep exactly as they were in previous file, just ensure background classes are bg-white dark:bg-neutral-900) -->
-    
-    <!-- Edit Socials Modal -->
     <div id="modal-edit-socials" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center transition-opacity duration-300 px-4">
-        <div class="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800">
+        <div class="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl">
             <button onclick="closeSocialsModal()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
@@ -249,15 +260,15 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">Instagram URL</label>
-                    <input type="url" id="input-social-instagram" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                    <input type="url" id="input-social-instagram" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
                 </div>
                 <div>
                     <label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">LinkedIn URL</label>
-                    <input type="url" id="input-social-linkedin" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                    <input type="url" id="input-social-linkedin" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
                 </div>
                 <div>
                     <label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">GitHub URL</label>
-                    <input type="url" id="input-social-github" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                    <input type="url" id="input-social-github" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
                 </div>
                 <button onclick="saveSocialLinks()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform mt-2">
                     Save Links
@@ -266,31 +277,78 @@
         </div>
     </div>
 
-    <!-- Student Profiles Modals -->
-    <!-- (Include your existing private/public modals here, ensuring you update 'bg-surface' to 'bg-white dark:bg-neutral-900') -->
+    <div id="modal-profile-private" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
+        <div class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModals()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <div class="flex flex-col items-center text-center">
+                <div class="relative mb-4">
+                    <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 shadow-md bg-gray-100 dark:bg-neutral-800">
+                        <img id="private-profile-avatar" src="https://via.placeholder.com/150" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <h3 id="private-profile-name" class="text-xl font-extrabold">Loading...</h3>
+                <p id="private-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-6">Student</p>
+                <div class="w-full bg-gray-100 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-5 rounded-2xl mb-6">
+                    <span class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 mb-2 block">lock</span>
+                    <h4 class="text-[14px] font-bold mb-1">This Account is Private</h4>
+                    <p class="text-[12px] text-gray-500 dark:text-gray-400 px-4">Connect with them to see their full profile, bio, and social media links.</p>
+                </div>
+                <button id="private-connect-btn" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold tracking-wide active:scale-95 transition-transform">
+                    Request to Connect
+                </button>
+            </div>
+        </div>
+    </div>
 
-    <!-- BOTTOM NAV -->
-    <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/80 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.4)] z-[40]">
+    <div id="modal-profile-public" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
+        <div class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModals()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <div class="flex flex-col items-center text-center">
+                <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4">
+                    <div class="w-full h-full rounded-full border-[3px] border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                        <img id="public-profile-avatar" src="https://via.placeholder.com/150" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <h3 id="public-profile-name" class="text-xl font-extrabold">Loading...</h3>
+                <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-4">Student</p>
+                <p id="public-profile-bio" class="text-[13px] text-gray-600 dark:text-gray-400 mb-6 px-4">No bio added.</p>
+                
+                <div id="public-profile-socials" class="flex gap-4 mb-8">
+                    </div>
+                
+                <div class="flex gap-3 w-full">
+                    <button class="flex-1 bg-gray-100 dark:bg-neutral-800 py-3.5 rounded-xl font-bold tracking-wide active:scale-95 transition-transform flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">mail</span> Message
+                    </button>
+                    <button id="public-connect-btn" class="flex-1 bg-primary text-white py-3.5 rounded-xl font-bold tracking-wide active:scale-95 transition-transform flex justify-center items-center gap-1">
+                        Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.4)] z-[40]">
         <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex flex-col items-center justify-center bg-primary text-white rounded-2xl px-5 py-2 transition-all active:scale-95">
             <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">dashboard</span>
             <span class="text-[10px] font-bold mt-0.5 tracking-wide">Feed</span>
         </button>
-        <button onclick="switchTab('efind')" id="nav-efind" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl active:scale-95">
+        <button onclick="switchTab('efind')" id="nav-efind" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl active:scale-95 transition-all">
             <span class="material-symbols-outlined text-[24px]">search</span>
             <span class="text-[10px] font-bold mt-0.5 tracking-wide">Search</span>
         </button>
-        <button onclick="switchTab('updates')" id="nav-updates" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl active:scale-95">
+        <button onclick="switchTab('updates')" id="nav-updates" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl active:scale-95 transition-all">
             <span class="material-symbols-outlined text-[24px]">campaign</span>
             <span class="text-[10px] font-bold mt-0.5 tracking-wide">Updates</span>
         </button>
-        <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl active:scale-95">
+        <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl active:scale-95 transition-all">
             <span class="material-symbols-outlined text-[24px]">person</span>
             <span class="text-[10px] font-bold mt-0.5 tracking-wide">Profile</span>
         </button>
     </nav>
-    <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
 </body>
 </html>
