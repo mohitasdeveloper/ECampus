@@ -309,15 +309,47 @@
     </main>
 
     <div id="modal-edit-socials" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
-        <div class="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl">
-            <button onclick="document.getElementById('modal-edit-socials').classList.replace('flex','hidden')" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"><span class="material-symbols-outlined text-[18px]">close</span></button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100">Edit Social Links</h3>
-            <div class="space-y-4">
-                <div><label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">Instagram URL</label><input type="url" id="input-social-instagram" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100"></div>
-                <div><label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">LinkedIn URL</label><input type="url" id="input-social-linkedin" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100"></div>
-                <div><label class="text-[12px] font-bold text-gray-500 dark:text-gray-400">GitHub URL</label><input type="url" id="input-social-github" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100"></div>
-                <button onclick="saveSocialLinks()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-2 active:scale-95 transition-transform">Save Links</button>
+        <div class="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <button onclick="closeSocialsModal()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Manage Social Links</h3>
+            
+            <!-- Add Link Section -->
+            <div class="bg-gray-50 dark:bg-neutral-800/50 p-4 rounded-2xl border border-gray-100 dark:border-neutral-800 mb-4 shrink-0">
+                <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5">Add New Link</h4>
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-2">
+                        <select id="add-social-platform" class="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none w-1/3 shadow-sm">
+                            <option value="linkedin">LinkedIn</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="github">GitHub</option>
+                            <option value="twitter">Twitter/X</option>
+                            <option value="youtube">YouTube</option>
+                            <option value="discord">Discord</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="behance">Behance</option>
+                            <option value="dribbble">Dribbble</option>
+                            <option value="website">Website</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <input type="url" id="add-social-url" placeholder="https://..." class="flex-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none shadow-sm">
+                    </div>
+                    <button onclick="addSocialLinkTemp()" class="w-full bg-primary/10 hover:bg-primary/20 text-primary py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Link
+                    </button>
+                </div>
             </div>
+
+            <!-- Current Links List -->
+            <div class="flex-1 overflow-y-auto min-h-[120px] mb-4 pr-1">
+                <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5 sticky top-0 bg-white dark:bg-neutral-900 py-1">Current Links</h4>
+                <div id="modal-socials-list" class="space-y-2">
+                    <!-- Dynamic links will be injected here -->
+                </div>
+            </div>
+
+            <button onclick="saveSocialLinks()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform shrink-0 shadow-md shadow-primary/25">Save Links</button>
         </div>
     </div>
 
@@ -346,8 +378,9 @@
                     <div class="w-full h-full rounded-full border-[3px] border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800"><img id="public-profile-avatar" src="" class="w-full h-full object-cover"></div>
                 </div>
                 <h3 id="public-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
-                <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-4">Student</p>
-                <p id="public-profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-6 px-4">---</p>
+                <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-2">Student</p>
+                <p id="public-profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-4 px-4">---</p>
+                <div class="flex gap-3 justify-center mb-6" id="public-profile-social-links"></div>
                 <div class="flex gap-3 w-full">
                     <button class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-transform"><span class="material-symbols-outlined">mail</span> Message</button>
                     <button id="public-connect-btn" class="flex-1 bg-primary text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-transform shadow-md"><span class="material-symbols-outlined">person_add</span> Connect</button>
