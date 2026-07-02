@@ -15,7 +15,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
-    <script src="main.js" defer></script>
+    <script src="main.js" type="module" defer></script>
 
     <script id="tailwind-config">
         tailwind.config = {
@@ -209,27 +209,31 @@
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
                         <div
                             class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm border border-blue-100 dark:border-blue-800">
-                            <span class="material-symbols-outlined">calendar_month</span></div>
+                            <span class="material-symbols-outlined">calendar_month</span>
+                        </div>
                         <span
                             class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Timetable</span>
                     </div>
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
                         <div
                             class="w-14 h-14 rounded-2xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shadow-sm border border-green-100 dark:border-green-800">
-                            <span class="material-symbols-outlined">recycling</span></div>
+                            <span class="material-symbols-outlined">recycling</span>
+                        </div>
                         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Plastic
                             Log</span>
                     </div>
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
                         <div
                             class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-sm border border-teal-100 dark:border-teal-800">
-                            <span class="material-symbols-outlined">smart_toy</span></div>
+                            <span class="material-symbols-outlined">smart_toy</span>
+                        </div>
                         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">AI Bots</span>
                     </div>
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
                         <div
                             class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center shadow-sm border border-orange-100 dark:border-orange-800">
-                            <span class="material-symbols-outlined">sports_soccer</span></div>
+                            <span class="material-symbols-outlined">sports_soccer</span>
+                        </div>
                         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Sports</span>
                     </div>
                 </div>
@@ -328,7 +332,8 @@
                 <div class="p-5 flex items-center gap-4 border-b border-gray-200 dark:border-neutral-800">
                     <div
                         class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                        <span class="material-symbols-outlined">badge</span></div>
+                        <span class="material-symbols-outlined">badge</span>
+                    </div>
                     <div>
                         <p
                             class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">
@@ -339,7 +344,8 @@
                 <div class="p-5 flex items-center gap-4">
                     <div
                         class="w-10 h-10 bg-orange-50 dark:bg-orange-900/30 rounded-xl text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                        <span class="material-symbols-outlined">menu_book</span></div>
+                        <span class="material-symbols-outlined">menu_book</span>
+                    </div>
                     <div>
                         <p
                             class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">
@@ -354,7 +360,8 @@
                     class="w-full bg-white dark:bg-neutral-900 border border-primary/30 p-4 rounded-2xl flex items-center justify-between shadow-sm bg-primary/5">
                     <div class="flex items-center gap-3.5">
                         <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                            <span class="material-symbols-outlined text-[18px]">lock</span></div>
+                            <span class="material-symbols-outlined text-[18px]">lock</span>
+                        </div>
                         <div>
                             <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100 block">Private
                                 Account</span>
@@ -375,7 +382,8 @@
                     <div class="flex items-center gap-3.5">
                         <div
                             class="w-8 h-8 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                            <span class="material-symbols-outlined text-[18px]">dark_mode</span></div>
+                            <span class="material-symbols-outlined text-[18px]">dark_mode</span>
+                        </div>
                         <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100">Dark Theme</span>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -462,7 +470,8 @@
             <div class="flex flex-col items-center text-center">
                 <div
                     class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 bg-gray-100 dark:bg-neutral-800 mb-4">
-                    <img id="private-profile-avatar" src="" class="w-full h-full object-cover"></div>
+                    <img id="private-profile-avatar" src="" class="w-full h-full object-cover">
+                </div>
                 <h3 id="private-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
                 <p id="private-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-6">
                     Student</p>
@@ -491,7 +500,8 @@
                 <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4">
                     <div
                         class="w-full h-full rounded-full border-[3px] border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                        <img id="public-profile-avatar" src="" class="w-full h-full object-cover"></div>
+                        <img id="public-profile-avatar" src="" class="w-full h-full object-cover">
+                    </div>
                 </div>
                 <h3 id="public-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
                 <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-2">
