@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html class="light" lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>ECampus - App</title>
-    
+
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
     <script src="main.js" defer></script>
@@ -41,19 +44,19 @@
             });
             // Show target tab
             const target = document.getElementById(`view-${tabId}`);
-            if(target) {
+            if (target) {
                 target.classList.remove('hidden');
                 target.classList.add('animate-fadeIn');
-                window.scrollTo({top: 0, behavior: 'smooth'});
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
-            
+
             // Update Nav colors
             document.querySelectorAll('.nav-item').forEach(nav => {
                 nav.classList.remove('bg-primary', 'text-white');
                 nav.classList.add('text-gray-500', 'dark:text-gray-400');
             });
             const activeNav = document.getElementById(`nav-${tabId}`);
-            if(activeNav) {
+            if (activeNav) {
                 activeNav.classList.remove('text-gray-500', 'dark:text-gray-400');
                 activeNav.classList.add('bg-primary', 'text-white');
             }
@@ -61,7 +64,7 @@
 
         function openProfileModal(type) {
             const modal = document.getElementById(`modal-profile-${type}`);
-            if(modal) {
+            if (modal) {
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             }
@@ -75,30 +78,41 @@
         }
     </script>
 </head>
-<body class="bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden transition-colors duration-300 selection:bg-primary/20">
 
-    <header class="fixed top-0 w-full z-[40] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-neutral-800 shadow-sm transition-colors duration-300">
+<body
+    class="bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden transition-colors duration-300 selection:bg-primary/20">
+
+    <header
+        class="fixed top-0 w-full z-[40] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-neutral-800 shadow-sm transition-colors duration-300">
         <div class="flex items-center px-6 h-16 w-full max-w-screen-xl mx-auto relative">
             <div class="flex-none z-10">
-                <div class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-gray-100 dark:bg-neutral-800 shadow-sm shrink-0">
-                    <img id="header-avatar" alt="Profile" class="w-full h-full object-cover" src="https://ui-avatars.com/api/?name=User&background=e1e3e4"/>
+                <div
+                    class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-gray-100 dark:bg-neutral-800 shadow-sm shrink-0">
+                    <img id="header-avatar" alt="Profile" class="w-full h-full object-cover"
+                        src="https://ui-avatars.com/api/?name=User&background=e1e3e4" />
                 </div>
             </div>
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
+                <span
+                    class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
             </div>
             <div class="flex-none ml-auto z-10 relative">
-                <button id="notif-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-all active:scale-95 duration-200 relative text-gray-500 dark:text-gray-400">
+                <button id="notif-btn"
+                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-all active:scale-95 duration-200 relative text-gray-500 dark:text-gray-400">
                     <span class="material-symbols-outlined">notifications</span>
-                    <span id="notif-badge" class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-white dark:border-neutral-900 hidden"></span>
+                    <span id="notif-badge"
+                        class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-white dark:border-neutral-900 hidden"></span>
                 </button>
             </div>
         </div>
     </header>
 
-    <div id="full-notif-panel" class="fixed inset-0 z-[100] bg-gray-50 dark:bg-neutral-950 transition-transform duration-300 translate-x-full flex flex-col">
-        <div class="h-16 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl shrink-0">
-            <button id="close-notif-btn" class="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 active:scale-95 transition-transform text-gray-900 dark:text-gray-100">
+    <div id="full-notif-panel"
+        class="fixed inset-0 z-[100] bg-gray-50 dark:bg-neutral-950 transition-transform duration-300 translate-x-full flex flex-col">
+        <div
+            class="h-16 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl shrink-0">
+            <button id="close-notif-btn"
+                class="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 active:scale-95 transition-transform text-gray-900 dark:text-gray-100">
                 <span class="material-symbols-outlined">arrow_back</span>
             </button>
             <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex-1">Notifications</h2>
@@ -109,31 +123,42 @@
     </div>
 
     <main class="pt-20 px-5 max-w-screen-md mx-auto relative z-10 pb-6">
-        
+
         <div id="view-dashboard" class="tab-content active animate-fadeIn">
             <section class="mb-4">
                 <h3 class="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[#e65100] text-[18px]">local_fire_department</span> Hotposts
+                    <span class="material-symbols-outlined text-[#e65100] text-[18px]">local_fire_department</span>
+                    Hotposts
                 </h3>
                 <div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2 pt-1">
-                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative">
-                        <div class="w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary">
+                    <div id="create-hotpost-btn"
+                        class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative">
+                        <div
+                            class="w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary">
                             <span class="material-symbols-outlined text-[26px]">add</span>
                         </div>
                         <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">Your Story</span>
                     </div>
-                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-sm">
-                            <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                                <img src="https://ui-avatars.com/api/?name=David&background=e1e3e4" class="w-full h-full object-cover">
+                    <div
+                        class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
+                        <div
+                            class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-sm">
+                            <div
+                                class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                                <img src="https://ui-avatars.com/api/?name=David&background=e1e3e4"
+                                    class="w-full h-full object-cover">
                             </div>
                         </div>
                         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">David</span>
                     </div>
-                    <div class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
-                        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#8b5cf6] to-[#ec4899] shadow-sm">
-                            <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                                <img src="https://ui-avatars.com/api/?name=Maya&background=e1e3e4" class="w-full h-full object-cover">
+                    <div
+                        class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
+                        <div
+                            class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#8b5cf6] to-[#ec4899] shadow-sm">
+                            <div
+                                class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                                <img src="https://ui-avatars.com/api/?name=Maya&background=e1e3e4"
+                                    class="w-full h-full object-cover">
                             </div>
                         </div>
                         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Maya</span>
@@ -142,28 +167,38 @@
             </section>
 
             <section class="mt-4">
-                <div class="bg-white dark:bg-neutral-900 rounded-[32px] p-4 border border-gray-200 dark:border-neutral-800 shadow-sm mb-6 flex gap-3 items-center">
-                    <div class="w-10 h-10 rounded-full border border-gray-200 dark:border-neutral-700 shadow-sm overflow-hidden shrink-0">
-                        <img id="feed-input-avatar" src="https://ui-avatars.com/api/?name=User&background=e1e3e4" class="w-full h-full object-cover">
+                <div
+                    class="bg-white dark:bg-neutral-900 rounded-[32px] p-4 border border-gray-200 dark:border-neutral-800 shadow-sm mb-6 flex gap-3 items-center">
+                    <div
+                        class="w-10 h-10 rounded-full border border-gray-200 dark:border-neutral-700 shadow-sm overflow-hidden shrink-0">
+                        <img id="feed-input-avatar" src="https://ui-avatars.com/api/?name=User&background=e1e3e4"
+                            class="w-full h-full object-cover">
                     </div>
-                    <input type="text" id="post-input" class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-transparent outline-none focus:border-primary placeholder-gray-500 dark:placeholder-gray-400 transition-colors" placeholder="Share an update, ask a question...">
-                    <button id="send-post-btn" onclick="submitPost()" class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
+                    <input type="text" id="post-input"
+                        class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-transparent outline-none focus:border-primary placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
+                        placeholder="Share an update, ask a question...">
+                    <button id="send-post-btn" onclick="submitPost()"
+                        class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
                         <span class="material-symbols-outlined text-[20px] ml-1">send</span>
                     </button>
                 </div>
 
                 <div id="feed-posts-container" class="space-y-5">
-                    <p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Loading live network feed...</p>
+                    <p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Loading live network
+                        feed...</p>
                 </div>
             </section>
         </div>
 
         <div id="view-efind" class="tab-content pt-4 hidden">
             <div class="relative mb-6 mt-2">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-500 dark:text-gray-400">
+                <div
+                    class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-500 dark:text-gray-400">
                     <span class="material-symbols-outlined text-[20px]">search</span>
                 </div>
-                <input type="text" class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-gray-100 text-sm rounded-2xl focus:ring-primary focus:border-primary block pl-11 p-3.5 shadow-sm outline-none placeholder-gray-500 dark:placeholder-gray-400 transition-colors" placeholder="Search apps, students, or resources...">
+                <input type="text"
+                    class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-gray-100 text-sm rounded-2xl focus:ring-primary focus:border-primary block pl-11 p-3.5 shadow-sm outline-none placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
+                    placeholder="Search apps, students, or resources...">
             </div>
 
             <div class="mb-8">
@@ -172,19 +207,29 @@
                 </div>
                 <div class="grid grid-cols-4 gap-4">
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
-                        <div class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm border border-blue-100 dark:border-blue-800"><span class="material-symbols-outlined">calendar_month</span></div>
-                        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Timetable</span>
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm border border-blue-100 dark:border-blue-800">
+                            <span class="material-symbols-outlined">calendar_month</span></div>
+                        <span
+                            class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Timetable</span>
                     </div>
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
-                        <div class="w-14 h-14 rounded-2xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shadow-sm border border-green-100 dark:border-green-800"><span class="material-symbols-outlined">recycling</span></div>
-                        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Plastic Log</span>
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shadow-sm border border-green-100 dark:border-green-800">
+                            <span class="material-symbols-outlined">recycling</span></div>
+                        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Plastic
+                            Log</span>
                     </div>
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
-                        <div class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-sm border border-teal-100 dark:border-teal-800"><span class="material-symbols-outlined">smart_toy</span></div>
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-sm border border-teal-100 dark:border-teal-800">
+                            <span class="material-symbols-outlined">smart_toy</span></div>
                         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">AI Bots</span>
                     </div>
                     <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
-                        <div class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center shadow-sm border border-orange-100 dark:border-orange-800"><span class="material-symbols-outlined">sports_soccer</span></div>
+                        <div
+                            class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center shadow-sm border border-orange-100 dark:border-orange-800">
+                            <span class="material-symbols-outlined">sports_soccer</span></div>
                         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 text-center">Sports</span>
                     </div>
                 </div>
@@ -193,7 +238,8 @@
             <div>
                 <div class="flex justify-between items-end mb-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Discover Students</h3>
-                    <span class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">Explore</span>
+                    <span
+                        class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">Explore</span>
                 </div>
                 <div id="discover-students-container" class="space-y-4">
                     <p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Finding peers...</p>
@@ -204,19 +250,27 @@
         <div id="view-updates" class="tab-content pt-4 hidden">
             <h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mb-6">Campus Updates</h2>
             <div class="space-y-4">
-                <div class="bg-white dark:bg-neutral-900 rounded-3xl p-5 border border-gray-200 dark:border-neutral-800 shadow-sm cursor-pointer active:scale-[0.98]">
+                <div
+                    class="bg-white dark:bg-neutral-900 rounded-3xl p-5 border border-gray-200 dark:border-neutral-800 shadow-sm cursor-pointer active:scale-[0.98]">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Event</span>
+                        <span
+                            class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Event</span>
                     </div>
-                    <h3 class="text-[16px] font-bold text-gray-900 dark:text-gray-100 mb-1">Annual Tech Symposium 2026</h3>
-                    <p class="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">Join us for a 3-day tech extravaganza starting this Friday at the Main Auditorium.</p>
+                    <h3 class="text-[16px] font-bold text-gray-900 dark:text-gray-100 mb-1">Annual Tech Symposium 2026
+                    </h3>
+                    <p class="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">Join us for a 3-day tech
+                        extravaganza starting this Friday at the Main Auditorium.</p>
                 </div>
-                <div class="bg-white dark:bg-neutral-900 rounded-3xl p-5 border border-gray-200 dark:border-neutral-800 shadow-sm cursor-pointer active:scale-[0.98]">
+                <div
+                    class="bg-white dark:bg-neutral-900 rounded-3xl p-5 border border-gray-200 dark:border-neutral-800 shadow-sm cursor-pointer active:scale-[0.98]">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="bg-secondary/10 text-secondary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Notice</span>
+                        <span
+                            class="bg-secondary/10 text-secondary text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-widest">Notice</span>
                     </div>
-                    <h3 class="text-[16px] font-bold text-gray-900 dark:text-gray-100 mb-1">Library Maintenance Closure</h3>
-                    <p class="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">The Central Library will be closed for HVAC maintenance on Sunday. Digital resources remain accessible.</p>
+                    <h3 class="text-[16px] font-bold text-gray-900 dark:text-gray-100 mb-1">Library Maintenance Closure
+                    </h3>
+                    <p class="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">The Central Library will be
+                        closed for HVAC maintenance on Sunday. Digital resources remain accessible.</p>
                 </div>
             </div>
         </div>
@@ -224,83 +278,116 @@
         <div id="view-profile" class="tab-content pt-4 hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">My Profile</h2>
-                <button id="edit-profile-btn" onclick="openEditProfileModal()" class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95">Edit</button>
+                <button id="edit-profile-btn" onclick="openEditProfileModal()"
+                    class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95">Edit</button>
             </div>
-            
-            <div class="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-gray-200 dark:border-neutral-800 text-center relative overflow-hidden mb-6">
-                <div class="absolute -top-20 -left-10 w-full h-40 bg-gradient-to-b from-primary/10 to-transparent rounded-full blur-2xl"></div>
+
+            <div
+                class="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-gray-200 dark:border-neutral-800 text-center relative overflow-hidden mb-6">
+                <div
+                    class="absolute -top-20 -left-10 w-full h-40 bg-gradient-to-b from-primary/10 to-transparent rounded-full blur-2xl">
+                </div>
                 <div class="relative z-10 flex flex-col items-center mt-2">
-                    <div id="profile-avatar-container" class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 shadow-md mb-4 bg-gray-100 dark:bg-neutral-800 relative cursor-pointer group">
-                        <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover" src="https://ui-avatars.com/api/?name=User&background=e1e3e4"/>
-                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div id="profile-avatar-container"
+                        class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 shadow-md mb-4 bg-gray-100 dark:bg-neutral-800 relative cursor-pointer group">
+                        <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover"
+                            src="https://ui-avatars.com/api/?name=User&background=e1e3e4" />
+                        <div
+                            class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <span class="material-symbols-outlined text-white">photo_camera</span>
                         </div>
                     </div>
                     <input type="file" id="avatar-upload-input" accept="image/*" class="hidden">
-                    
-                    <h3 id="profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Syncing...</h3>
+
+                    <h3 id="profile-name"
+                        class="text-xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">Syncing...</h3>
                     <div class="flex items-center gap-2 mt-2 mb-3">
-                        <span id="profile-role" class="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-widest border border-primary/20">Student</span>
+                        <span id="profile-role"
+                            class="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-widest border border-primary/20">Student</span>
                     </div>
-                    <p id="profile-email" class="text-[13px] font-medium text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-neutral-800 px-4 py-2 rounded-xl mb-4">
+                    <p id="profile-email"
+                        class="text-[13px] font-medium text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-neutral-800 px-4 py-2 rounded-xl mb-4">
                         <span class="material-symbols-outlined text-[16px]">mail</span> ---
                     </p>
                     <p id="profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-2 px-4">---</p>
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm p-5">
+            <div
+                class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm p-5">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-[14px] font-bold text-gray-900 dark:text-gray-100">Social Profiles</h3>
-                    <span onclick="document.getElementById('modal-edit-socials').classList.replace('hidden','flex')" class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors">Manage</span>
+                    <span onclick="document.getElementById('modal-edit-socials').classList.replace('hidden','flex')"
+                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors">Manage</span>
                 </div>
                 <div class="flex gap-3" id="profile-social-links"></div>
             </div>
 
-            <div class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm">
+            <div
+                class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm">
                 <div class="p-5 flex items-center gap-4 border-b border-gray-200 dark:border-neutral-800">
-                    <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 flex items-center justify-center"><span class="material-symbols-outlined">badge</span></div>
+                    <div
+                        class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <span class="material-symbols-outlined">badge</span></div>
                     <div>
-                        <p class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">Student ID</p>
+                        <p
+                            class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">
+                            Student ID</p>
                         <p id="profile-id" class="text-[15px] font-bold text-gray-900 dark:text-gray-100">---</p>
                     </div>
                 </div>
                 <div class="p-5 flex items-center gap-4">
-                    <div class="w-10 h-10 bg-orange-50 dark:bg-orange-900/30 rounded-xl text-orange-600 dark:text-orange-400 flex items-center justify-center"><span class="material-symbols-outlined">menu_book</span></div>
+                    <div
+                        class="w-10 h-10 bg-orange-50 dark:bg-orange-900/30 rounded-xl text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                        <span class="material-symbols-outlined">menu_book</span></div>
                     <div>
-                        <p class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">Course</p>
+                        <p
+                            class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">
+                            Course</p>
                         <p id="profile-course" class="text-[15px] font-bold text-gray-900 dark:text-gray-100">---</p>
                     </div>
                 </div>
             </div>
 
             <div class="space-y-3 mb-8">
-                <div class="w-full bg-white dark:bg-neutral-900 border border-primary/30 p-4 rounded-2xl flex items-center justify-between shadow-sm bg-primary/5">
+                <div
+                    class="w-full bg-white dark:bg-neutral-900 border border-primary/30 p-4 rounded-2xl flex items-center justify-between shadow-sm bg-primary/5">
                     <div class="flex items-center gap-3.5">
-                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary"><span class="material-symbols-outlined text-[18px]">lock</span></div>
+                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-[18px]">lock</span></div>
                         <div>
-                            <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100 block">Private Account</span>
-                            <span class="text-[10px] text-gray-500 dark:text-gray-400">Only connections see full profile</span>
+                            <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100 block">Private
+                                Account</span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400">Only connections see full
+                                profile</span>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="privacy-toggle-switch" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        <div
+                            class="w-11 h-6 bg-gray-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all">
+                        </div>
                     </label>
                 </div>
-                
-                <div class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+
+                <div
+                    class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3.5">
-                        <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center text-gray-500 dark:text-gray-400"><span class="material-symbols-outlined text-[18px]">dark_mode</span></div>
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-[18px]">dark_mode</span></div>
                         <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100">Dark Theme</span>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="theme-toggle-switch" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        <div
+                            class="w-11 h-6 bg-gray-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all">
+                        </div>
                     </label>
                 </div>
 
-                <button onclick="sb.auth.signOut().then(() => window.location.reload())" class="w-full bg-error/10 border border-error/20 p-4 rounded-2xl flex items-center justify-center gap-2 mt-8 shadow-sm hover:bg-error/20 transition-colors">
+                <button onclick="sb.auth.signOut().then(() => window.location.reload())"
+                    class="w-full bg-error/10 border border-error/20 p-4 rounded-2xl flex items-center justify-center gap-2 mt-8 shadow-sm hover:bg-error/20 transition-colors">
                     <span class="material-symbols-outlined text-error text-[20px]">logout</span>
                     <span class="font-bold text-[15px] text-error">Sign Out</span>
                 </button>
@@ -308,19 +395,25 @@
         </div>
     </main>
 
-    <div id="modal-edit-socials" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
-        <div class="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[85vh]">
-            <button onclick="closeSocialsModal()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+    <div id="modal-edit-socials"
+        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
+        <div
+            class="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <button onclick="closeSocialsModal()"
+                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
             <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Manage Social Links</h3>
-            
+
             <!-- Add Link Section -->
-            <div class="bg-gray-50 dark:bg-neutral-800/50 p-4 rounded-2xl border border-gray-100 dark:border-neutral-800 mb-4 shrink-0">
-                <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5">Add New Link</h4>
+            <div
+                class="bg-gray-50 dark:bg-neutral-800/50 p-4 rounded-2xl border border-gray-100 dark:border-neutral-800 mb-4 shrink-0">
+                <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5">Add New
+                    Link</h4>
                 <div class="flex flex-col gap-2">
                     <div class="flex gap-2">
-                        <select id="add-social-platform" class="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none w-1/3 shadow-sm">
+                        <select id="add-social-platform"
+                            class="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none w-1/3 shadow-sm">
                             <option value="linkedin">LinkedIn</option>
                             <option value="instagram">Instagram</option>
                             <option value="github">GitHub</option>
@@ -333,9 +426,11 @@
                             <option value="website">Website</option>
                             <option value="other">Other</option>
                         </select>
-                        <input type="url" id="add-social-url" placeholder="https://..." class="flex-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none shadow-sm">
+                        <input type="url" id="add-social-url" placeholder="https://..."
+                            class="flex-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none shadow-sm">
                     </div>
-                    <button onclick="addSocialLinkTemp()" class="w-full bg-primary/10 hover:bg-primary/20 text-primary py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
+                    <button onclick="addSocialLinkTemp()"
+                        class="w-full bg-primary/10 hover:bg-primary/20 text-primary py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
                         <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Link
                     </button>
                 </div>
@@ -343,65 +438,98 @@
 
             <!-- Current Links List -->
             <div class="flex-1 overflow-y-auto min-h-[120px] mb-4 pr-1">
-                <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5 sticky top-0 bg-white dark:bg-neutral-900 py-1">Current Links</h4>
+                <h4
+                    class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5 sticky top-0 bg-white dark:bg-neutral-900 py-1">
+                    Current Links</h4>
                 <div id="modal-socials-list" class="space-y-2">
                     <!-- Dynamic links will be injected here -->
                 </div>
             </div>
 
-            <button onclick="saveSocialLinks()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform shrink-0 shadow-md shadow-primary/25">Save Links</button>
+            <button onclick="saveSocialLinks()"
+                class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform shrink-0 shadow-md shadow-primary/25">Save
+                Links</button>
         </div>
     </div>
 
-    <div id="modal-profile-private" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
-            <button onclick="closeProfileModals()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span class="material-symbols-outlined text-[18px]">close</span></button>
+    <div id="modal-profile-private"
+        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div
+            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModals()"
+                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
+                    class="material-symbols-outlined text-[18px]">close</span></button>
             <div class="flex flex-col items-center text-center">
-                <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 bg-gray-100 dark:bg-neutral-800 mb-4"><img id="private-profile-avatar" src="" class="w-full h-full object-cover"></div>
+                <div
+                    class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 bg-gray-100 dark:bg-neutral-800 mb-4">
+                    <img id="private-profile-avatar" src="" class="w-full h-full object-cover"></div>
                 <h3 id="private-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
-                <p id="private-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-6">Student</p>
-                <div class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-5 rounded-2xl mb-6">
-                    <span class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 mb-2 block">lock</span>
+                <p id="private-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-6">
+                    Student</p>
+                <div
+                    class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-5 rounded-2xl mb-6">
+                    <span
+                        class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 mb-2 block">lock</span>
                     <h4 class="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-1">This Account is Private</h4>
                     <p class="text-[12px] text-gray-500 dark:text-gray-400 px-4">Connect to see their full profile.</p>
                 </div>
-                <button id="private-connect-btn" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform">Request to Connect</button>
+                <button id="private-connect-btn"
+                    class="w-full bg-primary text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform">Request
+                    to Connect</button>
             </div>
         </div>
     </div>
 
-    <div id="modal-profile-public" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
-            <button onclick="closeProfileModals()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span class="material-symbols-outlined text-[18px]">close</span></button>
+    <div id="modal-profile-public"
+        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div
+            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModals()"
+                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
+                    class="material-symbols-outlined text-[18px]">close</span></button>
             <div class="flex flex-col items-center text-center">
                 <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4">
-                    <div class="w-full h-full rounded-full border-[3px] border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800"><img id="public-profile-avatar" src="" class="w-full h-full object-cover"></div>
+                    <div
+                        class="w-full h-full rounded-full border-[3px] border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                        <img id="public-profile-avatar" src="" class="w-full h-full object-cover"></div>
                 </div>
                 <h3 id="public-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
-                <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-2">Student</p>
+                <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Student</p>
                 <p id="public-profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-4 px-4">---</p>
                 <div class="flex gap-3 justify-center mb-6" id="public-profile-social-links"></div>
                 <div class="flex gap-3 w-full">
-                    <button class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-transform"><span class="material-symbols-outlined">mail</span> Message</button>
-                    <button id="public-connect-btn" class="flex-1 bg-primary text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-transform shadow-md"><span class="material-symbols-outlined">person_add</span> Connect</button>
+                    <button
+                        class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-transform"><span
+                            class="material-symbols-outlined">mail</span> Message</button>
+                    <button id="public-connect-btn"
+                        class="flex-1 bg-primary text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-transform shadow-md"><span
+                            class="material-symbols-outlined">person_add</span> Connect</button>
                 </div>
             </div>
         </div>
     </div>
-    <div id="modal-edit-profile" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
-        <div class="bg-white dark:bg-neutral-900 w-full max-w-md rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[90vh]">
-            <button onclick="closeEditProfileModal()" class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+    <div id="modal-edit-profile"
+        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
+        <div
+            class="bg-white dark:bg-neutral-900 w-full max-w-md rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[90vh]">
+            <button onclick="closeEditProfileModal()"
+                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
             <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Edit Profile</h3>
-            
+
             <div class="flex-1 overflow-y-auto pr-1 space-y-4 mb-4">
                 <!-- Avatar Editing -->
                 <div class="flex flex-col items-center gap-2 pb-2">
-                    <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/20 bg-gray-100 dark:bg-neutral-800 relative shadow-sm">
-                        <img id="edit-profile-avatar-preview" src="https://ui-avatars.com/api/?name=User&background=e1e3e4" class="w-full h-full object-cover">
+                    <div
+                        class="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/20 bg-gray-100 dark:bg-neutral-800 relative shadow-sm">
+                        <img id="edit-profile-avatar-preview"
+                            src="https://ui-avatars.com/api/?name=User&background=e1e3e4"
+                            class="w-full h-full object-cover">
                     </div>
-                    <button type="button" onclick="triggerEditAvatarUpload()" class="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+                    <button type="button" onclick="triggerEditAvatarUpload()"
+                        class="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
                         <span class="material-symbols-outlined text-[14px]">photo_camera</span> Change Photo
                     </button>
                     <input type="file" id="edit-avatar-upload-input" accept="image/*" class="hidden">
@@ -409,48 +537,160 @@
 
                 <!-- Full Name -->
                 <div>
-                    <label class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Full Name</label>
-                    <input type="text" id="edit-profile-name" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors" placeholder="Enter full name">
+                    <label
+                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Full
+                        Name</label>
+                    <input type="text" id="edit-profile-name"
+                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors"
+                        placeholder="Enter full name">
                 </div>
 
                 <!-- Student ID -->
                 <div>
-                    <label class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Student ID</label>
-                    <input type="text" id="edit-profile-id" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors" placeholder="Enter Student ID">
+                    <label
+                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Student
+                        ID</label>
+                    <input type="text" id="edit-profile-id"
+                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors"
+                        placeholder="Enter Student ID">
                 </div>
 
                 <!-- Course -->
                 <div>
-                    <label class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Course</label>
-                    <input type="text" id="edit-profile-course" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors" placeholder="Enter course name">
+                    <label
+                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Course</label>
+                    <input type="text" id="edit-profile-course"
+                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors"
+                        placeholder="Enter course name">
                 </div>
 
                 <!-- Bio -->
                 <div>
-                    <label class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Bio</label>
-                    <textarea id="edit-profile-bio" rows="3" class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors resize-none" placeholder="Write a short bio..."></textarea>
+                    <label
+                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Bio</label>
+                    <textarea id="edit-profile-bio" rows="3"
+                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors resize-none"
+                        placeholder="Write a short bio..."></textarea>
                 </div>
             </div>
 
-            <button id="save-profile-btn" onclick="saveUserProfile()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform shrink-0 shadow-md shadow-primary/25 flex items-center justify-center gap-2">
+            <button id="save-profile-btn" onclick="saveUserProfile()"
+                class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform shrink-0 shadow-md shadow-primary/25 flex items-center justify-center gap-2">
                 Save Changes
             </button>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-[40]">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex flex-col items-center justify-center bg-primary text-white rounded-2xl px-5 py-2 transition-all active:scale-95">
-            <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">dashboard</span><span class="text-[10px] font-bold mt-0.5">Feed</span>
+    <!-- Hotpost Creation Modal -->
+    <div id="modal-create-hotpost"
+        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div
+            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto">
+            <button id="close-hotpost-create-btn"
+                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
+                    class="material-symbols-outlined text-[18px]">close</span></button>
+            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100">Create Hotpost</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="hotpost-image-upload"
+                        class="w-full h-40 bg-gray-100 dark:bg-neutral-800 border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors">
+                        <img id="hotpost-preview" class="hidden w-full h-full object-cover rounded-2xl" />
+                        <div id="hotpost-upload-placeholder">
+                            <span
+                                class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500">add_photo_alternate</span>
+                            <p class="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1">Upload Image</p>
+                        </div>
+                    </label>
+                    <input type="file" id="hotpost-image-upload" accept="image/*" class="hidden">
+                </div>
+
+                <div>
+                    <label
+                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Caption
+                        (Optional)</label>
+                    <input type="text" id="hotpost-caption"
+                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors"
+                        placeholder="Add a caption...">
+                </div>
+
+                <div>
+                    <label
+                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Visible
+                        To</label>
+                    <select id="hotpost-visibility"
+                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors">
+                        <option value="everyone">Everyone</option>
+                        <option value="connections">Connections Only</option>
+                    </select>
+                </div>
+
+                <button id="submit-hotpost-btn"
+                    class="w-full bg-primary text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform shadow-md shadow-primary/25 flex items-center justify-center gap-2">
+                    Post Hotpost
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hotpost Viewer Modal -->
+    <div id="modal-view-hotpost" class="fixed inset-0 z-[120] bg-black hidden flex-col items-center justify-center">
+        <div id="hotpost-viewer-content"
+            class="w-full h-full max-w-screen-md mx-auto relative flex flex-col animate-fadeIn">
+            <!-- Progress bars will be injected here -->
+            <div id="hotpost-progress-bars" class="absolute top-3 left-2 right-2 h-1 flex gap-1 z-20"></div>
+
+            <div class="absolute top-5 left-4 flex items-center gap-2 z-20">
+                <img id="hotpost-viewer-avatar" src=""
+                    class="w-9 h-9 rounded-full object-cover border-2 border-white/50">
+                <div>
+                    <p id="hotpost-viewer-name"
+                        class="text-white font-bold text-sm shadow-black/50 [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">
+                        User</name>
+                    <p id="hotpost-viewer-time"
+                        class="text-white/80 text-xs [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">Just now</p>
+                </div>
+            </div>
+            <button id="close-hotpost-viewer-btn"
+                class="absolute top-5 right-4 text-white p-1.5 bg-black/20 rounded-full z-20"><span
+                    class="material-symbols-outlined">close</span></button>
+
+            <div class="flex-1 flex items-center justify-center overflow-hidden relative">
+                <img id="hotpost-viewer-image" src="" class="max-w-full max-h-full object-contain">
+            </div>
+            <p id="hotpost-viewer-caption"
+                class="text-center text-white text-sm font-medium p-4 pb-8 z-10 bg-gradient-to-t from-black/50 to-transparent [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">
+            </p>
+
+            <div id="hotpost-nav-prev" class="absolute left-0 top-0 bottom-0 w-1/3 z-10"></div>
+            <div id="hotpost-nav-next" class="absolute right-0 top-0 bottom-0 w-1/3 z-10"></div>
+        </div>
+    </div>
+
+    <nav
+        class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-[40]">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard"
+            class="nav-item active flex flex-col items-center justify-center bg-primary text-white rounded-2xl px-5 py-2 transition-all active:scale-95">
+            <span class="material-symbols-outlined text-[24px]"
+                style="font-variation-settings: 'FILL' 1;">dashboard</span><span
+                class="text-[10px] font-bold mt-0.5">Feed</span>
         </button>
-        <button onclick="switchTab('efind')" id="nav-efind" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl transition-all active:scale-95">
-            <span class="material-symbols-outlined text-[24px]">search</span><span class="text-[10px] font-bold mt-0.5">Search</span>
+        <button onclick="switchTab('efind')" id="nav-efind"
+            class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl transition-all active:scale-95">
+            <span class="material-symbols-outlined text-[24px]">search</span><span
+                class="text-[10px] font-bold mt-0.5">Search</span>
         </button>
-        <button onclick="switchTab('updates')" id="nav-updates" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl transition-all active:scale-95">
-            <span class="material-symbols-outlined text-[24px]">campaign</span><span class="text-[10px] font-bold mt-0.5">Updates</span>
+        <button onclick="switchTab('updates')" id="nav-updates"
+            class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl transition-all active:scale-95">
+            <span class="material-symbols-outlined text-[24px]">campaign</span><span
+                class="text-[10px] font-bold mt-0.5">Updates</span>
         </button>
-        <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl transition-all active:scale-95">
-            <span class="material-symbols-outlined text-[24px]">person</span><span class="text-[10px] font-bold mt-0.5">Profile</span>
+        <button onclick="switchTab('profile')" id="nav-profile"
+            class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-5 py-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-2xl transition-all active:scale-95">
+            <span class="material-symbols-outlined text-[24px]">person</span><span
+                class="text-[10px] font-bold mt-0.5">Profile</span>
         </button>
     </nav>
 </body>
+
 </html>
