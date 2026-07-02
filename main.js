@@ -101,7 +101,7 @@ if (window.location.search.includes('mock=true')) {
 
 
 const CLOUDINARY_CLOUD_NAME = 'dnia8lb2q'; 
-const CLOUDINARY_UPLOAD_PRESET = 'profiles'; 
+const CLOUDINARY_UPLOAD_PRESET = 'ecovities_avatars'; 
 
 // ==========================================
 // 1. AUTH & INITIALIZATION
