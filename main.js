@@ -5,6 +5,8 @@ const sb = window.sb;
 let currentSession = null;
 let currentUserSocialLinks = [];
 let tempSocialLinks = [];
+let currentUserProfile = null;
+let tempProfileImgUrl = '';
 
 // ==========================================
 // MOCK CONFIGURATION FOR LOCAL TESTING
@@ -90,9 +92,7 @@ if (window.location.search.includes('mock=true')) {
             }),
             update: async (data) => {
                 console.log("Mock update table:", table, data);
-                if (data.social_links !== undefined) {
-                    mockProfile.social_links = data.social_links;
-                }
+                Object.assign(mockProfile, data);
                 return { error: null };
             }
         })
@@ -135,6 +135,7 @@ async function fetchUserProfile(authUserId, fallbackEmail) {
         if (error) throw error; 
 
         if (userProfile) {
+            currentUserProfile = userProfile;
             // FIX: Replaced broken via.placeholder.com with reliable UI-Avatars
             const avatarUrl = userProfile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.full_name)}&background=e1e3e4`;
             
@@ -457,6 +458,175 @@ window.saveSocialLinks = async function() {
 };
 
 // ==========================================
+// 5.1 EDIT PROFILE DETAILS MANAGEMENT
+// ==========================================
+window.openEditProfileModal = () => {
+    if (!currentUserProfile) return;
+    tempProfileImgUrl = currentUserProfile.profile_img_url || '';
+    
+    const previewEl = document.getElementById('edit-profile-avatar-preview');
+    if (previewEl) {
+        previewEl.src = tempProfileImgUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.full_name)}&background=e1e3e4`;
+    }
+    
+    const nameEl = document.getElementById('edit-profile-name');
+    if (nameEl) nameEl.value = currentUserProfile.full_name || '';
+    
+    const idEl = document.getElementById('edit-profile-id');
+    if (idEl) idEl.value = currentUserProfile.student_id || '';
+    
+    const courseEl = document.getElementById('edit-profile-course');
+    if (courseEl) courseEl.value = currentUserProfile.course || '';
+    
+    const bioEl = document.getElementById('edit-profile-bio');
+    if (bioEl) bioEl.value = currentUserProfile.bio || '';
+    
+    const modal = document.getElementById('modal-edit-profile');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+};
+
+window.closeEditProfileModal = () => {
+    const modal = document.getElementById('modal-edit-profile');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+};
+
+window.triggerEditAvatarUpload = () => {
+    const fileInput = document.getElementById('edit-avatar-upload-input');
+    if (fileInput) fileInput.click();
+};
+
+function setupEditProfileImageUpload() {
+    const fileInput = document.getElementById('edit-avatar-upload-input');
+    const previewImg = document.getElementById('edit-profile-avatar-preview');
+    if (!fileInput || !previewImg) return;
+    
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        previewImg.style.opacity = '0.5';
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+            
+            const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await uploadRes.json();
+            if (!uploadRes.ok) throw new Error(data.error?.message || "Upload failed");
+            
+            tempProfileImgUrl = data.secure_url;
+            previewImg.src = tempProfileImgUrl;
+        } catch (err) {
+            console.error("Edit profile avatar upload failed:", err);
+            alert(`Avatar upload failed: ${err.message}`);
+        } finally {
+            previewImg.style.opacity = '1';
+            fileInput.value = '';
+        }
+    });
+}
+
+window.saveUserProfile = async function() {
+    if (!currentSession) return;
+    
+    const nameInput = document.getElementById('edit-profile-name');
+    const idInput = document.getElementById('edit-profile-id');
+    const courseInput = document.getElementById('edit-profile-course');
+    const bioInput = document.getElementById('edit-profile-bio');
+    
+    const full_name = nameInput?.value.trim();
+    const student_id = idInput?.value.trim();
+    const course = courseInput?.value.trim();
+    const bio = bioInput?.value.trim();
+    
+    if (!full_name) {
+        alert("Full Name cannot be empty.");
+        return;
+    }
+    if (!student_id) {
+        alert("Student ID cannot be empty.");
+        return;
+    }
+    
+    const saveBtn = document.getElementById('save-profile-btn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> Saving...';
+    }
+    
+    try {
+        const updates = {
+            full_name,
+            student_id,
+            course,
+            bio,
+            profile_img_url: tempProfileImgUrl
+        };
+        
+        const { error } = await sb
+            .from('users')
+            .update(updates)
+            .eq('auth_user_id', currentSession.user.id);
+            
+        if (error) throw error;
+        
+        // Update local cache
+        if (currentUserProfile) {
+            currentUserProfile.full_name = full_name;
+            currentUserProfile.student_id = student_id;
+            currentUserProfile.course = course;
+            currentUserProfile.bio = bio;
+            currentUserProfile.profile_img_url = tempProfileImgUrl;
+        }
+        
+        // Refresh profile page UI
+        const avatarUrl = tempProfileImgUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(full_name)}&background=e1e3e4`;
+        
+        const headerAvatar = document.getElementById('header-avatar');
+        if (headerAvatar) headerAvatar.src = avatarUrl;
+        
+        const profileAvatar = document.getElementById('profile-avatar-large');
+        if (profileAvatar) profileAvatar.src = avatarUrl;
+        
+        const feedAvatar = document.getElementById('feed-avatar');
+        if (feedAvatar) feedAvatar.src = avatarUrl;
+        
+        const feedInputAvatar = document.getElementById('feed-input-avatar');
+        if (feedInputAvatar) feedInputAvatar.src = avatarUrl;
+        
+        const fields = {
+            'profile-name': full_name,
+            'profile-id': student_id,
+            'profile-course': course || '---',
+            'profile-bio': bio || 'Add a bio to tell people about yourself! 🌱'
+        };
+        Object.entries(fields).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+        });
+        
+        closeEditProfileModal();
+    } catch (err) {
+        console.error("Error saving user profile:", err);
+        alert(`Error saving profile: ${err.message}`);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = 'Save Changes';
+        }
+    }
+};
+
+// ==========================================
 // 6. PRIVACY & SEARCH SYSTEM
 // ==========================================
 const privacyToggleEl = document.getElementById('privacy-toggle-switch');
@@ -613,4 +783,5 @@ document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     checkAuth();
     setupProfileImageUpload();
+    setupEditProfileImageUpload();
 });
