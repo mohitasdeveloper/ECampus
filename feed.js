@@ -81,7 +81,7 @@ function renderPosts(posts) {
         const commentCount = post.post_comments[0]?.count || 0;
 
         return `
-        <div class="bg-white dark:bg-neutral-900 rounded-[28px] p-5 border border-gray-200 dark:border-neutral-800 shadow-sm">
+        <div class="bg-white dark:bg-neutral-900 rounded-[28px] p-5 border border-gray-200 dark:border-neutral-800 shadow-sm animate-fadeIn">
             <div class="flex items-center gap-3 mb-4">
                 <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
                 <div>
@@ -114,26 +114,88 @@ async function submitPost() {
         return;
     }
 
-    const { error } = await supabase.from('posts').insert({ user_id: currentUser.id, content: content });
+    const btn = document.getElementById('send-post-btn');
+    btn.disabled = true;
 
-    if (error) {
+    try {
+        const { data, error } = await supabase
+            .from('posts')
+            .insert({ user_id: currentUser.id, content: content })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Optimistic UI update
+        input.value = '';
+        const container = document.getElementById('feed-posts-container');
+        const newPostHtml = `
+        <div class="bg-white dark:bg-neutral-900 rounded-[28px] p-5 border border-gray-200 dark:border-neutral-800 shadow-sm animate-fadeIn">
+            <div class="flex items-center gap-3 mb-4">
+                <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
+                <div>
+                    <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${currentUser.full_name}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Just now</p>
+                </div>
+            </div>
+            <p class="text-[15px] text-gray-800 dark:text-gray-200 leading-relaxed">${content}</p>
+            <div class="mt-4 pt-3 border-t border-gray-100 dark:border-neutral-800 flex items-center gap-5">
+                <button data-post-id="${data.id}" data-liked="false" class="like-btn flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">favorite</span>
+                    <span class="text-xs font-bold">0</span>
+                </button>
+                <button data-post-id="${data.id}" class="comment-btn flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-secondary dark:hover:text-secondary transition-colors">
+                    <span class="material-symbols-outlined text-xl">chat_bubble</span>
+                    <span class="text-xs font-bold">0</span>
+                </button>
+            </div>
+        </div>`;
+
+        const emptyMsg = container.querySelector('p.italic');
+        if (emptyMsg) {
+            container.innerHTML = newPostHtml;
+        } else {
+            container.insertAdjacentHTML('afterbegin', newPostHtml);
+        }
+
+    } catch (error) {
         showToast('Failed to create post.', 'error');
         console.error('Error submitting post:', error);
-    } else {
-        input.value = '';
-        fetchPosts(); // Refresh the feed
+    } finally {
+        btn.disabled = false;
     }
 }
 
 async function handleLike(postId, isLiked) {
-    if (isLiked) {
-        // Unlike
-        await supabase.from('post_likes').delete().match({ post_id: postId, user_id: currentUser.id });
-    } else {
-        // Like
-        await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
+    // Optimistic UI update
+    const likeBtn = document.querySelector(`.like-btn[data-post-id="${postId}"]`);
+    if (!likeBtn) return;
+
+    const countSpan = likeBtn.querySelector('span:last-child');
+    const iconSpan = likeBtn.querySelector('span:first-child');
+    const currentCount = parseInt(countSpan.textContent);
+
+    // Toggle liked state
+    likeBtn.dataset.liked = (!isLiked).toString();
+    countSpan.textContent = isLiked ? currentCount - 1 : currentCount + 1;
+    iconSpan.classList.toggle('text-primary', !isLiked);
+    iconSpan.style.fontVariationSettings = `'FILL' ${!isLiked ? 1 : 0}`;
+
+    try {
+        if (isLiked) {
+            await supabase.from('post_likes').delete().match({ post_id: postId, user_id: currentUser.id });
+        } else {
+            await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
+        }
+    } catch (error) {
+        console.error("Like error:", error);
+        showToast("Couldn't update like.", "error");
+        // Revert UI on error
+        likeBtn.dataset.liked = isLiked.toString();
+        countSpan.textContent = currentCount;
+        iconSpan.classList.toggle('text-primary', isLiked);
+        iconSpan.style.fontVariationSettings = `'FILL' ${isLiked ? 1 : 0}`;
     }
-    fetchPosts(); // Simple refresh for now
 }
 
 async function openCommentsModal(postId) {
@@ -199,6 +261,13 @@ async function submitComment(postId) {
     } else {
         input.value = '';
         openCommentsModal(postId); // Refresh the comments list
-        fetchPosts(); // Refresh the main feed to update comment count
+
+        // Optimistically update comment count on the feed
+        const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"]`);
+        if (commentBtn) {
+            const countSpan = commentBtn.querySelector('span:last-child');
+            const currentCount = parseInt(countSpan.textContent);
+            countSpan.textContent = currentCount + 1;
+        }
     }
 }

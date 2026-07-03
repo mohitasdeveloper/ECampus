@@ -10,6 +10,7 @@ let currentFilter = 'none';
 
 let currentCameraStream = null;
 let currentFacingMode = 'environment'; // 'environment' for back camera, 'user' for front
+let sessionViewedPostIds = new Set();
 
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
@@ -20,7 +21,7 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    document.getElementById('create-hotpost-btn').addEventListener('click', handleCreateOrViewMyHotposts);
+    document.getElementById('create-hotpost-btn').addEventListener('click', openCameraModal);
     document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
@@ -31,8 +32,13 @@ function setupEventListeners() {
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
     document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
-    document.getElementById('close-hotpost-viewers-btn')?.addEventListener('click', closeHotpostViewersModal);
+    document.getElementById('close-story-details-btn')?.addEventListener('click', closeStoryDetailsModal);
     document.getElementById('hotpost-reply-btn')?.addEventListener('click', handleReplyToHotpost);
+
+    // Pause/resume on reply input focus
+    const replyInput = document.getElementById('hotpost-reply-input');
+    replyInput?.addEventListener('focus', pauseStory);
+    replyInput?.addEventListener('blur', resumeStory);
 
     // New listeners for edits
     document.querySelector('[data-edit="filter"]')?.addEventListener('click', toggleFilterTray);
@@ -245,7 +251,8 @@ async function fetchHotposts() {
             media_url,
             caption,
             users ( id, full_name, profile_img_url ),
-            hotpost_views ( count )
+            hotpost_views ( count ),
+            hotpost_replies ( count )
         `)
         .gt('created_at', twentyFourHoursAgo)
         // .eq('visibility', 'everyone') // Add logic for connections later
@@ -263,7 +270,8 @@ async function fetchHotposts() {
         if (!hotpostsByUser.has(userId)) {
             hotpostsByUser.set(userId, {
                 user: post.users,
-                posts: []
+                posts: [],
+                viewed: false // For "viewed once" logic
             });
         }
         hotpostsByUser.get(userId).posts.push({ ...post, profiles: undefined, users: undefined }); // Clean up the post object
@@ -282,21 +290,31 @@ function renderHotpostCircles() {
     createBtnDiv.className = 'w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary';
     createBtnDiv.innerHTML = `<span class="material-symbols-outlined text-[26px]">add</span>`;
 
-    // Create a sorted list of users, with the current user first if they have stories
-    const sortedUserIds = Array.from(hotpostsByUser.keys()).sort((a, b) => {
-        if (a === currentUser.id) return -1;
-        if (b === currentUser.id) return 1;
-        return 0; // Keep original order for others
-    });
+    // Separate current user from others
+    const otherUserIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
 
-    sortedUserIds.forEach(userId => {
+    // Sort other users: un-viewed first, then viewed
+    otherUserIds.sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
+
+    const finalSortedIds = [];
+    // If the current user has hotposts, add them to the start of the list
+    if (hotpostsByUser.has(currentUser.id)) {
+        finalSortedIds.push(currentUser.id);
+    }
+    // Add the sorted other users
+    finalSortedIds.push(...otherUserIds);
+
+    finalSortedIds.forEach(userId => {
         const data = hotpostsByUser.get(userId);
         const user = data.user;
         const circle = document.createElement('div');
         circle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform';
 
         const isSelf = userId === currentUser.id;
-        const ringClass = isSelf ? 'from-gray-400 to-gray-600' : 'from-yellow-400 via-orange-500 to-red-500';
+        const isViewed = data.viewed;
+        let ringClass = 'from-yellow-400 via-orange-500 to-red-500'; // Default un-viewed
+        if (isSelf) ringClass = 'from-blue-500 to-primary'; // Self is always special color
+        if (isViewed && !isSelf) ringClass = 'from-gray-300 to-gray-500'; // Viewed
 
         circle.innerHTML = `
             <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
@@ -308,11 +326,7 @@ function renderHotpostCircles() {
         `;
         circle.addEventListener('click', () => openHotpostViewer(userId));
 
-        if (isSelf) {
-            container.insertBefore(circle, container.children[1]); // Insert after the "Create" button
-        } else {
-            container.appendChild(circle);
-        }
+        container.appendChild(circle);
     });
 }
 
@@ -332,10 +346,13 @@ function openHotpostViewer(userId) {
     if (!userData || userData.posts.length === 0) return;
 
     // Set the order of users to view, starting with the clicked one
-    const allUserIds = Array.from(hotpostsByUser.keys()).sort((a, b) => {
-        if (a === currentUser.id) return -1; // Prioritize self
-        if (b === currentUser.id) return 1;
-    });
+    const allUserIds = Array.from(hotpostsByUser.keys())
+        .filter(id => id !== currentUser.id)
+        .sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
+
+    // Add current user to the front if they were clicked
+    if (userId === currentUser.id) allUserIds.unshift(currentUser.id);
+
     const clickedUserIndex = allUserIds.indexOf(userId);
     currentViewerState.userOrder = [
         ...allUserIds.slice(clickedUserIndex),
@@ -376,6 +393,12 @@ function playUserStories(userIndex, postIndex = 0) {
     `).join('');
 
     // Update UI
+    const replyContainer = document.getElementById('hotpost-reply-container');
+    const isMyStory = currentViewerState.userId === currentUser.id;
+
+    // Hide reply for own story, show for others
+    replyContainer.style.display = isMyStory ? 'none' : 'flex';
+
     document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
     document.getElementById('hotpost-viewer-name').textContent = userData.user.full_name;
     document.getElementById('hotpost-viewer-time').textContent = timeAgo(post.created_at);
@@ -403,6 +426,9 @@ function nextStory() {
         // Go to next post of the same user
         playUserStories(currentViewerState.userIndex, currentViewerState.postIndex + 1);
     } else {
+        // Mark current user's stories as viewed (if not self)
+        if (currentViewerState.userId !== currentUser.id) hotpostsByUser.get(currentViewerState.userId).viewed = true;
+        renderHotpostCircles(); // Re-render to show grayed-out state
         // Go to the first post of the next user
         playUserStories(currentViewerState.userIndex + 1, 0);
     }
@@ -443,6 +469,7 @@ function resumeStory() {
 async function recordView(hotpostId) {
     // Don't record views on your own posts
     const postOwnerId = Array.from(hotpostsByUser.values()).find(u => u.posts.some(p => p.id === hotpostId))?.user.id;
+    if (sessionViewedPostIds.has(hotpostId)) return;
     if (postOwnerId === currentUser.id) return;
 
     const { error } = await supabase.from('hotpost_views').insert({
@@ -450,8 +477,10 @@ async function recordView(hotpostId) {
         viewer_id: currentUser.id
     });
 
-    if (error && error.code !== '23505') { // 23505 is unique violation, which is fine
+    if (error && error.code !== '23505') { // 23505 is unique violation
         console.error('Error recording hotpost view:', error);
+    } else {
+        sessionViewedPostIds.add(hotpostId); // Add to session cache to prevent re-insert attempts
     }
 }
 
@@ -482,27 +511,23 @@ async function handleReplyToHotpost() {
     }
 }
 
-function handleCreateOrViewMyHotposts() {
-    const myHotpostsData = hotpostsByUser.get(currentUser.id);
-    if (myHotpostsData && myHotpostsData.posts.length > 0) {
-        openMyHotpostsModal(myHotpostsData.posts);
-    } else {
-        openCameraModal();
-    }
-}
-
 function openMyHotpostsModal(posts) {
     const list = document.getElementById('my-hotposts-list');
     list.innerHTML = posts.map(post => {
         const viewCount = post.hotpost_views[0]?.count || 0;
+        const replyCount = post.hotpost_replies[0]?.count || 0;
         return `
             <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800">
                 <img src="${post.media_url}" class="w-14 h-14 rounded-xl object-cover">
-                <div class="flex-1 cursor-pointer" onclick="openHotpostViewersModal('${post.id}')">
+                <div class="flex-1 cursor-pointer" onclick="openStoryDetailsModal('${post.id}')">
                     <p class="text-sm font-bold text-gray-800 dark:text-gray-100 line-clamp-1">${post.caption || 'No Caption'}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">${timeAgo(post.created_at)}</p>
                 </div>
-                <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 cursor-pointer" onclick="openHotpostViewersModal('${post.id}')">
+                <div class="flex items-center gap-1.5 text-secondary dark:text-secondary/80 cursor-pointer" onclick="openStoryDetailsModal('${post.id}', 'replies')">
+                    <span class="material-symbols-outlined text-[18px]">reply</span>
+                    <span class="text-sm font-bold">${replyCount}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 cursor-pointer" onclick="openStoryDetailsModal('${post.id}', 'viewers')">
                     <span class="material-symbols-outlined text-[18px]">visibility</span>
                     <span class="text-sm font-bold">${viewCount}</span>
                 </div>
@@ -537,10 +562,24 @@ async function handleDeleteHotpost(hotpostId) {
     }
 }
 
-async function openHotpostViewersModal(hotpostId) {
-    const modal = document.getElementById('modal-hotpost-viewers');
-    const list = document.getElementById('hotpost-viewers-list');
+async function openStoryDetailsModal(hotpostId, defaultTab = 'viewers') {
+    const modal = document.getElementById('modal-story-details');
     modal.classList.replace('hidden', 'flex');
+
+    const viewersList = document.getElementById('hotpost-viewers-list');
+    const repliesList = document.getElementById('hotpost-replies-list');
+    viewersList.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading...</p>`;
+    repliesList.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading...</p>`;
+
+    switchDetailsTab(defaultTab);
+
+    // Fetch Viewers
+    fetchStoryViewers(hotpostId, viewersList);
+    // Fetch Replies
+    fetchStoryReplies(hotpostId, repliesList);
+}
+
+async function fetchStoryViewers(hotpostId, list) {
     list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading viewers...</p>`;
 
     try {
@@ -573,10 +612,65 @@ async function openHotpostViewersModal(hotpostId) {
     }
 }
 
-function closeHotpostViewersModal() {
-    document.getElementById('modal-hotpost-viewers').classList.replace('flex', 'hidden');
+async function fetchStoryReplies(hotpostId, list) {
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading replies...</p>`;
+    try {
+        const { data, error } = await supabase
+            .from('hotpost_replies')
+            .select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)')
+            .eq('hotpost_id', hotpostId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data.length === 0) {
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">No replies yet.</p>`;
+            return;
+        }
+
+        list.innerHTML = data.map(reply => `
+            <div class="flex items-start gap-3">
+                <img src="${reply.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.users.full_name)}&background=e1e3e4`}" class="w-9 h-9 rounded-full object-cover mt-1">
+                <div class="flex-1 bg-gray-100 dark:bg-neutral-800 rounded-2xl p-3">
+                    <div class="flex justify-between items-center">
+                        <p class="text-xs font-bold text-gray-900 dark:text-gray-100">${reply.users.full_name}</p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500">${timeAgo(reply.created_at)}</p>
+                    </div>
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">${reply.content}</p>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error fetching hotpost replies:', error);
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load replies.</p>`;
+    }
+}
+
+function closeStoryDetailsModal() {
+    document.getElementById('modal-story-details').classList.replace('flex', 'hidden');
+}
+
+function switchDetailsTab(tabName) {
+    document.querySelectorAll('.details-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById(`details-content-${tabName}`).classList.remove('hidden');
+
+    document.querySelectorAll('.details-tab').forEach(el => {
+        el.classList.remove('active', 'border-primary', 'text-primary');
+        el.classList.add('border-transparent', 'text-gray-500');
+    });
+    document.getElementById(`details-tab-${tabName}`).classList.add('active', 'border-primary', 'text-primary');
+}
+
+export function showMyHotposts() {
+    const myPosts = hotpostsByUser.get(currentUser.id)?.posts;
+    if (myPosts && myPosts.length > 0) {
+        openMyHotpostsModal(myPosts);
+    } else {
+        showToast("You have no active Hotposts.", "info");
+    }
 }
 
 window.handleDeleteHotpost = handleDeleteHotpost;
-
-window.openHotpostViewersModal = openHotpostViewersModal;
+window.openStoryDetailsModal = openStoryDetailsModal;
+window.showMyHotposts = showMyHotposts;
