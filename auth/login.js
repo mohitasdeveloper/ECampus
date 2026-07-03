@@ -66,7 +66,7 @@ async function handleLogin(event) {
             }
 
             if (data?.session) {
-                window.location.href = "/EcoCampus/";
+                window.location.href = "../index.html";
                 return;
             }
         } else {
@@ -100,7 +100,7 @@ async function handleLogin(event) {
                 }
 
                 // 🎯 Redirect (GitHub Pages safe)
-                window.location.href = "/EcoCampus/";
+                window.location.href = "../index.html";
                 return;
             }
         }
@@ -122,7 +122,7 @@ async function checkUserSession() {
 
         if (data?.session) {
             // already logged in → skip login page
-            window.location.href = "/EcoCampus/";
+            window.location.href = "../index.html";
         }
     } catch (err) {
         console.error("Session check error:", err);

@@ -37,40 +37,20 @@ function setLoading(button, isLoading) {
 }
 
 // 🟢 Load colleges dynamically from the 'colleges' table
-async function loadColleges() {
+function loadColleges() {
     const select = document.getElementById("signup-college");
+    if (!select) return;
 
-    try {
-        const { data: colleges, error } = await sb
-            .from('colleges')
-            .select('name')
-            .order('name', { ascending: true });
+    // Set the only option and select it
+    select.innerHTML = `<option value="B. K. Birla Night College" selected>B. K. Birla Night College</option>`;
 
-        if (error) {
-            console.error("Error loading colleges:", error);
-            select.innerHTML = '<option value="" disabled selected>Failed to load. Please try again.</option>';
-            return;
-        }
+    // Disable the dropdown as there are no other choices
+    select.disabled = true;
 
-        // Clear existing placeholder
-        select.innerHTML = '<option value="" disabled selected>Select your College</option>';
-        
-        // Populate from DB
-        colleges.forEach(c => {
-            const opt = document.createElement("option");
-            opt.value = c.name;
-            opt.textContent = c.name;
-            select.appendChild(opt);
-        });
-
-        // Re-add the "Other" option at the end
-        const otherOpt = document.createElement("option");
-        otherOpt.value = "Other";
-        otherOpt.textContent = "Other (Not Listed)";
-        select.appendChild(otherOpt);
-
-    } catch (err) {
-        console.error("Critical error fetching colleges:", err);
+    // Hide the 'other college' input field if it exists
+    const otherCollegeContainer = document.getElementById('other-college-container');
+    if (otherCollegeContainer) {
+        otherCollegeContainer.classList.add('hidden');
     }
 }
 
@@ -78,26 +58,7 @@ async function loadColleges() {
 async function handleSignup(event) {
     event.preventDefault();
 
-    let collegeName = document.getElementById("signup-college").value;
-    const otherCollegeInput = document.getElementById("signup-college-other");
-
-    // 🟢 Capture custom college name and upload to database
-    if (collegeName === "Other") {
-        collegeName = otherCollegeInput.value.trim();
-        
-        // Insert the new college into the colleges table so it's available for future users
-        if(collegeName) {
-            const { error: collegeError } = await sb
-                .from('colleges')
-                .upsert({ name: collegeName }, { onConflict: 'name' }); 
-                
-            if (collegeError) {
-                console.error("Error adding new college to database:", collegeError);
-            }
-        }
-    } else if (collegeName) {
-        collegeName = collegeName.trim();
-    }
+    const collegeName = document.getElementById("signup-college").value;
 
     const fullName = document.getElementById("signup-fullname").value.trim();
     const email = document.getElementById("signup-email").value.trim();
@@ -139,16 +100,16 @@ async function handleSignup(event) {
         }
 
         const user = authData?.user;
-        
+
         if (user) {
             // ✅ Account successfully created
             showMessage("Account created! Please check your email to confirm your account.", false);
-            
+
             // Clear the form
             signupForm.reset();
             document.getElementById('other-college-container').classList.add('hidden');
         } else {
-             showMessage("Something went wrong during signup.");
+            showMessage("Something went wrong during signup.");
         }
 
     } catch (err) {
@@ -166,7 +127,7 @@ async function checkUserSession() {
 
         if (data?.session) {
             // already logged in → skip signup page
-            window.location.href = "/EcoCampus/";
+            window.location.href = "../index.html";
         }
     } catch (err) {
         console.error("Session check error:", err);

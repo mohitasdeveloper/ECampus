@@ -31,6 +31,7 @@ function setupEventListeners() {
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
     document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
+    document.getElementById('close-hotpost-viewers-btn')?.addEventListener('click', closeHotpostViewersModal);
 
     // New listeners for edits
     document.querySelector('[data-edit="filter"]')?.addEventListener('click', toggleFilterTray);
@@ -315,6 +316,8 @@ let currentViewerState = {
     postIndex: 0,
     storyTimer: null,
     storyDuration: 5000, // 5 seconds
+    animationStartTime: 0,
+    remainingDuration: 0,
 };
 
 function openHotpostViewer(userId) {
@@ -385,6 +388,7 @@ function playUserStories(userIndex, postIndex = 0) {
 
     // Auto-advance
     clearTimeout(currentViewerState.storyTimer);
+    currentViewerState.animationStartTime = performance.now();
     currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.storyDuration);
 }
 
@@ -414,17 +418,21 @@ function prevStory() {
 function pauseStory() {
     clearTimeout(currentViewerState.storyTimer);
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
+    currentViewerState.remainingDuration = currentViewerState.storyDuration - (performance.now() - currentViewerState.animationStartTime);
     if (activeBar) {
         activeBar.style.animationPlayState = 'paused';
     }
 }
 
 function resumeStory() {
+    // To prevent accidental resume if modal is not open
+    if (document.getElementById('modal-view-hotpost').classList.contains('hidden')) return;
+
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
     if (activeBar) {
         activeBar.style.animationPlayState = 'running';
     }
-    currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.storyDuration - (performance.now() - (currentViewerState.animationStartTime || performance.now())));
+    currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.remainingDuration);
 }
 
 async function recordView(hotpostId) {
@@ -447,7 +455,7 @@ function openMyHotpostsModal(posts) {
     list.innerHTML = posts.map(post => {
         const viewCount = post.hotpost_views[0]?.count || 0;
         return `
-            <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800">
+            <div onclick="openHotpostViewersModal('${post.id}')" class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors">
                 <img src="${post.media_url}" class="w-14 h-14 rounded-xl object-cover">
                 <div class="flex-1">
                     <p class="text-sm font-bold text-gray-800 dark:text-gray-100 line-clamp-1">${post.caption || 'No Caption'}</p>
@@ -466,4 +474,44 @@ function openMyHotpostsModal(posts) {
 
 function closeMyHotpostsModal() {
     document.getElementById('modal-my-hotposts').classList.replace('flex', 'hidden');
+}
+
+async function openHotpostViewersModal(hotpostId) {
+    const modal = document.getElementById('modal-hotpost-viewers');
+    const list = document.getElementById('hotpost-viewers-list');
+    modal.classList.replace('hidden', 'flex');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading viewers...</p>`;
+
+    try {
+        const { data, error } = await supabase
+            .from('hotpost_views')
+            .select('viewed_at, users(full_name, profile_img_url)')
+            .eq('hotpost_id', hotpostId)
+            .order('viewed_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data.length === 0) {
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">No views yet.</p>`;
+            return;
+        }
+
+        list.innerHTML = data.map(view => `
+            <div class="flex items-center gap-3 p-2">
+                <img src="${view.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(view.users.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-gray-800 dark:text-gray-100">${view.users.full_name}</p>
+                </div>
+                <p class="text-xs text-gray-400 dark:text-gray-500">${timeAgo(view.viewed_at)}</p>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error fetching hotpost viewers:', error);
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load viewers.</p>`;
+    }
+}
+
+function closeHotpostViewersModal() {
+    document.getElementById('modal-hotpost-viewers').classList.replace('flex', 'hidden');
 }
