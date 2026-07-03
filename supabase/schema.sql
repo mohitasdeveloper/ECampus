@@ -38,6 +38,49 @@ CREATE TABLE IF NOT EXISTS public.users (
   CONSTRAINT users_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
+-- Hotposts Table (Stories)
+CREATE TABLE public.hotposts (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  media_url text NOT NULL,
+  media_type text DEFAULT 'image'::text,
+  caption text,
+  visibility text DEFAULT 'everyone'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT hotposts_pkey PRIMARY KEY (id),
+  CONSTRAINT hotposts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE public.hotposts IS 'Stores temporary, 24-hour "story" like posts.';
+COMMENT ON COLUMN public.hotposts.visibility IS 'Can be "everyone" or "connections".';
+
+-- Hotpost Views Table
+CREATE TABLE public.hotpost_views (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  hotpost_id uuid NOT NULL,
+  viewer_id uuid NOT NULL,
+  viewed_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT hotpost_views_pkey PRIMARY KEY (id),
+  CONSTRAINT hotpost_views_hotpost_id_fkey FOREIGN KEY (hotpost_id) REFERENCES public.hotposts(id) ON DELETE CASCADE,
+  CONSTRAINT hotpost_views_viewer_id_fkey FOREIGN KEY (viewer_id) REFERENCES public.users(id) ON DELETE CASCADE,
+  CONSTRAINT hotpost_views_unique_view UNIQUE (hotpost_id, viewer_id)
+);
+
+COMMENT ON TABLE public.hotpost_views IS 'Tracks unique user views on each hotpost.';
+
+-- Campus Updates Table
+CREATE TABLE public.campus_updates (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  title text NOT NULL,
+  content text,
+  category text NOT NULL,
+  author_name text DEFAULT 'Admin Office',
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT campus_updates_pkey PRIMARY KEY (id)
+);
+
+COMMENT ON TABLE public.campus_updates IS 'Stores official campus-wide updates like events, notices, etc.';
+COMMENT ON COLUMN public.campus_updates.category IS 'e.g., Event, Notice, Academic, Holiday';
 
 -- ==========================================
 -- 2. AUTH TRIGGER (Syncs Auth to Public Users)
@@ -89,6 +132,9 @@ CREATE TRIGGER on_auth_user_created
 -- Enable RLS on both tables
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.colleges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hotposts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hotpost_views ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.campus_updates ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------
 -- POLICIES FOR 'users' TABLE
@@ -123,4 +169,44 @@ WITH CHECK (true);
 
 CREATE POLICY "Allow public update access on colleges" 
 ON public.colleges FOR UPDATE 
+USING (true);
+
+-- -------------------------
+-- POLICIES FOR 'hotposts' TABLE
+-- -------------------------
+CREATE POLICY "Users can insert their own hotposts"
+ON public.hotposts FOR INSERT
+TO authenticated
+WITH CHECK (
+  (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid()
+);
+
+CREATE POLICY "Authenticated users can view hotposts"
+ON public.hotposts FOR SELECT
+TO authenticated
+USING (true);
+
+-- -------------------------
+-- POLICIES FOR 'hotpost_views' TABLE
+-- -------------------------
+CREATE POLICY "Users can insert their own view records"
+ON public.hotpost_views FOR INSERT
+TO authenticated
+WITH CHECK (
+  (SELECT auth_user_id FROM public.users WHERE id = viewer_id) = auth.uid()
+);
+
+CREATE POLICY "Users can see views on their own hotposts"
+ON public.hotpost_views FOR SELECT
+TO authenticated
+USING (
+  (SELECT user_id FROM public.hotposts WHERE id = hotpost_id) = (SELECT id FROM public.users WHERE auth_user_id = auth.uid())
+);
+
+-- -------------------------
+-- POLICIES FOR 'campus_updates' TABLE
+-- -------------------------
+CREATE POLICY "Authenticated users can read campus updates"
+ON public.campus_updates FOR SELECT
+TO authenticated
 USING (true);

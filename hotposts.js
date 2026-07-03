@@ -23,6 +23,8 @@ function setupEventListeners() {
     document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
+    document.getElementById('retake-hotpost-btn')?.addEventListener('click', resetCameraUI);
+    document.getElementById('submit-hotpost-btn')?.addEventListener('click', submitHotpost);
 
     document.getElementById('close-my-hotposts-btn').addEventListener('click', closeMyHotpostsModal);
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
@@ -46,15 +48,23 @@ async function openCameraModal() {
     }
 
     try {
+        // First try the back camera
         currentCameraStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
         video.srcObject = currentCameraStream;
         video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'none';
     } catch (err) {
-        console.error("Camera access error:", err);
-        showToast('Could not access camera. Please check permissions.', 'error');
-        closeCameraModal();
+        // If back camera fails (e.g., on a laptop), try any available camera
+        console.warn(`Camera with facingMode:${currentFacingMode} not found, trying default.`);
+        try {
+            currentCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = currentCameraStream;
+        } catch (finalErr) {
+            console.error("Camera access error:", finalErr);
+            showToast('Could not access camera. Please check permissions.', 'error');
+            closeCameraModal();
+        }
     }
 }
 
@@ -79,20 +89,20 @@ function switchCamera() {
 
 function resetCameraUI() {
     document.getElementById('hotpost-camera-feed').classList.remove('hidden');
-    document.getElementById('hotpost-preview').classList.add('hidden');
+    document.getElementById('hotpost-preview')?.classList.add('hidden');
     document.getElementById('capture-hotpost-btn').classList.remove('hidden');
-    document.getElementById('submit-hotpost-btn').classList.add('hidden');
-    document.getElementById('retake-hotpost-btn').classList.add('hidden');
-    document.getElementById('hotpost-visibility').classList.add('hidden');
+    document.getElementById('switch-hotpost-camera-btn').classList.remove('hidden');
+    document.getElementById('post-options')?.classList.add('hidden');
+    document.getElementById('retake-hotpost-btn')?.classList.add('hidden');
 }
 
 function showPreviewUI() {
     document.getElementById('hotpost-camera-feed').classList.add('hidden');
-    document.getElementById('hotpost-preview').classList.remove('hidden');
+    document.getElementById('hotpost-preview')?.classList.remove('hidden');
     document.getElementById('capture-hotpost-btn').classList.add('hidden');
-    document.getElementById('submit-hotpost-btn').classList.remove('hidden');
-    document.getElementById('retake-hotpost-btn').classList.remove('hidden');
-    document.getElementById('hotpost-visibility').classList.remove('hidden');
+    document.getElementById('switch-hotpost-camera-btn').classList.add('hidden');
+    document.getElementById('post-options')?.classList.remove('hidden');
+    document.getElementById('retake-hotpost-btn')?.classList.remove('hidden');
 }
 
 function capturePhoto() {
@@ -112,7 +122,7 @@ function capturePhoto() {
     canvas.toBlob(blob => {
         currentPhotoBlob = blob;
         const imageUrl = URL.createObjectURL(blob);
-        document.getElementById('hotpost-preview').src = imageUrl;
+        document.getElementById('hotpost-preview').src = imageUrl; // This was failing because the element was missing
         showPreviewUI();
     }, 'image/jpeg', 0.9);
 }
@@ -123,10 +133,10 @@ async function submitHotpost() {
         return;
     }
 
-    const visibility = document.getElementById('hotpost-visibility').value;
+    const visibility = document.getElementById('hotpost-visibility')?.value || 'everyone';
     const btn = document.getElementById('submit-hotpost-btn');
     btn.disabled = true;
-    btn.textContent = 'Uploading...';
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
 
     try {
         // 1. Upload to Cloudinary
@@ -162,7 +172,7 @@ async function submitHotpost() {
         showToast('Failed to create hotpost. Please try again.', 'error');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Post Hotpost';
+        btn.innerHTML = `<span class="material-symbols-outlined text-3xl">send</span>`;
     }
 }
 
