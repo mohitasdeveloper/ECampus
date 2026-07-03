@@ -19,22 +19,24 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    document.getElementById('create-hotpost-btn').addEventListener('click', handleCreateOrViewMyHotposts);
+    document.getElementById('create-hotpost-btn').addEventListener('click', openCameraModal);
     document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
 
-    document.getElementById('retake-hotpost-btn')?.addEventListener('click', openCameraModal);
-    document.getElementById('close-hotpost-create-btn')?.addEventListener('click', closeCreateHotpostModal);
     document.getElementById('close-my-hotposts-btn').addEventListener('click', closeMyHotpostsModal);
-    document.getElementById('submit-hotpost-btn').addEventListener('click', submitHotpost);
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
     document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
+
+    // Pause/Resume story on long press
+    const pauseOverlay = document.getElementById('hotpost-pause-overlay');
+    pauseOverlay.addEventListener('pointerdown', pauseStory);
+    pauseOverlay.addEventListener('pointerup', resumeStory);
+    pauseOverlay.addEventListener('pointerleave', resumeStory);
 }
 
 async function openCameraModal() {
-    closeCreateHotpostModal(); // Close preview modal if open
     const modal = document.getElementById('modal-hotpost-camera');
     const video = document.getElementById('hotpost-camera-feed');
     modal.classList.replace('hidden', 'flex');
@@ -61,12 +63,36 @@ function closeCameraModal() {
     if (currentCameraStream) {
         currentCameraStream.getTracks().forEach(track => track.stop());
     }
+    // Clean up blob URL to prevent memory leaks
+    const preview = document.getElementById('hotpost-preview');
+    if (preview && preview.src.startsWith('blob:')) {
+        URL.revokeObjectURL(preview.src);
+    }
+    resetCameraUI();
     modal.classList.replace('flex', 'hidden');
 }
 
 function switchCamera() {
     currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
     openCameraModal();
+}
+
+function resetCameraUI() {
+    document.getElementById('hotpost-camera-feed').classList.remove('hidden');
+    document.getElementById('hotpost-preview').classList.add('hidden');
+    document.getElementById('capture-hotpost-btn').classList.remove('hidden');
+    document.getElementById('submit-hotpost-btn').classList.add('hidden');
+    document.getElementById('retake-hotpost-btn').classList.add('hidden');
+    document.getElementById('hotpost-visibility').classList.add('hidden');
+}
+
+function showPreviewUI() {
+    document.getElementById('hotpost-camera-feed').classList.add('hidden');
+    document.getElementById('hotpost-preview').classList.remove('hidden');
+    document.getElementById('capture-hotpost-btn').classList.add('hidden');
+    document.getElementById('submit-hotpost-btn').classList.remove('hidden');
+    document.getElementById('retake-hotpost-btn').classList.remove('hidden');
+    document.getElementById('hotpost-visibility').classList.remove('hidden');
 }
 
 function capturePhoto() {
@@ -87,8 +113,7 @@ function capturePhoto() {
         currentPhotoBlob = blob;
         const imageUrl = URL.createObjectURL(blob);
         document.getElementById('hotpost-preview').src = imageUrl;
-        closeCameraModal();
-        document.getElementById('modal-create-hotpost').classList.replace('hidden', 'flex');
+        showPreviewUI();
     }, 'image/jpeg', 0.9);
 }
 
@@ -98,7 +123,6 @@ async function submitHotpost() {
         return;
     }
 
-    const caption = document.getElementById('hotpost-caption').value.trim();
     const visibility = document.getElementById('hotpost-visibility').value;
     const btn = document.getElementById('submit-hotpost-btn');
     btn.disabled = true;
@@ -123,14 +147,14 @@ async function submitHotpost() {
             user_id: currentUser.id,
             media_url: imageUrl,
             media_type: 'image',
-            caption: caption,
+            caption: null, // Caption removed
             visibility: visibility,
         });
 
         if (error) throw error;
 
         showToast('Hotpost created successfully!', 'success');
-        closeCreateHotpostModal();
+        closeCameraModal();
         fetchHotposts(); // Refresh the list
 
     } catch (error) {
@@ -186,22 +210,29 @@ function renderHotpostCircles() {
     // Clear existing circles except the "add" button
     container.querySelectorAll('.hotpost-circle').forEach(el => el.remove());
 
-    hotpostsByUser.forEach((data, userId) => {
-        // Don't show the current user's circle in the main feed
-        if (userId === currentUser.id) {
-            // Instead, update the 'Create' button to show it's active
-            const createBtnDiv = document.querySelector('#create-hotpost-btn > div');
-            createBtnDiv.classList.remove('border-dashed', 'border-primary/40', 'bg-primary/5', 'text-primary');
-            createBtnDiv.classList.add('p-[2.5px]', 'bg-gradient-to-tr', 'from-yellow-400', 'via-orange-500', 'to-red-500');
-            createBtnDiv.innerHTML = `<div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800"><img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover"></div>`;
-            return;
-        }
+    // Reset the create button to its default state
+    const createBtnDiv = document.querySelector('#create-hotpost-btn > div');
+    createBtnDiv.className = 'w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary';
+    createBtnDiv.innerHTML = `<span class="material-symbols-outlined text-[26px]">add</span>`;
 
+    // Create a sorted list of users, with the current user first if they have stories
+    const sortedUserIds = Array.from(hotpostsByUser.keys()).sort((a, b) => {
+        if (a === currentUser.id) return -1;
+        if (b === currentUser.id) return 1;
+        return 0; // Keep original order for others
+    });
+
+    sortedUserIds.forEach(userId => {
+        const data = hotpostsByUser.get(userId);
         const user = data.user;
         const circle = document.createElement('div');
         circle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform';
+
+        const isSelf = userId === currentUser.id;
+        const ringClass = isSelf ? 'from-gray-400 to-gray-600' : 'from-yellow-400 via-orange-500 to-red-500';
+
         circle.innerHTML = `
-            <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-sm">
+            <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
                 <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
                     <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
                 </div>
@@ -209,7 +240,12 @@ function renderHotpostCircles() {
             <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
         `;
         circle.addEventListener('click', () => openHotpostViewer(userId));
-        container.appendChild(circle);
+
+        if (isSelf) {
+            container.insertBefore(circle, container.children[1]); // Insert after the "Create" button
+        } else {
+            container.appendChild(circle);
+        }
     });
 }
 
@@ -227,7 +263,10 @@ function openHotpostViewer(userId) {
     if (!userData || userData.posts.length === 0) return;
 
     // Set the order of users to view, starting with the clicked one
-    const allUserIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
+    const allUserIds = Array.from(hotpostsByUser.keys()).sort((a, b) => {
+        if (a === currentUser.id) return -1; // Prioritize self
+        if (b === currentUser.id) return 1;
+    });
     const clickedUserIndex = allUserIds.indexOf(userId);
     currentViewerState.userOrder = [
         ...allUserIds.slice(clickedUserIndex),
@@ -235,6 +274,7 @@ function openHotpostViewer(userId) {
     ];
 
     document.getElementById('modal-view-hotpost').classList.replace('hidden', 'flex');
+    document.getElementById('hotpost-pause-overlay').classList.remove('hidden');
     playUserStories(0); // Start with the first user in our new order
 }
 
@@ -244,6 +284,7 @@ function closeHotpostViewer() {
     // Stop any active progress bar animation
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
     if (activeBar) activeBar.style.animation = 'none';
+    document.getElementById('hotpost-pause-overlay').classList.add('hidden');
 }
 
 function playUserStories(userIndex, postIndex = 0) {
@@ -272,8 +313,6 @@ function playUserStories(userIndex, postIndex = 0) {
     document.getElementById('hotpost-viewer-name').textContent = userData.user.full_name;
     document.getElementById('hotpost-viewer-time').textContent = timeAgo(post.created_at);
     document.getElementById('hotpost-viewer-image').src = post.media_url;
-    document.getElementById('hotpost-viewer-caption').textContent = post.caption || '';
-    document.getElementById('hotpost-viewer-caption').classList.toggle('hidden', !post.caption);
 
     // Record the view
     recordView(post.id);
@@ -313,6 +352,22 @@ function prevStory() {
     }
 }
 
+function pauseStory() {
+    clearTimeout(currentViewerState.storyTimer);
+    const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
+    if (activeBar) {
+        activeBar.style.animationPlayState = 'paused';
+    }
+}
+
+function resumeStory() {
+    const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
+    if (activeBar) {
+        activeBar.style.animationPlayState = 'running';
+    }
+    currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.storyDuration - (performance.now() - (currentViewerState.animationStartTime || performance.now())));
+}
+
 async function recordView(hotpostId) {
     // Don't record views on your own posts
     const postOwnerId = Array.from(hotpostsByUser.values()).find(u => u.posts.some(p => p.id === hotpostId))?.user.id;
@@ -325,15 +380,6 @@ async function recordView(hotpostId) {
 
     if (error && error.code !== '23505') { // 23505 is unique violation, which is fine
         console.error('Error recording hotpost view:', error);
-    }
-}
-
-function handleCreateOrViewMyHotposts() {
-    const myHotposts = hotpostsByUser.get(currentUser.id);
-    if (myHotposts && myHotposts.posts.length > 0) {
-        openMyHotpostsModal(myHotposts.posts);
-    } else {
-        openCameraModal();
     }
 }
 
@@ -361,15 +407,4 @@ function openMyHotpostsModal(posts) {
 
 function closeMyHotpostsModal() {
     document.getElementById('modal-my-hotposts').classList.replace('flex', 'hidden');
-}
-
-function closeCreateHotpostModal() {
-    document.getElementById('modal-create-hotpost').classList.replace('flex', 'hidden');
-    document.getElementById('hotpost-caption').value = '';
-    currentPhotoBlob = null;
-    // Clean up the blob URL to prevent memory leaks
-    const preview = document.getElementById('hotpost-preview');
-    if (preview.src.startsWith('blob:')) {
-        URL.revokeObjectURL(preview.src);
-    }
 }
