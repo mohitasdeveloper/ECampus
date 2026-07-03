@@ -145,7 +145,36 @@ window.switchTab = switchTab;
 window.openProfileModal = openProfileModal;
 window.closeProfileModals = closeProfileModals;
 
-// Dummy functions for now, you would expand these
-function switchTab(tabId) { /* ... from index.html ... */ }
-function openProfileModal(type) { /* ... from index.html ... */ }
-function closeProfileModals() { /* ... from index.html ... */ }
+function switchTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+        tab.classList.remove('animate-fadeIn');
+    });
+    // Show target tab
+    const target = document.getElementById(`view-${tabId}`);
+    if (target) {
+        target.classList.remove('hidden');
+        target.classList.add('animate-fadeIn');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Update Nav colors
+    document.querySelectorAll('.nav-item').forEach(nav => {
+        nav.classList.remove('bg-primary', 'text-white');
+        nav.classList.add('text-gray-500', 'dark:text-gray-400');
+    });
+    const activeNav = document.getElementById(`nav-${tabId}`);
+    if (activeNav) {
+        activeNav.classList.remove('text-gray-500', 'dark:text-gray-400');
+        activeNav.classList.add('bg-primary', 'text-white');
+    }
+}
+
+function openProfileModal(type) { /* This can be expanded later */ }
+function closeProfileModals() {
+    document.querySelectorAll('[id^="modal-profile-"]').forEach(modal => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    });
+}

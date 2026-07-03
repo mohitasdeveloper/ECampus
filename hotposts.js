@@ -5,7 +5,10 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_HOTPOSTS_PRESET } from './config.js';
 
 let hotpostsByUser = new Map();
 let currentUser = null;
-let currentFile = null;
+let currentPhotoBlob = null;
+
+let currentCameraStream = null;
+let currentFacingMode = 'environment'; // 'environment' for back camera, 'user' for front
 
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
@@ -16,44 +19,85 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    document.getElementById('create-hotpost-btn').addEventListener('click', openCreateHotpostModal);
+    document.getElementById('create-hotpost-btn').addEventListener('click', openCameraModal);
+    document.getElementById('close-hotpost-camera-btn').addEventListener('click', closeCameraModal);
+    document.getElementById('switch-hotpost-camera-btn').addEventListener('click', switchCamera);
+    document.getElementById('capture-hotpost-btn').addEventListener('click', capturePhoto);
+
+    document.getElementById('retake-hotpost-btn').addEventListener('click', openCameraModal);
     document.getElementById('close-hotpost-create-btn').addEventListener('click', closeCreateHotpostModal);
-    document.getElementById('hotpost-image-upload').addEventListener('change', handleImagePreview);
     document.getElementById('submit-hotpost-btn').addEventListener('click', submitHotpost);
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
 }
 
-function openCreateHotpostModal() {
-    document.getElementById('modal-create-hotpost').classList.replace('hidden', 'flex');
+async function openCameraModal() {
+    closeCreateHotpostModal(); // Close preview modal if open
+    const modal = document.getElementById('modal-hotpost-camera');
+    const video = document.getElementById('hotpost-camera-feed');
+    modal.classList.replace('hidden', 'flex');
+
+    if (currentCameraStream) {
+        currentCameraStream.getTracks().forEach(track => track.stop());
+    }
+
+    try {
+        currentCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        });
+        video.srcObject = currentCameraStream;
+        video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'none';
+    } catch (err) {
+        console.error("Camera access error:", err);
+        showToast('Could not access camera. Please check permissions.', 'error');
+        closeCameraModal();
+    }
+}
+
+function closeCameraModal() {
+    const modal = document.getElementById('modal-hotpost-camera');
+    if (currentCameraStream) {
+        currentCameraStream.getTracks().forEach(track => track.stop());
+    }
+    modal.classList.replace('flex', 'hidden');
+}
+
+function switchCamera() {
+    currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+    openCameraModal();
+}
+
+function capturePhoto() {
+    const video = document.getElementById('hotpost-camera-feed');
+    const canvas = document.getElementById('hotpost-camera-canvas');
+    const context = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    if (currentFacingMode === 'user') {
+        context.translate(canvas.width, 0);
+        context.scale(-1, 1);
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+        currentPhotoBlob = blob;
+        const imageUrl = URL.createObjectURL(blob);
+        document.getElementById('hotpost-preview').src = imageUrl;
+        closeCameraModal();
+        document.getElementById('modal-create-hotpost').classList.replace('hidden', 'flex');
+    }, 'image/jpeg', 0.9);
 }
 
 function closeCreateHotpostModal() {
     document.getElementById('modal-create-hotpost').classList.replace('flex', 'hidden');
-    // Reset form
-    document.getElementById('hotpost-preview').classList.add('hidden');
-    document.getElementById('hotpost-upload-placeholder').classList.remove('hidden');
     document.getElementById('hotpost-caption').value = '';
-    document.getElementById('hotpost-image-upload').value = '';
-    currentFile = null;
-}
-
-function handleImagePreview(event) {
-    const file = event.target.files[0];
-    if (file) {
-        currentFile = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('hotpost-preview').src = e.target.result;
-            document.getElementById('hotpost-preview').classList.remove('hidden');
-            document.getElementById('hotpost-upload-placeholder').classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
-    }
+    currentPhotoBlob = null;
 }
 
 async function submitHotpost() {
-    if (!currentFile) {
-        showToast('Please select an image to post.', 'error');
+    if (!currentPhotoBlob) {
+        showToast('No photo to upload.', 'error');
         return;
     }
 
@@ -66,7 +110,7 @@ async function submitHotpost() {
     try {
         // 1. Upload to Cloudinary
         const formData = new FormData();
-        formData.append('file', currentFile);
+        formData.append('file', currentPhotoBlob, 'hotpost.jpg');
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
 
         const res = await fetch(CLOUDINARY_URL, {

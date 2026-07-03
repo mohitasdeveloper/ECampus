@@ -61,20 +61,6 @@
             }
         }
 
-        function openProfileModal(type) {
-            const modal = document.getElementById(`modal-profile-${type}`);
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-        }
-
-        function closeProfileModals() {
-            document.querySelectorAll('[id^="modal-profile-"]').forEach(modal => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            });
-        }
     </script>
 </head>
 
@@ -137,30 +123,6 @@
                             <span class="material-symbols-outlined text-[26px]">add</span>
                         </div>
                         <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">Your Story</span>
-                    </div>
-                    <div
-                        class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
-                        <div
-                            class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-sm">
-                            <div
-                                class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                                <img src="https://ui-avatars.com/api/?name=David&background=e1e3e4"
-                                    class="w-full h-full object-cover">
-                            </div>
-                        </div>
-                        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">David</span>
-                    </div>
-                    <div
-                        class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform">
-                        <div
-                            class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#8b5cf6] to-[#ec4899] shadow-sm">
-                            <div
-                                class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                                <img src="https://ui-avatars.com/api/?name=Maya&background=e1e3e4"
-                                    class="w-full h-full object-cover">
-                            </div>
-                        </div>
-                        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Maya</span>
                     </div>
                 </div>
             </section>
