@@ -113,7 +113,7 @@ async function fetchHotposts() {
             media_url,
             caption,
             profiles ( id, full_name, avatar_url )
-        `)
+        `.replace('profiles', 'users')) // Correct the table name for the join
         .gt('created_at', twentyFourHoursAgo)
         // .eq('visibility', 'everyone') // Add logic for connections later
         .order('created_at', { ascending: false });
@@ -126,14 +126,14 @@ async function fetchHotposts() {
     // Group hotposts by user
     hotpostsByUser.clear();
     for (const post of data) {
-        const userId = post.profiles.id;
+        const userId = post.users.id;
         if (!hotpostsByUser.has(userId)) {
             hotpostsByUser.set(userId, {
-                user: post.profiles,
+                user: post.users,
                 posts: []
             });
         }
-        hotpostsByUser.get(userId).posts.push(post);
+        hotpostsByUser.get(userId).posts.push({ ...post, profiles: undefined, users: undefined }); // Clean up the post object
     }
 
     renderHotpostCircles();

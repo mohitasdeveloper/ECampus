@@ -20,9 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Fetch user profile from your 'profiles' table
     const { data: profile, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('auth_user_id', session.user.id)
         .single();
 
     if (error) {
@@ -113,9 +113,9 @@ function setupProfileAvatarUpload() {
 
             // 2. Update Supabase 'profiles' table
             const { error } = await supabase
-                .from('profiles')
+                .from('users')
                 .update({ avatar_url: imageUrl })
-                .eq('id', currentUserProfile.id);
+                .eq('auth_user_id', currentUserProfile.auth_user_id);
 
             if (error) throw error;
 
