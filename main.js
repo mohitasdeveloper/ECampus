@@ -358,7 +358,7 @@ function renderTempSocialsList() {
                 </button>
             </div>
         `;
-    }
+    });
 }
 
 function addSocialLinkTemp() {
@@ -542,3 +542,55 @@ function closeProfileModals() {
         modal.classList.remove('flex');
     });
 }
+
+async function openConnectionsModal() {
+    const modal = document.getElementById('modal-connections');
+    const list = document.getElementById('connections-list');
+    if (!modal || !list) return;
+
+    modal.classList.replace('hidden', 'flex');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading connections...</p>`;
+
+    try {
+        const { data, error } = await supabase
+            .from('connections')
+            .select('status, user_one:user_one_id(id, full_name, profile_img_url, course), user_two:user_two_id(id, full_name, profile_img_url, course)')
+            .or(`user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${currentUserProfile.id}`)
+            .eq('status', 'accepted');
+
+        if (error) throw error;
+
+        const connections = data.map(conn => {
+            return conn.user_one.id === currentUserProfile.id ? conn.user_two : conn.user_one;
+        }).filter(Boolean); // Filter out any nulls if a user profile is missing
+
+        if (connections.length === 0) {
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You have no connections yet.</p>`;
+            return;
+        }
+
+        list.innerHTML = connections.map(user => `
+            <div onclick="viewUserProfile('${user.id}'); closeConnectionsModal();" class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${user.full_name}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${user.course || 'Student'}</p>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error fetching connections:', error);
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load connections.</p>`;
+    }
+}
+
+function closeConnectionsModal() {
+    const modal = document.getElementById('modal-connections');
+    if (modal) {
+        modal.classList.replace('flex', 'hidden');
+    }
+}
+
+window.openConnectionsModal = openConnectionsModal;
+window.closeConnectionsModal = closeConnectionsModal;
