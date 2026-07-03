@@ -504,31 +504,31 @@ window.viewUserProfile = viewUserProfile;
 
 function switchTab(tabId) {
     // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-        tab.classList.remove('animate-fadeIn');
-    });
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+
     // Show target tab
     const target = document.getElementById(`view-${tabId}`);
     if (target) {
         target.classList.remove('hidden');
-        target.classList.add('animate-fadeIn');
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) {
-            // Scroll the correct container to the top, not the window
-            mainContent.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        // The main content area is now the body, so scrolling the window is fine.
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // Update Nav active state
-    // 🟢 FIX: Use the .active class for consistency with the CSS and the rest of the app.
-    // The old method of adding/removing utility classes was conflicting with the stylesheet, likely causing the nav to be invisible.
+    const activeClasses = ['bg-primary', 'text-white'];
+    const inactiveClasses = ['text-gray-500', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-neutral-800'];
+
     document.querySelectorAll('.nav-item').forEach(nav => {
-        nav.classList.remove('active');
+        nav.classList.remove(...activeClasses);
+        nav.classList.add(...inactiveClasses);
+        nav.querySelector('span.material-symbols-outlined').style.fontVariationSettings = "'FILL' 0";
     });
+
     const activeNav = document.getElementById(`nav-${tabId}`);
     if (activeNav) {
-        activeNav.classList.add('active');
+        activeNav.classList.remove(...inactiveClasses);
+        activeNav.classList.add(...activeClasses);
+        activeNav.querySelector('span.material-symbols-outlined').style.fontVariationSettings = "'FILL' 1";
     }
 }
 
