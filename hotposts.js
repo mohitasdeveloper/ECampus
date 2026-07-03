@@ -5,7 +5,7 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_HOTPOSTS_PRESET } from './config.js';
 
 let hotpostsByUser = new Map();
 let currentUser = null;
-let currentPhotoBlob = null;
+let currentPhotoBlob = null; // This will be a Blob object
 
 let currentCameraStream = null;
 let currentFacingMode = 'environment'; // 'environment' for back camera, 'user' for front
@@ -19,13 +19,14 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    document.getElementById('create-hotpost-btn').addEventListener('click', openCameraModal);
+    document.getElementById('create-hotpost-btn').addEventListener('click', handleCreateOrViewMyHotposts);
     document.getElementById('close-hotpost-camera-btn').addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn').addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn').addEventListener('click', capturePhoto);
 
     document.getElementById('retake-hotpost-btn').addEventListener('click', openCameraModal);
     document.getElementById('close-hotpost-create-btn').addEventListener('click', closeCreateHotpostModal);
+    document.getElementById('close-my-hotposts-btn').addEventListener('click', closeMyHotpostsModal);
     document.getElementById('submit-hotpost-btn').addEventListener('click', submitHotpost);
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
 }
@@ -89,12 +90,6 @@ function capturePhoto() {
     }, 'image/jpeg', 0.9);
 }
 
-function closeCreateHotpostModal() {
-    document.getElementById('modal-create-hotpost').classList.replace('flex', 'hidden');
-    document.getElementById('hotpost-caption').value = '';
-    currentPhotoBlob = null;
-}
-
 async function submitHotpost() {
     if (!currentPhotoBlob) {
         showToast('No photo to upload.', 'error');
@@ -110,7 +105,7 @@ async function submitHotpost() {
     try {
         // 1. Upload to Cloudinary
         const formData = new FormData();
-        formData.append('file', currentPhotoBlob, 'hotpost.jpg');
+        formData.append('file', currentPhotoBlob, 'hotpost.jpg'); // Send blob as a file
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
 
         const res = await fetch(CLOUDINARY_URL, {
@@ -156,7 +151,8 @@ async function fetchHotposts() {
             created_at,
             media_url,
             caption,
-            users ( id, full_name, profile_img_url )
+            users ( id, full_name, profile_img_url ),
+            hotpost_views ( count )
         `)
         .gt('created_at', twentyFourHoursAgo)
         // .eq('visibility', 'everyone') // Add logic for connections later
@@ -189,6 +185,16 @@ function renderHotpostCircles() {
     container.querySelectorAll('.hotpost-circle').forEach(el => el.remove());
 
     hotpostsByUser.forEach((data, userId) => {
+        // Don't show the current user's circle in the main feed
+        if (userId === currentUser.id) {
+            // Instead, update the 'Create' button to show it's active
+            const createBtnDiv = document.querySelector('#create-hotpost-btn > div');
+            createBtnDiv.classList.remove('border-dashed', 'border-primary/40', 'bg-primary/5', 'text-primary');
+            createBtnDiv.classList.add('p-[2.5px]', 'bg-gradient-to-tr', 'from-yellow-400', 'via-orange-500', 'to-red-500');
+            createBtnDiv.innerHTML = `<div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800"><img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover"></div>`;
+            return;
+        }
+
         const user = data.user;
         const circle = document.createElement('div');
         circle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform';
@@ -219,6 +225,7 @@ function openHotpostViewer(userId) {
     currentViewerState.postIndex = 0;
 
     document.getElementById('modal-view-hotpost').classList.replace('hidden', 'flex');
+    recordView(userData.posts[0].id);
     showCurrentHotpost();
 }
 
@@ -245,4 +252,67 @@ function showCurrentHotpost() {
         // Logic to move to next post or close
         closeHotpostViewer(); // Simple for now
     }, 5000);
+}
+
+async function recordView(hotpostId) {
+    // Don't record views on your own posts
+    const postData = Array.from(hotpostsByUser.values()).flatMap(u => u.posts).find(p => p.id === hotpostId);
+    if (postData && postData.users.id === currentUser.id) {
+        return;
+    }
+
+    const { error } = await supabase.from('hotpost_views').insert({
+        hotpost_id: hotpostId,
+        viewer_id: currentUser.id
+    });
+
+    if (error && error.code !== '23505') { // 23505 is unique violation, which is fine
+        console.error('Error recording hotpost view:', error);
+    }
+}
+
+function handleCreateOrViewMyHotposts() {
+    const myHotposts = hotpostsByUser.get(currentUser.id);
+    if (myHotposts && myHotposts.posts.length > 0) {
+        openMyHotpostsModal(myHotposts.posts);
+    } else {
+        openCameraModal();
+    }
+}
+
+function openMyHotpostsModal(posts) {
+    const list = document.getElementById('my-hotposts-list');
+    list.innerHTML = posts.map(post => {
+        const viewCount = post.hotpost_views[0]?.count || 0;
+        return `
+            <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800">
+                <img src="${post.media_url}" class="w-14 h-14 rounded-xl object-cover">
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-gray-800 dark:text-gray-100 line-clamp-1">${post.caption || 'No Caption'}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${timeAgo(post.created_at)}</p>
+                </div>
+                <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                    <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    <span class="text-sm font-bold">${viewCount}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('modal-my-hotposts').classList.replace('hidden', 'flex');
+}
+
+function closeMyHotpostsModal() {
+    document.getElementById('modal-my-hotposts').classList.replace('flex', 'hidden');
+}
+
+function closeCreateHotpostModal() {
+    document.getElementById('modal-create-hotpost').classList.replace('flex', 'hidden');
+    document.getElementById('hotpost-caption').value = '';
+    currentPhotoBlob = null;
+    // Clean up the blob URL to prevent memory leaks
+    const preview = document.getElementById('hotpost-preview');
+    if (preview.src.startsWith('blob:')) {
+        URL.revokeObjectURL(preview.src);
+    }
 }

@@ -122,7 +122,7 @@
                             class="w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary">
                             <span class="material-symbols-outlined text-[26px]">add</span>
                         </div>
-                        <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">Your Story</span>
+                        <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">Create</span>
                     </div>
                 </div>
             </section>
@@ -532,7 +532,27 @@
         </div>
     </div>
 
-    <!-- Hotpost Creation Modal -->
+    <!-- Hotpost Camera Modal -->
+    <div id="modal-hotpost-camera" class="fixed inset-0 z-[115] bg-black hidden flex-col justify-center items-center">
+        <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
+        <canvas id="hotpost-camera-canvas" class="hidden"></canvas>
+
+        <button id="close-hotpost-camera-btn"
+            class="absolute top-5 left-4 text-white p-2 bg-black/30 rounded-full z-20"><span
+                class="material-symbols-outlined">close</span></button>
+        <button id="switch-hotpost-camera-btn"
+            class="absolute top-5 right-4 text-white p-2 bg-black/30 rounded-full z-20"><span
+                class="material-symbols-outlined">cameraswitch</span></button>
+
+        <div class="absolute bottom-10 z-20 flex justify-center w-full">
+            <button id="capture-hotpost-btn"
+                class="w-20 h-20 rounded-full bg-white/30 border-4 border-white flex items-center justify-center active:scale-95 transition-transform">
+                <div class="w-16 h-16 bg-white rounded-full"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Hotpost Preview & Post Modal -->
     <div id="modal-create-hotpost"
         class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
         <div
@@ -540,20 +560,18 @@
             <button id="close-hotpost-create-btn"
                 class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
                     class="material-symbols-outlined text-[18px]">close</span></button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100">Create Hotpost</h3>
+            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100">Preview Hotpost</h3>
 
             <div class="space-y-4">
                 <div>
-                    <label for="hotpost-image-upload"
-                        class="w-full h-40 bg-gray-100 dark:bg-neutral-800 border-2 border-dashed border-gray-300 dark:border-neutral-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors">
-                        <img id="hotpost-preview" class="hidden w-full h-full object-cover rounded-2xl" />
-                        <div id="hotpost-upload-placeholder">
-                            <span
-                                class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500">add_photo_alternate</span>
-                            <p class="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1">Upload Image</p>
-                        </div>
-                    </label>
-                    <input type="file" id="hotpost-image-upload" accept="image/*" class="hidden">
+                    <div
+                        class="w-full h-40 bg-gray-100 dark:bg-neutral-800 rounded-2xl flex flex-col items-center justify-center overflow-hidden">
+                        <img id="hotpost-preview" class="w-full h-full object-cover" />
+                    </div>
+                    <button id="retake-hotpost-btn"
+                        class="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1 mx-auto mt-2">
+                        <span class="material-symbols-outlined text-[14px]">refresh</span> Retake Photo
+                    </button>
                 </div>
 
                 <div>
@@ -580,6 +598,23 @@
                     class="w-full bg-primary text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform shadow-md shadow-primary/25 flex items-center justify-center gap-2">
                     Post Hotpost
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Hotposts Viewer Modal -->
+    <div id="modal-my-hotposts" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div
+            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
+            <button id="close-my-hotposts-btn"
+                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
+                    class="material-symbols-outlined text-[18px]">close</span></button>
+            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">My Active Hotposts</h3>
+
+            <div id="my-hotposts-list" class="flex-1 overflow-y-auto space-y-3 pr-1">
+                <!-- My hotposts will be injected here -->
+                <p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You have no active Hotposts.
+                </p>
             </div>
         </div>
     </div>
