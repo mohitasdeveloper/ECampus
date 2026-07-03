@@ -288,19 +288,27 @@ function renderHotpostCircles() {
     createBtnDiv.className = 'w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary';
     createBtnDiv.innerHTML = `<span class="material-symbols-outlined text-[26px]">add</span>`;
 
-    // Separate current user from others
-    const otherUserIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
-
-    // Sort other users: un-viewed first, then viewed
-    otherUserIds.sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
-
-    const finalSortedIds = [];
-    // If the current user has hotposts, add them to the start of the list
-    if (hotpostsByUser.has(currentUser.id)) {
-        finalSortedIds.push(currentUser.id);
+    // Add "My Hotposts" button to the feed if it doesn't exist
+    const createBtn = document.getElementById('create-hotpost-btn');
+    if (createBtn && !document.getElementById('my-hotposts-feed-btn')) {
+        const myHotpostsBtn = document.createElement('div');
+        myHotpostsBtn.id = 'my-hotposts-feed-btn';
+        myHotpostsBtn.className = 'flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform';
+        myHotpostsBtn.innerHTML = `
+            <div class="w-[68px] h-[68px] rounded-full border-[2.5px] border-blue-500/40 flex items-center justify-center bg-blue-500/5 text-blue-500 dark:border-blue-400/40 dark:bg-blue-400/10 dark:text-blue-400">
+                <span class="material-symbols-outlined text-[26px]">history</span>
+            </div>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">My Posts</span>
+        `;
+        myHotpostsBtn.addEventListener('click', window.showMyHotposts);
+        createBtn.insertAdjacentElement('afterend', myHotpostsBtn);
     }
-    // Add the sorted other users
-    finalSortedIds.push(...otherUserIds);
+
+    // Get all user IDs with hotposts, excluding the current user
+    const finalSortedIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
+
+    // Sort users: un-viewed first, then viewed
+    finalSortedIds.sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
 
     finalSortedIds.forEach(userId => {
         const data = hotpostsByUser.get(userId);
@@ -322,13 +330,7 @@ function renderHotpostCircles() {
             </div>
             <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
         `;
-        circle.addEventListener('click', () => {
-            if (isSelf) {
-                showMyHotposts();
-            } else {
-                openHotpostViewer(userId);
-            }
-        });
+        circle.addEventListener('click', () => openHotpostViewer(userId));
 
         container.appendChild(circle);
     });
@@ -592,7 +594,7 @@ async function fetchStoryViewers(hotpostId, list) {
     try {
         const { data, error } = await supabase
             .from('hotpost_views')
-            .select('viewed_at, users:viewer_id(full_name, profile_img_url)')
+            .select('viewed_at, users!hotpost_views_viewer_id_fkey(full_name, profile_img_url)')
             .eq('hotpost_id', hotpostId)
             .order('viewed_at', { ascending: false });
 
@@ -624,7 +626,7 @@ async function fetchStoryReplies(hotpostId, list) {
     try {
         const { data, error } = await supabase
             .from('hotpost_replies')
-            .select('created_at, content, users:replier_id(full_name, profile_img_url)')
+            .select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)')
             .eq('hotpost_id', hotpostId)
             .order('created_at', { ascending: false });
 
