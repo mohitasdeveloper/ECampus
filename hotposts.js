@@ -387,7 +387,8 @@ function playUserStories(userIndex, postIndex = 0) {
     const isMyStory = currentViewerState.userId === currentUser.id;
 
     // Hide reply for own story, show for others
-    replyContainer.style.display = isMyStory ? 'none' : 'flex';
+    replyContainer.classList.toggle('hidden', isMyStory);
+    replyContainer.classList.toggle('flex', !isMyStory);
 
     document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
     document.getElementById('hotpost-viewer-name').textContent = userData.user.full_name;
@@ -458,7 +459,7 @@ function resumeStory() {
 
 async function recordView(hotpostId) {
     // Don't record views on your own posts
-    const postOwnerId = Array.from(hotpostsByUser.values()).find(u => u.posts.some(p => p.id === hotpostId))?.user.id;
+    const postOwnerId = currentViewerState.userId;
     if (sessionViewedPostIds.has(hotpostId)) return;
     if (postOwnerId === currentUser.id) return;
 
@@ -501,9 +502,14 @@ async function handleReplyToHotpost() {
     }
 }
 
-function openMyHotpostsModal(posts) {
+function renderMyHotpostsList(posts) {
     const list = document.getElementById('my-hotposts-list');
     list.innerHTML = ''; // Clear the list before adding new items
+
+    if (!posts || posts.length === 0) {
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You have no active Hotposts.</p>`;
+        return;
+    }
 
     posts.forEach(post => {
         const viewCount = post.hotpost_views[0]?.count || 0;
@@ -529,8 +535,6 @@ function openMyHotpostsModal(posts) {
         postEl.querySelector('.delete-btn').addEventListener('click', () => handleDeleteHotpost(post.id));
         list.appendChild(postEl);
     });
-
-    document.getElementById('modal-my-hotposts').classList.replace('hidden', 'flex');
 }
 
 function closeMyHotpostsModal() {
@@ -542,6 +546,8 @@ async function handleDeleteHotpost(hotpostId) {
         return;
     }
 
+    closeStoryDetailsModal(); // Close details modal just in case it's open for this post
+
     const { error } = await supabase.from('hotposts').delete().eq('id', hotpostId);
 
     if (error) {
@@ -550,7 +556,10 @@ async function handleDeleteHotpost(hotpostId) {
     } else {
         showToast('Hotpost deleted.', 'success');
         fetchHotposts(); // Refresh the list
-        closeMyHotpostsModal();
+        // If the "My Hotposts" modal is open, refresh its content
+        if (!document.getElementById('modal-my-hotposts').classList.contains('hidden')) {
+            showMyHotposts();
+        }
     }
 }
 
@@ -667,12 +676,37 @@ function switchDetailsTab(tabName) {
     document.getElementById(`details-tab-${tabName}`).classList.add('active', 'border-primary', 'text-primary');
 }
 
-export function showMyHotposts() {
-    const myPosts = hotpostsByUser.get(currentUser.id)?.posts;
-    if (myPosts && myPosts.length > 0) {
-        openMyHotpostsModal(myPosts);
-    } else {
-        showToast("You have no active Hotposts.", "info");
+export async function showMyHotposts() {
+    const modal = document.getElementById('modal-my-hotposts');
+    const list = document.getElementById('my-hotposts-list');
+
+    modal.classList.replace('hidden', 'flex');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading your posts...</p>`;
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    try {
+        const { data: myPosts, error } = await supabase
+            .from('hotposts')
+            .select(`
+                id,
+                created_at,
+                media_url,
+                hotpost_views ( count ),
+                hotpost_replies ( count )
+            `)
+            .eq('user_id', currentUser.id)
+            .gt('created_at', twentyFourHoursAgo)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        renderMyHotpostsList(myPosts);
+
+    } catch (error) {
+        console.error("Error fetching my hotposts:", error);
+        showToast("Could not load your posts.", "error");
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load posts.</p>`;
     }
 }
 

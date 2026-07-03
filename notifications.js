@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
+import { handleConnectionAction } from './main.js';
 
 let currentUser = null;
 
@@ -16,9 +17,9 @@ export function initNotifications(user) {
             const declineBtn = e.target.closest('.decline-request-btn');
 
             if (acceptBtn) {
-                handleAcceptRequest(acceptBtn.dataset.connectionId);
+                handleAcceptRequest(acceptBtn.dataset.userId, acceptBtn);
             } else if (declineBtn) {
-                handleDeclineRequest(declineBtn.dataset.connectionId);
+                handleDeclineRequest(declineBtn.dataset.userId, declineBtn);
             }
         });
     }
@@ -63,8 +64,8 @@ async function fetchNotifications() {
                         <p class="text-sm"><span class="font-bold">${user.full_name}</span> sent you a connection request.</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">${timeAgo(req.created_at)}</p>
                         <div class="flex gap-2 mt-2">
-                            <button data-connection-id="${req.id}" class="accept-request-btn bg-primary text-white px-4 py-1 rounded-full text-xs font-bold">Accept</button>
-                            <button data-connection-id="${req.id}" class="decline-request-btn bg-gray-200 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 px-4 py-1 rounded-full text-xs font-bold">Decline</button>
+                            <button data-user-id="${user.id}" class="accept-request-btn bg-primary text-white px-4 py-1 rounded-full text-xs font-bold">Accept</button>
+                            <button data-user-id="${user.id}" class="decline-request-btn bg-gray-200 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 px-4 py-1 rounded-full text-xs font-bold">Decline</button>
                         </div>
                     </div>
                 </div>
@@ -77,22 +78,12 @@ async function fetchNotifications() {
     }
 }
 
-async function handleAcceptRequest(connectionId) {
-    const { error } = await supabase.from('connections').update({ status: 'accepted' }).eq('id', connectionId);
-    if (error) {
-        showToast('Failed to accept request.', 'error');
-    } else {
-        showToast('Connection accepted!', 'success');
-        fetchNotifications();
-    }
+async function handleAcceptRequest(userId, btn) {
+    await handleConnectionAction(userId, 'accept', btn);
+    fetchNotifications(); // Refresh the notification list
 }
 
-async function handleDeclineRequest(connectionId) {
-    const { error } = await supabase.from('connections').delete().eq('id', connectionId);
-    if (error) {
-        showToast('Failed to decline request.', 'error');
-    } else {
-        showToast('Request declined.', 'info');
-        fetchNotifications();
-    }
+async function handleDeclineRequest(userId, btn) {
+    await handleConnectionAction(userId, 'decline', btn);
+    fetchNotifications(); // Refresh the notification list
 }
