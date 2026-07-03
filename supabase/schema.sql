@@ -354,13 +354,13 @@ DROP POLICY IF EXISTS "Users can insert replies" ON public.hotpost_replies;
 CREATE POLICY "Users can insert replies"
 ON public.hotpost_replies FOR INSERT
 TO authenticated
-WITH CHECK ( (SELECT auth_user_id FROM public.users WHERE id = replier_id) = auth.uid() );
+WITH CHECK (replier_id = public.current_user_id());
 
 DROP POLICY IF EXISTS "Users can view replies to their own hotposts" ON public.hotpost_replies;
 CREATE POLICY "Users can view replies to their own hotposts"
 ON public.hotpost_replies FOR SELECT
 TO authenticated
-USING ( author_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid()) );
+USING ( author_id = public.current_user_id() );
 
 -- -------------------------
 -- POLICIES FOR 'hotposts' TABLE
@@ -369,9 +369,7 @@ DROP POLICY IF EXISTS "Users can insert their own hotposts" ON public.hotposts;
 CREATE POLICY "Users can insert their own hotposts"
 ON public.hotposts FOR INSERT
 TO authenticated
-WITH CHECK (
-  (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid()
-);
+WITH CHECK (user_id = public.current_user_id());
 
 DROP POLICY IF EXISTS "Authenticated users can view hotposts based on visibility" ON public.hotposts;
 CREATE POLICY "Authenticated users can view hotposts based on visibility"
@@ -410,16 +408,14 @@ DROP POLICY IF EXISTS "Users can insert their own view records" ON public.hotpos
 CREATE POLICY "Users can insert their own view records"
 ON public.hotpost_views FOR INSERT
 TO authenticated
-WITH CHECK (
-  (SELECT auth_user_id FROM public.users WHERE id = viewer_id) = auth.uid()
-);
+WITH CHECK (viewer_id = public.current_user_id());
 
 DROP POLICY IF EXISTS "Users can see views on their own hotposts" ON public.hotpost_views;
 CREATE POLICY "Users can see views on their own hotposts"
 ON public.hotpost_views FOR SELECT
 TO authenticated
 USING (
-  (SELECT user_id FROM public.hotposts WHERE id = hotpost_id) = (SELECT id FROM public.users WHERE auth_user_id = auth.uid())
+  (SELECT user_id FROM public.hotposts WHERE id = hotpost_id) = public.current_user_id()
 );
 
 -- -------------------------

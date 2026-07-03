@@ -61,6 +61,7 @@ function initializeApp(profile) {
     setupProfileAvatarUpload();
     document.getElementById('my-hotposts-btn')?.addEventListener('click', window.showMyHotposts);
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
+    setupBlockedUsersListener();
 
     // Initial tab setup
     switchTab('dashboard');
@@ -91,6 +92,26 @@ function setupMoreMenuListener() {
             }
         });
     }
+}
+
+function setupBlockedUsersListener() {
+    const list = document.getElementById('blocked-users-list');
+    if (!list) return;
+
+    list.addEventListener('click', async (e) => {
+        const unblockBtn = e.target.closest('.unblock-btn');
+        if (unblockBtn && !unblockBtn.disabled) {
+            const userIdToUnblock = unblockBtn.dataset.userId;
+
+            // Temporarily disable button to prevent double clicks
+            unblockBtn.disabled = true;
+            unblockBtn.textContent = '...';
+
+            // The handleConnectionAction will show toasts on success/error
+            await handleConnectionAction(userIdToUnblock, 'unblock', null);
+            openBlockedUsersModal(); // Refresh the list
+        }
+    });
 }
 
 const socialIconMap = {
@@ -782,3 +803,57 @@ function closeConnectionsModal() {
 
 window.openConnectionsModal = openConnectionsModal;
 window.closeConnectionsModal = closeConnectionsModal;
+
+
+async function openBlockedUsersModal() {
+    const modal = document.getElementById('modal-blocked-users');
+    const list = document.getElementById('blocked-users-list');
+    if (!modal || !list) return;
+
+    modal.classList.replace('hidden', 'flex');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading blocked users...</p>`;
+
+    try {
+        const { data, error } = await supabase
+            .from('connections')
+            .select('user_one:user_one_id(id, full_name, profile_img_url, course), user_two:user_two_id(id, full_name, profile_img_url, course)')
+            .eq('status', 'blocked')
+            .eq('action_user_id', currentUserProfile.id);
+
+        if (error) throw error;
+
+        const blockedUsers = data.map(conn => {
+            return conn.user_one.id === currentUserProfile.id ? conn.user_two : conn.user_one;
+        }).filter(Boolean);
+
+        if (blockedUsers.length === 0) {
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You haven't blocked anyone.</p>`;
+            return;
+        }
+
+        list.innerHTML = blockedUsers.map(user => `
+            <div class="blocked-user-item flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm">
+                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${user.full_name}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${user.course || 'Student'}</p>
+                </div>
+                <button data-user-id="${user.id}" class="unblock-btn btn-error !px-4 !py-2 !text-xs">
+                    Unblock
+                </button>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error fetching blocked users:', error);
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load blocked users.</p>`;
+    }
+}
+
+function closeBlockedUsersModal() {
+    const modal = document.getElementById('modal-blocked-users');
+    if (modal) modal.classList.replace('flex', 'hidden');
+}
+
+window.openBlockedUsersModal = openBlockedUsersModal;
+window.closeBlockedUsersModal = closeBlockedUsersModal;
