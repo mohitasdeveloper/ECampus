@@ -46,6 +46,7 @@ function initializeApp(profile) {
     // Setup UI elements
     updateHeaderAvatar(profile.avatar_url, profile.full_name);
     setupThemeToggle();
+    document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
 
     // Initial tab setup
     switchTab('dashboard');
@@ -77,6 +78,11 @@ function setupThemeToggle() {
             localStorage.setItem('theme', 'light');
         }
     });
+}
+
+async function handleSignOut() {
+    await supabase.auth.signOut();
+    window.location.replace('auth/login.html');
 }
 
 // Make utility functions globally available if they are called from HTML onclick
