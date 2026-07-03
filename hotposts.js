@@ -220,7 +220,6 @@ async function submitHotpost() {
             user_id: currentUser.id,
             media_url: imageUrl,
             media_type: 'image',
-            caption: null, // Caption removed
             visibility: visibility,
         });
 
@@ -249,7 +248,6 @@ async function fetchHotposts() {
             id,
             created_at,
             media_url,
-            caption,
             users ( id, full_name, profile_img_url ),
             hotpost_views ( count ),
             hotpost_replies ( count )
@@ -324,7 +322,13 @@ function renderHotpostCircles() {
             </div>
             <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
         `;
-        circle.addEventListener('click', () => openHotpostViewer(userId));
+        circle.addEventListener('click', () => {
+            if (isSelf) {
+                showMyHotposts();
+            } else {
+                openHotpostViewer(userId);
+            }
+        });
 
         container.appendChild(circle);
     });
@@ -518,20 +522,23 @@ function openMyHotpostsModal(posts) {
         const replyCount = post.hotpost_replies[0]?.count || 0;
         return `
             <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800">
-                <img src="${post.media_url}" class="w-14 h-14 rounded-xl object-cover">
-                <div class="flex-1 cursor-pointer" onclick="openStoryDetailsModal('${post.id}')">
-                    <p class="text-sm font-bold text-gray-800 dark:text-gray-100 line-clamp-1">${post.caption || 'No Caption'}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">${timeAgo(post.created_at)}</p>
+                <div class="flex-1 flex items-center gap-4 cursor-pointer" onclick="openStoryDetailsModal('${post.id}')">
+                    <img src="${post.media_url}" class="w-14 h-20 rounded-xl object-cover">
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-gray-800 dark:text-gray-100">Posted ${timeAgo(post.created_at)}</p>
+                        <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            <div class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">visibility</span>
+                                <span>${viewCount} Views</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">reply</span>
+                                <span>${replyCount} Replies</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex items-center gap-1.5 text-secondary dark:text-secondary/80 cursor-pointer" onclick="openStoryDetailsModal('${post.id}', 'replies')">
-                    <span class="material-symbols-outlined text-[18px]">reply</span>
-                    <span class="text-sm font-bold">${replyCount}</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 cursor-pointer" onclick="openStoryDetailsModal('${post.id}', 'viewers')">
-                    <span class="material-symbols-outlined text-[18px]">visibility</span>
-                    <span class="text-sm font-bold">${viewCount}</span>
-                </div>
-                <button onclick="handleDeleteHotpost('${post.id}')" class="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors">
+                <button onclick="handleDeleteHotpost('${post.id}')" class="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors self-center">
                     <span class="material-symbols-outlined text-xl">delete</span>
                 </button>
             </div>
@@ -585,7 +592,7 @@ async function fetchStoryViewers(hotpostId, list) {
     try {
         const { data, error } = await supabase
             .from('hotpost_views')
-            .select('viewed_at, users(full_name, profile_img_url)')
+            .select('viewed_at, users:viewer_id(full_name, profile_img_url)')
             .eq('hotpost_id', hotpostId)
             .order('viewed_at', { ascending: false });
 
@@ -597,8 +604,8 @@ async function fetchStoryViewers(hotpostId, list) {
         }
 
         list.innerHTML = data.map(view => `
-            <div class="flex items-center gap-3 p-2">
-                <img src="${view.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(view.users.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full object-cover">
+            <div class="flex items-center gap-3 p-2.5">
+                <img src="${view.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(view.users.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
                 <div class="flex-1">
                     <p class="text-sm font-bold text-gray-800 dark:text-gray-100">${view.users.full_name}</p>
                 </div>
@@ -617,7 +624,7 @@ async function fetchStoryReplies(hotpostId, list) {
     try {
         const { data, error } = await supabase
             .from('hotpost_replies')
-            .select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)')
+            .select('created_at, content, users:replier_id(full_name, profile_img_url)')
             .eq('hotpost_id', hotpostId)
             .order('created_at', { ascending: false });
 
@@ -629,14 +636,14 @@ async function fetchStoryReplies(hotpostId, list) {
         }
 
         list.innerHTML = data.map(reply => `
-            <div class="flex items-start gap-3">
-                <img src="${reply.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.users.full_name)}&background=e1e3e4`}" class="w-9 h-9 rounded-full object-cover mt-1">
+            <div class="flex items-start gap-3 p-2.5">
+                <img src="${reply.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.users.full_name)}&background=e1e3e4`}" class="w-9 h-9 rounded-full object-cover mt-1 border border-gray-200 dark:border-neutral-700">
                 <div class="flex-1 bg-gray-100 dark:bg-neutral-800 rounded-2xl p-3">
                     <div class="flex justify-between items-center">
                         <p class="text-xs font-bold text-gray-900 dark:text-gray-100">${reply.users.full_name}</p>
                         <p class="text-[10px] text-gray-400 dark:text-gray-500">${timeAgo(reply.created_at)}</p>
                     </div>
-                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">${reply.content}</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">${reply.content}</p>
                 </div>
             </div>
         `).join('');

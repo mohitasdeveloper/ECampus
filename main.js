@@ -59,7 +59,6 @@ function initializeApp(profile) {
     setupThemeToggle();
     setupEditProfileAvatarUpload();
     setupProfileAvatarUpload();
-    document.getElementById('my-hotposts-btn')?.addEventListener('click', window.showMyHotposts);
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
     setupBlockedUsersListener();
 

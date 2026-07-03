@@ -101,7 +101,6 @@ CREATE TABLE IF NOT EXISTS public.hotposts (
   user_id uuid NOT NULL,
   media_url text NOT NULL,
   media_type text DEFAULT 'image'::text,
-  caption text,
   visibility text DEFAULT 'everyone'::text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT hotposts_pkey PRIMARY KEY (id),
