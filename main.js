@@ -1,13 +1,14 @@
 import { initHotposts } from './hotposts.js';
 import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
+import { supabase } from './supabase.js';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 
-const sb = window.sb; // Supabase client from supabase.js
 let currentUserProfile = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Check user session
-    const { data: { session } } = await sb.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
         // If on a protected page and no session, redirect to login
@@ -18,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Fetch user profile from your 'profiles' table
-    const { data: profile, error } = await sb
+    const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
@@ -28,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error fetching profile:', error);
         showToast('Could not load your profile.', 'error');
         // Optional: sign out if profile is missing
-        // await sb.auth.signOut();
+        // await supabase.auth.signOut();
         // window.location.replace('auth/login.html');
         return;
     }
@@ -46,6 +47,7 @@ function initializeApp(profile) {
     // Setup UI elements
     updateHeaderAvatar(profile.avatar_url, profile.full_name);
     setupThemeToggle();
+    setupProfileAvatarUpload();
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
 
     // Initial tab setup
@@ -76,6 +78,59 @@ function setupThemeToggle() {
         } else {
             document.documentElement.classList.remove('dark');
             localStorage.setItem('theme', 'light');
+        }
+    });
+}
+
+function setupProfileAvatarUpload() {
+    const avatarContainer = document.getElementById('profile-avatar-container');
+    const avatarInput = document.getElementById('avatar-upload-input');
+
+    if (!avatarContainer || !avatarInput) return;
+
+    avatarContainer.addEventListener('click', () => avatarInput.click());
+
+    avatarInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        showToast('Uploading new avatar...', 'info');
+        avatarContainer.style.opacity = '0.6';
+
+        try {
+            // 1. Upload to Cloudinary
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
+
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error.message);
+            const imageUrl = data.secure_url;
+
+            // 2. Update Supabase 'profiles' table
+            const { error } = await supabase
+                .from('profiles')
+                .update({ avatar_url: imageUrl })
+                .eq('id', currentUserProfile.id);
+
+            if (error) throw error;
+
+            // 3. Update UI
+            currentUserProfile.avatar_url = imageUrl;
+            document.getElementById('profile-avatar-large').src = imageUrl;
+            updateHeaderAvatar(imageUrl, currentUserProfile.full_name);
+            showToast('Avatar updated successfully!', 'success');
+
+        } catch (error) {
+            console.error('Error updating avatar:', error);
+            showToast('Failed to update avatar. Please try again.', 'error');
+        } finally {
+            avatarContainer.style.opacity = '1';
+            avatarInput.value = ''; // Reset input
         }
     });
 }
