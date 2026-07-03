@@ -1,7 +1,6 @@
 // auth/login.js
-
-// ✅ use shared Supabase client
-const sb = window.sb;
+import { supabase } from '../supabase.js';
+const sb = supabase; // Keep using 'sb' for consistency in the file
 
 // DOM elements
 let loginForm;

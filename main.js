@@ -2,6 +2,7 @@ import { initHotposts } from './hotposts.js';
 import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { supabase } from './supabase.js';
+import { initFeed } from './feed.js';
 import { initUpdates } from './updates.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 
@@ -44,16 +45,41 @@ function initializeApp(profile) {
 
     // Initialize features that need the user object
     initHotposts(profile);
+    initFeed(profile);
     initUpdates();
 
     // Setup UI elements
     updateHeaderAvatar(profile.profile_img_url, profile.full_name);
+    populateProfileUI(profile);
     setupThemeToggle();
     setupProfileAvatarUpload();
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
 
     // Initial tab setup
     switchTab('dashboard');
+}
+
+function populateProfileUI(profile) {
+    if (!profile) return;
+
+    // Main profile card
+    document.getElementById('profile-avatar-large').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+    document.getElementById('profile-name').textContent = profile.full_name;
+    document.getElementById('profile-email').innerHTML = `<span class="material-symbols-outlined text-[16px]">mail</span> ${profile.email}`;
+    document.getElementById('profile-bio').textContent = profile.bio || 'No bio yet. Click "Edit" to add one!';
+
+    // Role badge
+    const roleElement = document.getElementById('profile-role');
+    if (roleElement) {
+        roleElement.textContent = profile.role || 'Student';
+    }
+
+    // Details section
+    document.getElementById('profile-id').textContent = profile.student_id;
+    document.getElementById('profile-course').textContent = profile.course;
+
+    // Feed input avatar
+    document.getElementById('feed-input-avatar').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
 }
 
 function updateHeaderAvatar(avatarUrl, fullName) {

@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Login - EcoCampus</title>
-    
+
     <link rel="icon" type="image/png" href="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
-    
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <script>
@@ -32,27 +35,46 @@
         }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .fade-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
+
 <body class="bg-white h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-gray-900 fade-in">
 
     <div class="text-center mb-8">
-        <img src="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png" class="w-24 h-24 mx-auto mb-4" alt="EcoBirla Logo">
-        
-        <h1 class="text-4xl font-extrabold bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 text-transparent bg-clip-text pb-1">
+        <img src="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png" class="w-24 h-24 mx-auto mb-4"
+            alt="EcoBirla Logo">
+
+        <h1
+            class="text-4xl font-extrabold bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 text-transparent bg-clip-text pb-1">
             EcoCampus
         </h1>
-        
+
         <p class="text-xs font-bold text-slate-500 mt-1 tracking-widest uppercase">
             A BKBNC DIGITAL INITIATIVE
         </p>
     </div>
 
     <div class="w-full max-w-[340px]">
-        
+
         <div class="mb-8 text-left">
             <h2 class="text-2xl font-bold text-gray-900 mb-1">Welcome Back!</h2>
             <p class="text-sm text-gray-500 font-medium">Please sign in with your Email or Student ID.</p>
@@ -61,20 +83,17 @@
         <div id="auth-message" class="text-red-500 text-sm text-center mb-4 h-5 font-bold empty:hidden"></div>
 
         <form id="login-form" class="space-y-5">
-            
+
             <div class="space-y-1.5">
-                <label for="login-identifier" class="block text-sm font-bold text-gray-800 ml-1">Email or Student ID</label>
+                <label for="login-identifier" class="block text-sm font-bold text-gray-800 ml-1">Email or Student
+                    ID</label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="user" class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                        <i data-lucide="user"
+                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                     </div>
-                    <input 
-                        type="text" 
-                        id="login-identifier" 
-                        required 
-                        placeholder="student@college.edu or 123456" 
-                        class="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                    >
+                    <input type="text" id="login-identifier" required placeholder="student@college.edu or 123456"
+                        class="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
                 </div>
             </div>
 
@@ -82,23 +101,16 @@
                 <label for="login-password" class="block text-sm font-bold text-gray-800 ml-1">Password</label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="lock" class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                        <i data-lucide="lock"
+                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                     </div>
-                    <input 
-                        type="password" 
-                        id="login-password" 
-                        required 
-                        placeholder="••••••••" 
-                        class="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                    >
+                    <input type="password" id="login-password" required placeholder="••••••••"
+                        class="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
                 </div>
             </div>
 
-            <button 
-                type="submit" 
-                id="login-button" 
-                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center justify-center mt-2"
-            >
+            <button type="submit" id="login-button"
+                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center justify-center mt-2">
                 <span class="btn-text text-base">Login</span>
                 <i data-lucide="loader-circle" class="w-5 h-5 animate-spin hidden ml-2"></i>
             </button>
@@ -107,8 +119,9 @@
 
         <div class="mt-6 text-center">
             <p class="text-sm font-medium text-gray-600">
-                Other College Student? 
-                <a href="signup.html" class="text-emerald-600 hover:text-emerald-700 font-bold transition-colors">Sign up here</a>
+                Other College Student?
+                <a href="signup.html" class="text-emerald-600 hover:text-emerald-700 font-bold transition-colors">Sign
+                    up here</a>
             </p>
         </div>
 
@@ -118,12 +131,12 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../supabase.js"></script>
-    <script src="login.js"></script>
-    
+    <script src="login.js" type="module"></script>
+
     <script>
         // Initialize Icons for the UI
         lucide.createIcons();
     </script>
 </body>
+
 </html>

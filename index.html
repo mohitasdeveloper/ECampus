@@ -114,7 +114,7 @@
                     <input type="text" id="post-input"
                         class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-transparent outline-none focus:border-primary placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
                         placeholder="Share an update, ask a question...">
-                    <button id="send-post-btn" onclick="submitPost()"
+                    <button id="send-post-btn"
                         class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
                         <span class="material-symbols-outlined text-[20px] ml-1">send</span>
                     </button>
@@ -586,7 +586,6 @@
     <div id="modal-view-hotpost" class="fixed inset-0 z-[120] bg-black hidden flex-col items-center justify-center">
         <div id="hotpost-viewer-content"
             class="w-full h-full max-w-screen-md mx-auto relative flex flex-col animate-fadeIn">
-            <div id="hotpost-pause-overlay" class="absolute inset-0 z-50 hidden"></div>
             <!-- Progress bars will be injected here -->
             <div id="hotpost-progress-bars" class="absolute top-3 left-2 right-2 h-1 flex gap-1 z-20"></div>
 

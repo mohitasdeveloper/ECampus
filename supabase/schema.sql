@@ -38,6 +38,18 @@ CREATE TABLE IF NOT EXISTS public.users (
   CONSTRAINT users_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
+-- Posts Table (Main Feed)
+CREATE TABLE public.posts (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT posts_pkey PRIMARY KEY (id),
+  CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE public.posts IS 'Main feed posts created by users.';
+
 -- Hotposts Table (Stories)
 CREATE TABLE public.hotposts (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -132,6 +144,7 @@ CREATE TRIGGER on_auth_user_created
 -- Enable RLS on both tables
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.colleges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hotposts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hotpost_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campus_updates ENABLE ROW LEVEL SECURITY;
@@ -170,6 +183,26 @@ WITH CHECK (true);
 CREATE POLICY "Allow public update access on colleges" 
 ON public.colleges FOR UPDATE 
 USING (true);
+
+-- -------------------------
+-- POLICIES FOR 'posts' TABLE
+-- -------------------------
+CREATE POLICY "Users can read all posts"
+ON public.posts FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY "Users can insert their own posts"
+ON public.posts FOR INSERT
+TO authenticated
+WITH CHECK (
+  (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid()
+);
+
+CREATE POLICY "Users can delete their own posts"
+ON public.posts FOR DELETE
+TO authenticated
+USING ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() );
 
 -- -------------------------
 -- POLICIES FOR 'hotposts' TABLE

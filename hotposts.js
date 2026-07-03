@@ -40,10 +40,16 @@ function setupEventListeners() {
     });
 
     // Pause/Resume story on long press
-    const pauseOverlay = document.getElementById('hotpost-pause-overlay');
-    pauseOverlay.addEventListener('pointerdown', pauseStory);
-    pauseOverlay.addEventListener('pointerup', resumeStory);
-    pauseOverlay.addEventListener('pointerleave', resumeStory);
+    const navNext = document.getElementById('hotpost-nav-next');
+    const navPrev = document.getElementById('hotpost-nav-prev');
+
+    [navNext, navPrev].forEach(navEl => {
+        if (navEl) {
+            navEl.addEventListener('pointerdown', pauseStory);
+            navEl.addEventListener('pointerup', resumeStory);
+            navEl.addEventListener('pointerleave', resumeStory);
+        }
+    });
 }
 
 async function openCameraModal() {
@@ -336,7 +342,6 @@ function openHotpostViewer(userId) {
     ];
 
     document.getElementById('modal-view-hotpost').classList.replace('hidden', 'flex');
-    document.getElementById('hotpost-pause-overlay').classList.remove('hidden');
     playUserStories(0); // Start with the first user in our new order
 }
 
@@ -346,7 +351,6 @@ function closeHotpostViewer() {
     // Stop any active progress bar animation
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
     if (activeBar) activeBar.style.animation = 'none';
-    document.getElementById('hotpost-pause-overlay').classList.add('hidden');
 }
 
 function playUserStories(userIndex, postIndex = 0) {
@@ -515,3 +519,5 @@ async function openHotpostViewersModal(hotpostId) {
 function closeHotpostViewersModal() {
     document.getElementById('modal-hotpost-viewers').classList.replace('flex', 'hidden');
 }
+
+window.openHotpostViewersModal = openHotpostViewersModal;
