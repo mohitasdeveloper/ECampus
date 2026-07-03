@@ -520,15 +520,15 @@ function switchTab(tabId) {
         }
     }
 
-    // Update Nav colors
+    // Update Nav active state
+    // 🟢 FIX: Use the .active class for consistency with the CSS and the rest of the app.
+    // The old method of adding/removing utility classes was conflicting with the stylesheet, likely causing the nav to be invisible.
     document.querySelectorAll('.nav-item').forEach(nav => {
-        nav.classList.remove('bg-primary', 'text-white');
-        nav.classList.add('text-gray-500', 'dark:text-gray-400');
+        nav.classList.remove('active');
     });
     const activeNav = document.getElementById(`nav-${tabId}`);
     if (activeNav) {
-        activeNav.classList.remove('text-gray-500', 'dark:text-gray-400');
-        activeNav.classList.add('bg-primary', 'text-white');
+        activeNav.classList.add('active');
     }
 }
 
