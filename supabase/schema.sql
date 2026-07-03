@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   joined_at timestamp with time zone DEFAULT now(),
   college text null,
   bio text null default ''::text,
-  social_links jsonb null default '{}'::jsonb,
+  social_links jsonb null default '[]'::jsonb,
   is_private boolean null default false,
   connection_count integer null default 0,
   constraint users_pkey primary key (id),

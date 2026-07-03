@@ -3,7 +3,7 @@ import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { supabase } from './supabase.js';
 import { initFeed } from './feed.js';
-import { initDiscover } from './discover.js';
+import { initSearch } from './search.js';
 import { initNotifications } from './notifications.js';
 import { initUpdates } from './updates.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
@@ -48,7 +48,7 @@ function initializeApp(profile) {
     // Initialize features that need the user object
     initHotposts(profile);
     initFeed(profile);
-    initDiscover(profile);
+    initSearch(profile);
     initNotifications(profile);
     initUpdates();
 
@@ -65,24 +65,46 @@ function initializeApp(profile) {
     switchTab('dashboard');
 }
 
-function renderSocialLinks(links) {
-    const container = document.getElementById('profile-social-links');
-    if (!container) return;
+const socialIconMap = {
+    linkedin: { icon: 'fa-linkedin-in', color: 'bg-[#0A66C2]' },
+    instagram: { icon: 'fa-instagram', color: 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500' },
+    github: { icon: 'fa-github', color: 'bg-[#181717]' },
+    twitter: { icon: 'fa-x-twitter', color: 'bg-[#000000]' },
+    youtube: { icon: 'fa-youtube', color: 'bg-[#FF0000]' },
+    discord: { icon: 'fa-discord', color: 'bg-[#5865F2]' },
+    facebook: { icon: 'fa-facebook-f', color: 'bg-[#1877F2]' },
+    behance: { icon: 'fa-behance', color: 'bg-[#053EFF]' },
+    dribbble: { icon: 'fa-dribbble', color: 'bg-[#EA4C89]' },
+    website: { icon: 'fa-globe', color: 'bg-gray-500' },
+    other: { icon: 'fa-link', color: 'bg-gray-500' }
+};
 
-    container.innerHTML = ''; // Clear existing
-    if (!links || Object.keys(links).length === 0) {
-        container.innerHTML = `<p class="text-xs text-gray-400 italic">No social links added.</p>`;
-        return;
+function renderSocialLinks(links, container = null) {
+    const targetContainer = container || document.getElementById('profile-social-links');
+    if (!targetContainer) return;
+
+    targetContainer.innerHTML = ''; // Clear existing
+
+    if (links && links.length > 0) {
+        links.forEach(link => {
+            const platformInfo = socialIconMap[link.platform] || socialIconMap['other'];
+            const linkEl = document.createElement('a');
+            linkEl.href = link.url;
+            linkEl.target = '_blank';
+            linkEl.title = link.platform.charAt(0).toUpperCase() + link.platform.slice(1);
+            linkEl.className = `w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white text-2xl ${platformInfo.color} transition-transform hover:scale-110`;
+            linkEl.innerHTML = `<i class="fa-brands ${platformInfo.icon}"></i>`;
+            targetContainer.appendChild(linkEl);
+        });
     }
 
-    for (const [platform, url] of Object.entries(links)) {
-        const linkEl = document.createElement('a');
-        linkEl.href = url;
-        linkEl.target = '_blank';
-        linkEl.title = platform.charAt(0).toUpperCase() + platform.slice(1);
-        linkEl.className = 'w-10 h-10 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary transition-all text-lg font-bold';
-        linkEl.textContent = platform.charAt(0).toUpperCase();
-        container.appendChild(linkEl);
+    // Only add the '+' button to the user's own profile (when no container is passed)
+    if (!container) {
+        const addButton = document.createElement('button');
+        addButton.onclick = () => openEditSocialsModal();
+        addButton.className = 'w-[52px] h-[52px] rounded-2xl flex items-center justify-center bg-gray-100 dark:bg-neutral-800 border-2 border-dashed border-gray-300 dark:border-neutral-700 text-gray-400 dark:text-gray-500 hover:border-primary hover:text-primary transition-colors';
+        addButton.innerHTML = `<span class="material-symbols-outlined">add</span>`;
+        targetContainer.appendChild(addButton);
     }
 }
 
@@ -107,6 +129,9 @@ function populateProfileUI(profile) {
 
     // Feed input avatar
     document.getElementById('feed-input-avatar').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+
+    // Connection count
+    document.getElementById('profile-connection-count').textContent = profile.connection_count || 0;
 
     // Render social links
     renderSocialLinks(profile.social_links);
@@ -241,7 +266,7 @@ window.openProfileModal = openProfileModal;
 window.closeProfileModals = closeProfileModals;
 
 // --- PROFILE EDITING ---
-let tempSocialLinks = {};
+let tempSocialLinks = [];
 
 function openEditProfileModal() {
     if (!currentUserProfile) return;
@@ -307,7 +332,7 @@ async function saveUserProfile(extraUpdates = {}, closeModal = true) {
 
 function openEditSocialsModal() {
     if (!currentUserProfile) return;
-    tempSocialLinks = { ...(currentUserProfile.social_links || {}) };
+    tempSocialLinks = currentUserProfile.social_links ? JSON.parse(JSON.stringify(currentUserProfile.social_links)) : [];
     renderTempSocialsList();
     document.getElementById('modal-edit-socials').classList.replace('hidden', 'flex');
 }
@@ -319,16 +344,16 @@ function closeSocialsModal() {
 function renderTempSocialsList() {
     const list = document.getElementById('modal-socials-list');
     list.innerHTML = '';
-    if (Object.keys(tempSocialLinks).length === 0) {
+    if (tempSocialLinks.length === 0) {
         list.innerHTML = `<p class="text-xs text-center text-gray-400 italic py-4">No links added yet.</p>`;
         return;
     }
-    for (const [platform, url] of Object.entries(tempSocialLinks)) {
+    tempSocialLinks.forEach((link, index) => {
         list.innerHTML += `
             <div class="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800/50 p-2 rounded-lg">
-                <span class="font-bold text-xs capitalize text-gray-600 dark:text-gray-300 w-16">${platform}</span>
-                <input type="text" value="${url}" class="flex-1 bg-transparent text-xs text-gray-500 dark:text-gray-400 outline-none" readonly>
-                <button onclick="removeSocialLinkTemp('${platform}')" class="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full">
+                <span class="font-bold text-xs capitalize text-gray-600 dark:text-gray-300 w-16">${link.platform}</span>
+                <input type="text" value="${link.url}" class="flex-1 bg-transparent text-xs text-gray-500 dark:text-gray-400 outline-none" readonly>
+                <button onclick="removeSocialLinkTemp(${index})" class="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full">
                     <span class="material-symbols-outlined text-sm">delete</span>
                 </button>
             </div>
@@ -343,13 +368,18 @@ function addSocialLinkTemp() {
         showToast('Please enter a URL.', 'warning');
         return;
     }
-    tempSocialLinks[platform] = url;
+    const existingLinkIndex = tempSocialLinks.findIndex(link => link.platform === platform);
+    if (existingLinkIndex > -1) {
+        tempSocialLinks[existingLinkIndex].url = url;
+    } else {
+        tempSocialLinks.push({ platform, url });
+    }
     renderTempSocialsList();
     document.getElementById('add-social-url').value = '';
 }
 
-function removeSocialLinkTemp(platform) {
-    delete tempSocialLinks[platform];
+function removeSocialLinkTemp(index) {
+    tempSocialLinks.splice(index, 1);
     renderTempSocialsList();
 }
 
@@ -380,6 +410,98 @@ window.addSocialLinkTemp = addSocialLinkTemp;
 window.removeSocialLinkTemp = removeSocialLinkTemp;
 window.saveSocialLinks = saveSocialLinks;
 
+async function viewUserProfile(userId) {
+    if (userId === currentUserProfile.id) {
+        switchTab('profile');
+        return;
+    }
+
+    // Fetch user data
+    const { data: user, error } = await supabase.from('users').select('*').eq('id', userId).single();
+    if (error || !user) {
+        showToast('Could not load profile.', 'error');
+        console.error('Error fetching user profile:', error);
+        return;
+    }
+
+    // Fetch connection status between current user and the viewed user
+    const { data: connection } = await supabase
+        .from('connections')
+        .select('status, user_one_id')
+        .or(`(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
+        .single();
+
+    const isConnected = connection?.status === 'accepted';
+
+    if (user.is_private && !isConnected) {
+        // Show Private Profile Modal
+        document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+        document.getElementById('private-profile-name').textContent = user.full_name;
+        document.getElementById('private-profile-course').textContent = user.course || 'Student';
+        const connectBtn = document.getElementById('private-connect-btn');
+
+        if (connection?.status === 'pending') {
+            connectBtn.textContent = 'Request Sent';
+            connectBtn.disabled = true;
+        } else {
+            connectBtn.textContent = 'Request to Connect';
+            connectBtn.disabled = false;
+            connectBtn.onclick = () => handleConnectionRequest(user.id, connectBtn);
+        }
+        openProfileModal('private');
+    } else {
+        // Show Public Profile Modal
+        document.getElementById('public-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+        document.getElementById('public-profile-name').textContent = user.full_name;
+        document.getElementById('public-profile-course').textContent = user.course || 'Student';
+        document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
+        renderSocialLinks(user.social_links, document.getElementById('public-profile-social-links'));
+        const connectBtn = document.getElementById('public-connect-btn');
+
+        if (isConnected) {
+            connectBtn.textContent = 'Connected';
+            connectBtn.disabled = true;
+        } else if (connection?.status === 'pending') {
+            connectBtn.textContent = 'Request Sent';
+            connectBtn.disabled = true;
+        } else {
+            connectBtn.textContent = 'Connect';
+            connectBtn.disabled = false;
+            connectBtn.onclick = () => handleConnectionRequest(user.id, connectBtn);
+        }
+        openProfileModal('public');
+    }
+}
+
+async function handleConnectionRequest(targetUserId, btn) {
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Pending...';
+    }
+
+    const { error } = await supabase.from('connections').insert({
+        user_one_id: currentUserProfile.id, // The sender
+        user_two_id: targetUserId, // The receiver
+        status: 'pending'
+    });
+
+    if (error) {
+        showToast('Failed to send request.', 'error');
+        console.error('Error sending connection request:', error);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Connect';
+        }
+    } else {
+        showToast('Connection request sent!', 'success');
+        if (btn) {
+            btn.textContent = 'Request Sent';
+        }
+    }
+}
+
+window.viewUserProfile = viewUserProfile;
+
 function switchTab(tabId) {
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
@@ -406,7 +528,14 @@ function switchTab(tabId) {
     }
 }
 
-function openProfileModal(type) { /* This can be expanded later */ }
+function openProfileModal(type) {
+    const modal = document.getElementById(`modal-profile-${type}`);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
 function closeProfileModals() {
     document.querySelectorAll('[id^="modal-profile-"]').forEach(modal => {
         modal.classList.add('hidden');
