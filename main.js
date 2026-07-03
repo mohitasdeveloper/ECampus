@@ -55,6 +55,7 @@ function initializeApp(profile) {
     // Setup UI elements
     updateHeaderAvatar(profile.profile_img_url, profile.full_name);
     populateProfileUI(profile);
+    setupMoreMenuListener();
     setupThemeToggle();
     setupEditProfileAvatarUpload();
     setupProfileAvatarUpload();
@@ -63,6 +64,33 @@ function initializeApp(profile) {
 
     // Initial tab setup
     switchTab('dashboard');
+}
+
+function setupMoreMenuListener() {
+    const moreMenu = document.getElementById('public-profile-more-menu');
+    if (moreMenu) {
+        moreMenu.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const action = button.dataset.action;
+            const modal = document.getElementById('modal-profile-public');
+            const userId = modal.dataset.userId;
+            const userName = document.getElementById('public-profile-name').textContent;
+
+            if (!action || !userId) return;
+
+            // Hide the menu
+            moreMenu.classList.add('hidden');
+
+            if (action === 'report') {
+                openReportModal(userId, userName);
+            } else {
+                // For 'block', 'unfriend', 'unblock'
+                handleConnectionAction(userId, action, null); // No button to update visually here, modal will refresh
+            }
+        });
+    }
 }
 
 const socialIconMap = {
@@ -404,6 +432,8 @@ window.openEditProfileModal = openEditProfileModal;
 window.closeEditProfileModal = closeEditProfileModal;
 window.triggerEditAvatarUpload = triggerEditAvatarUpload;
 window.saveUserProfile = saveUserProfile;
+
+// --- SOCIALS ---
 window.openEditSocialsModal = openEditSocialsModal;
 window.closeSocialsModal = closeSocialsModal;
 window.addSocialLinkTemp = addSocialLinkTemp;
@@ -411,6 +441,12 @@ window.removeSocialLinkTemp = removeSocialLinkTemp;
 window.saveSocialLinks = saveSocialLinks;
 
 async function viewUserProfile(userId) {
+    // Close any open 'more' menus
+    const moreMenu = document.getElementById('public-profile-more-menu');
+    if (moreMenu) {
+        moreMenu.classList.add('hidden');
+    }
+
     if (userId === currentUserProfile.id) {
         switchTab('profile');
         return;
@@ -424,12 +460,21 @@ async function viewUserProfile(userId) {
         return;
     }
 
+    // Store the userId on the modal for refresh checks
+    document.getElementById('modal-profile-public').dataset.userId = userId;
+    document.getElementById('modal-profile-private').dataset.userId = userId;
+
     // Fetch connection status between current user and the viewed user
-    const { data: connection } = await supabase
+    const { data: connection, error: connError } = await supabase
         .from('connections')
-        .select('status, user_one_id')
+        .select('status, action_user_id')
         .or(`(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
         .single();
+
+    if (connError && connError.code !== 'PGRST116') { // Ignore 'PGRST116' (no rows found)
+        showToast('Could not check connection status.', 'error');
+        console.error('Error fetching connection:', connError);
+    }
 
     const isConnected = connection?.status === 'accepted';
 
@@ -438,16 +483,16 @@ async function viewUserProfile(userId) {
         document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('private-profile-name').textContent = user.full_name;
         document.getElementById('private-profile-course').textContent = user.course || 'Student';
-        const connectBtn = document.getElementById('private-connect-btn');
 
-        if (connection?.status === 'pending') {
-            connectBtn.textContent = 'Request Sent';
-            connectBtn.disabled = true;
+        const actionsContainer = document.getElementById('private-profile-actions');
+        if (connection?.status === 'pending' && connection.action_user_id === currentUserProfile.id) {
+            actionsContainer.innerHTML = `<button class="btn-secondary w-full">Cancel Request</button>`;
+            actionsContainer.firstElementChild.onclick = () => handleConnectionAction(user.id, 'cancel', actionsContainer.firstElementChild);
         } else {
-            connectBtn.textContent = 'Request to Connect';
-            connectBtn.disabled = false;
-            connectBtn.onclick = () => handleConnectionRequest(user.id, connectBtn);
+            actionsContainer.innerHTML = `<button class="btn-primary w-full">Request to Connect</button>`;
+            actionsContainer.firstElementChild.onclick = () => handleConnectionAction(user.id, 'request', actionsContainer.firstElementChild);
         }
+
         openProfileModal('private');
     } else {
         // Show Public Profile Modal
@@ -455,50 +500,182 @@ async function viewUserProfile(userId) {
         document.getElementById('public-profile-name').textContent = user.full_name;
         document.getElementById('public-profile-course').textContent = user.course || 'Student';
         document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
+        document.getElementById('public-profile-connection-count').textContent = user.connection_count || 0;
         renderSocialLinks(user.social_links, document.getElementById('public-profile-social-links'));
-        const connectBtn = document.getElementById('public-connect-btn');
 
-        if (isConnected) {
-            connectBtn.textContent = 'Connected';
-            connectBtn.disabled = true;
-        } else if (connection?.status === 'pending') {
-            connectBtn.textContent = 'Request Sent';
-            connectBtn.disabled = true;
-        } else {
-            connectBtn.textContent = 'Connect';
-            connectBtn.disabled = false;
-            connectBtn.onclick = () => handleConnectionRequest(user.id, connectBtn);
-        }
+        // Render the dynamic action buttons
+        renderProfileActions(user, connection);
         openProfileModal('public');
     }
 }
 
-async function handleConnectionRequest(targetUserId, btn) {
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Pending...';
+function renderProfileActions(user, connection) {
+    const actionsContainer = document.getElementById('public-profile-actions');
+    const moreMenuBtn = document.getElementById('public-profile-more-btn');
+    const moreMenu = document.getElementById('public-profile-more-menu');
+
+    // Reset
+    actionsContainer.innerHTML = '';
+    moreMenu.innerHTML = '';
+    moreMenuBtn.classList.add('hidden');
+    moreMenu.classList.add('hidden');
+
+    const userId = user.id;
+    let mainButtonHtml = '';
+    let moreMenuItems = [];
+
+    if (!connection) { // No relationship
+        mainButtonHtml = `<button class="btn-primary flex-1">Connect</button>`;
+        actionsContainer.innerHTML = mainButtonHtml;
+        actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'request', actionsContainer.firstElementChild);
+        moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
+
+    } else if (connection.status === 'pending') {
+        if (connection.action_user_id === currentUserProfile.id) { // I sent it
+            mainButtonHtml = `<button class="btn-secondary flex-1">Cancel Request</button>`;
+            actionsContainer.innerHTML = mainButtonHtml;
+            actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'cancel', actionsContainer.firstElementChild);
+        } else { // I received it
+            mainButtonHtml = `
+                <button class="btn-primary flex-1">Accept</button>
+                <button class="btn-secondary flex-1">Decline</button>
+            `;
+            actionsContainer.innerHTML = mainButtonHtml;
+            actionsContainer.children[0].onclick = () => handleConnectionAction(userId, 'accept', actionsContainer.children[0]);
+            actionsContainer.children[1].onclick = () => handleConnectionAction(userId, 'decline', actionsContainer.children[1]);
+        }
+        moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
+
+    } else if (connection.status === 'accepted') {
+        mainButtonHtml = `<button class="btn-secondary flex-1" disabled>✓ Connected</button>`;
+        actionsContainer.innerHTML = mainButtonHtml;
+        moreMenuItems.push({ label: 'Unfriend', action: 'unfriend', class: 'text-error' });
+        moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
+
+    } else if (connection.status === 'blocked') {
+        if (connection.action_user_id === currentUserProfile.id) { // I blocked them
+            mainButtonHtml = `<button class="btn-error flex-1">Unblock</button>`;
+            actionsContainer.innerHTML = mainButtonHtml;
+            actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'unblock', actionsContainer.firstElementChild);
+        } else { // They blocked me
+            mainButtonHtml = `<button class="btn-secondary flex-1" disabled>Blocked</button>`;
+            actionsContainer.innerHTML = mainButtonHtml;
+        }
     }
 
-    const { error } = await supabase.from('connections').insert({
-        user_one_id: currentUserProfile.id, // The sender
-        user_two_id: targetUserId, // The receiver
-        status: 'pending'
-    });
+    // Always add "Report" unless they blocked me
+    if (!(connection?.status === 'blocked' && connection.action_user_id !== currentUserProfile.id)) {
+        moreMenuItems.push({ label: 'Report User', action: 'report', class: 'text-warning' });
+    }
 
-    if (error) {
-        showToast('Failed to send request.', 'error');
-        console.error('Error sending connection request:', error);
+    // Render "More" menu if it has items
+    if (moreMenuItems.length > 0) {
+        moreMenuBtn.classList.remove('hidden');
+        moreMenu.innerHTML = moreMenuItems.map(item =>
+            `<button data-action="${item.action}" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg ${item.class}">${item.label}</button>`
+        ).join('');
+    }
+}
+
+export async function handleConnectionAction(targetUserId, action, btn) {
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined text-xl animate-spin">progress_activity</span>`;
+    }
+
+    try {
+        const { data, error } = await supabase.rpc('manage_connection', {
+            p_target_user_id: targetUserId,
+            p_action: action
+        });
+
+        if (error) throw error;
+
+        showToast(getSuccessMessage(data), 'success');
+
+        // If a button was passed (i.e., from Discover page), update its state
+        if (btn && action === 'request' && data === 'request_sent') {
+            btn.textContent = 'Request Sent';
+            // The button is already disabled.
+        }
+
+        // If the public profile modal is open for this user, refresh it to show the new state
+        const modal = document.getElementById('modal-profile-public');
+        if (modal && !modal.classList.contains('hidden') && modal.dataset.userId === targetUserId) {
+            viewUserProfile(targetUserId);
+        }
+
+    } catch (error) {
+        console.error(`Error performing action '${action}':`, error);
+        showToast(error.message || 'An error occurred.', 'error');
         if (btn) {
             btn.disabled = false;
-            btn.textContent = 'Connect';
-        }
-    } else {
-        showToast('Connection request sent!', 'success');
-        if (btn) {
-            btn.textContent = 'Request Sent';
+            btn.innerHTML = originalText;
         }
     }
 }
+
+function getSuccessMessage(result) {
+    const messages = {
+        request_sent: 'Connection request sent!',
+        accepted: 'Connection accepted!',
+        cancelled: 'Request cancelled.',
+        declined: 'Request declined.',
+        unfriended: 'Connection removed.',
+        blocked: 'User blocked.',
+        unblocked: 'User unblocked.'
+    };
+    return messages[result] || 'Action successful!';
+}
+
+function openReportModal(userId, userName) {
+    const modal = document.getElementById('modal-report-user');
+    modal.classList.replace('hidden', 'flex');
+    document.getElementById('report-user-name').textContent = userName;
+    document.getElementById('submit-report-btn').dataset.userId = userId;
+}
+
+function closeReportModal() {
+    const modal = document.getElementById('modal-report-user');
+    modal.classList.replace('flex', 'hidden');
+    document.getElementById('report-reason').value = '';
+    document.getElementById('report-description').value = '';
+}
+
+async function submitReport() {
+    const btn = document.getElementById('submit-report-btn');
+    const userId = btn.dataset.userId;
+    const reason = document.getElementById('report-reason').value;
+    const description = document.getElementById('report-description').value.trim();
+
+    if (!reason) {
+        showToast('Please select a reason for the report.', 'warning');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+        const { error } = await supabase.rpc('create_report', {
+            p_reported_user_id: userId,
+            p_reason: reason,
+            p_description: description || null
+        });
+        if (error) throw error;
+        showToast('Report submitted successfully. Our team will review it.', 'success');
+        closeReportModal();
+        closeProfileModals();
+    } catch (error) {
+        showToast('Failed to submit report.', 'error');
+        console.error('Error submitting report:', error);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Submit Report';
+    }
+}
+
 
 window.viewUserProfile = viewUserProfile;
 
@@ -546,6 +723,13 @@ function closeProfileModals() {
         modal.classList.remove('flex');
     });
 }
+
+window.openReportModal = openReportModal;
+window.closeReportModal = closeReportModal;
+window.submitReport = submitReport;
+window.toggleMoreMenu = () => {
+    document.getElementById('public-profile-more-menu').classList.toggle('hidden');
+};
 
 async function openConnectionsModal() {
     const modal = document.getElementById('modal-connections');

@@ -85,11 +85,14 @@ CREATE TABLE IF NOT EXISTS public.connections (
   user_one_id uuid NOT NULL,
   user_two_id uuid NOT NULL,
   status text NOT NULL, -- 'pending', 'accepted', 'blocked'
+  action_user_id uuid null,
   created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone null default now(),
   CONSTRAINT connections_pkey PRIMARY KEY (id),
+  constraint connections_action_user_id_fkey foreign key (action_user_id) references users (id) on delete set null,
   CONSTRAINT connections_user_one_id_fkey FOREIGN KEY (user_one_id) REFERENCES public.users(id) ON DELETE CASCADE,
   CONSTRAINT connections_user_two_id_fkey FOREIGN KEY (user_two_id) REFERENCES public.users(id) ON DELETE CASCADE,
-  CONSTRAINT connections_unique_pair UNIQUE (user_one_id, user_two_id)
+  constraint check_users_are_different check ((user_one_id <> user_two_id))
 );
 
 -- Hotposts Table (Stories)
@@ -150,6 +153,22 @@ CREATE TABLE IF NOT EXISTS public.campus_updates (
 COMMENT ON TABLE public.campus_updates IS 'Stores official campus-wide updates like events, notices, etc.';
 COMMENT ON COLUMN public.campus_updates.category IS 'e.g., Event, Notice, Academic, Holiday';
 
+create table
+  public.reports (
+    id uuid not null default uuid_generate_v4 (),
+    reporter_id uuid not null,
+    reported_user_id uuid not null,
+    reason text not null,
+    description text null,
+    status text not null default 'pending_review'::text,
+    created_at timestamp with time zone null default now(),
+    constraint reports_pkey primary key (id),
+    constraint reports_reported_user_id_fkey foreign key (reported_user_id) references users (id) on delete cascade,
+    constraint reports_reporter_id_fkey foreign key (reporter_id) references users (id) on delete cascade,
+    constraint reports_check_users_are_different check ((reporter_id <> reported_user_id))
+  );
+
+
 -- ==========================================
 -- 2. AUTH TRIGGER (Syncs Auth to Public Users)
 -- ==========================================
@@ -208,15 +227,20 @@ ALTER TABLE public.hotpost_replies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hotposts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hotpost_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campus_updates ENABLE ROW LEVEL SECURITY;
+alter table public.reports enable row level security;
 
 -- -------------------------
 -- POLICIES FOR 'users' TABLE
 -- -------------------------
 DROP POLICY IF EXISTS "Users can read all profiles" ON public.users;
--- Read all profiles (needed for discover/hotposts feeds)
-CREATE POLICY "Users can read all profiles" 
-ON public.users FOR SELECT TO authenticated 
-USING (true);
+CREATE POLICY "Users can read profiles of non-blocked users"
+ON public.users FOR SELECT
+TO authenticated
+USING (
+  -- A user can see other profiles if no block exists between them.
+  -- They can always see their own profile because is_blocked(me, me) is false.
+  NOT public.is_blocked(public.current_user_id(), id)
+);
 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 -- Update own profile
@@ -253,10 +277,10 @@ USING (true);
 -- POLICIES FOR 'posts' TABLE
 -- -------------------------
 DROP POLICY IF EXISTS "Users can read all posts" ON public.posts;
-CREATE POLICY "Users can read all posts"
+CREATE POLICY "Users can read posts from non-blocked users"
 ON public.posts FOR SELECT
 TO authenticated
-USING (true);
+USING ( NOT public.is_blocked(public.current_user_id(), user_id) );
 
 DROP POLICY IF EXISTS "Users can insert their own posts" ON public.posts;
 CREATE POLICY "Users can insert their own posts"
@@ -317,32 +341,11 @@ USING ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() 
 -- -------------------------
 -- POLICIES FOR 'connections' TABLE
 -- -------------------------
-DROP POLICY IF EXISTS "Users can view their own connections" ON public.connections;
+-- Users can only SEE their own connection rows. All modifications are done via RPC.
 CREATE POLICY "Users can view their own connections"
 ON public.connections FOR SELECT
 TO authenticated
-USING (
-  (user_one_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid())) OR
-  (user_two_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid()))
-);
-
-DROP POLICY IF EXISTS "Users can insert connection requests" ON public.connections;
-CREATE POLICY "Users can insert connection requests"
-ON public.connections FOR INSERT
-TO authenticated
-WITH CHECK ( user_one_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid()) );
-
-DROP POLICY IF EXISTS "Users can update incoming connection requests" ON public.connections;
-CREATE POLICY "Users can update incoming connection requests"
-ON public.connections FOR UPDATE
-TO authenticated
-USING ( user_two_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid()) );
-
-DROP POLICY IF EXISTS "Users can delete incoming connection requests" ON public.connections;
-CREATE POLICY "Users can delete incoming connection requests"
-ON public.connections FOR DELETE
-TO authenticated
-USING ( user_two_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid()) );
+USING ( public.current_user_id() IN (user_one_id, user_two_id) );
 
 -- -------------------------
 -- POLICIES FOR 'hotpost_replies' TABLE
@@ -375,17 +378,21 @@ CREATE POLICY "Authenticated users can view hotposts based on visibility"
 ON public.hotposts FOR SELECT
 TO authenticated
 USING (
-  visibility = 'everyone'
-  OR (user_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid()))
-  OR (
-    visibility = 'connections' AND EXISTS (
-      SELECT 1 FROM connections
-      WHERE
-        status = 'accepted' AND
-        (
-          (user_one_id = hotposts.user_id AND user_two_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid())) OR
-          (user_two_id = hotposts.user_id AND user_one_id = (SELECT id FROM public.users WHERE auth_user_id = auth.uid()))
-        )
+  -- Pre-check: No viewing if a block exists with the author
+  NOT public.is_blocked(public.current_user_id(), user_id)
+  AND (
+    -- Condition 1: It's a public hotpost
+    visibility = 'everyone'
+    -- Condition 2: It's the user's own hotpost
+    OR user_id = public.current_user_id()
+    -- Condition 3: It's for connections, and they are connected
+    OR (
+      visibility = 'connections' AND EXISTS (
+        SELECT 1 FROM public.connections
+        WHERE c.status = 'accepted'
+          AND c.user_one_id = least(hotposts.user_id, public.current_user_id())
+          AND c.user_two_id = greatest(hotposts.user_id, public.current_user_id())
+      )
     )
   )
 );
@@ -394,7 +401,7 @@ DROP POLICY IF EXISTS "Users can delete their own hotposts" ON public.hotposts;
 CREATE POLICY "Users can delete their own hotposts"
 ON public.hotposts FOR DELETE
 TO authenticated
-USING ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() );
+USING ( user_id = public.current_user_id() );
 
 -- -------------------------
 -- POLICIES FOR 'hotpost_views' TABLE
@@ -423,3 +430,173 @@ CREATE POLICY "Authenticated users can read campus updates"
 ON public.campus_updates FOR SELECT
 TO authenticated
 USING (true);
+
+-- -------------------------
+-- RLS FOR 'reports'
+-- -------------------------
+-- Users can INSERT reports, but cannot see any reports (only admins should).
+CREATE POLICY "Users can create reports" ON public.reports FOR INSERT TO authenticated WITH CHECK (reporter_id = public.current_user_id());
+
+-- ==========================================
+-- 4. HELPER FUNCTIONS
+-- ==========================================
+
+-- Function to get the public.users.id for the currently authenticated user
+-- Function to check if a block exists between two users.
+-- Returns TRUE if user_a is blocked by user_b, or user_a has blocked user_b.
+CREATE OR REPLACE FUNCTION public.is_blocked(user_a_id uuid, user_b_id uuid)
+RETURNS boolean LANGUAGE sql SECURITY INVOKER AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.connections
+    WHERE status = 'blocked'
+      AND (
+        (user_one_id = user_a_id AND user_two_id = user_b_id) OR
+        (user_one_id = user_b_id AND user_two_id = user_a_id)
+      )
+  );
+$$;
+
+-- ==========================================
+-- 5. DATABASE FUNCTIONS & TRIGGERS
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION public.current_user_id()
+RETURNS uuid LANGUAGE sql STABLE AS $$
+  -- Supabase provides auth.uid() to get the authenticated user's ID
+  SELECT id FROM public.users WHERE auth_user_id = auth.uid()
+$$;
+
+-- Function to create a user report.
+CREATE OR REPLACE FUNCTION public.create_report(p_reported_user_id uuid, p_reason text, p_description text DEFAULT NULL)
+RETURNS void AS $$
+BEGIN
+  INSERT INTO public.reports(reporter_id, reported_user_id, reason, description)
+  VALUES (public.current_user_id(), p_reported_user_id, p_reason, p_description);
+END;
+$$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+
+-- A single, powerful function to manage all connection state changes.
+CREATE OR REPLACE FUNCTION public.manage_connection(p_target_user_id uuid, p_action text)
+RETURNS text AS $$
+DECLARE
+  v_current_user_id uuid := public.current_user_id();
+  v_user_one_id uuid;
+  v_user_two_id uuid;
+  v_connection public.connections;
+BEGIN
+  -- Ensure users are not the same
+  IF v_current_user_id = p_target_user_id THEN
+    RAISE EXCEPTION 'Cannot perform connection actions with yourself.';
+  END IF;
+
+  -- Standardize user order for queries
+  v_user_one_id := least(v_current_user_id, p_target_user_id);
+  v_user_two_id := greatest(v_current_user_id, p_target_user_id);
+
+  -- Get the existing connection, if any
+  SELECT * INTO v_connection FROM public.connections
+  WHERE user_one_id = v_user_one_id AND user_two_id = v_user_two_id;
+
+  -- Main action logic
+  CASE p_action
+    WHEN 'request' THEN
+      IF v_connection IS NOT NULL THEN RAISE EXCEPTION 'A relationship already exists.'; END IF;
+      INSERT INTO public.connections(user_one_id, user_two_id, status, action_user_id)
+      VALUES (v_user_one_id, v_user_two_id, 'pending', v_current_user_id);
+      RETURN 'request_sent';
+
+    WHEN 'accept' THEN
+      IF v_connection IS NULL OR v_connection.status != 'pending' OR v_connection.action_user_id = v_current_user_id THEN
+        RAISE EXCEPTION 'No pending request to accept.';
+      END IF;
+      UPDATE public.connections SET status = 'accepted', action_user_id = v_current_user_id
+      WHERE id = v_connection.id;
+      RETURN 'accepted';
+
+    WHEN 'cancel' THEN
+      IF v_connection IS NULL OR v_connection.status != 'pending' OR v_connection.action_user_id != v_current_user_id THEN
+        RAISE EXCEPTION 'No request to cancel.';
+      END IF;
+      DELETE FROM public.connections WHERE id = v_connection.id;
+      RETURN 'cancelled';
+
+    WHEN 'decline' THEN
+      IF v_connection IS NULL OR v_connection.status != 'pending' OR v_connection.action_user_id = v_current_user_id THEN
+        RAISE EXCEPTION 'No request to decline.';
+      END IF;
+      DELETE FROM public.connections WHERE id = v_connection.id;
+      RETURN 'declined';
+
+    WHEN 'unfriend' THEN
+      IF v_connection IS NULL OR v_connection.status != 'accepted' THEN
+        RAISE EXCEPTION 'Not connected with this user.';
+      END IF;
+      DELETE FROM public.connections WHERE id = v_connection.id;
+      RETURN 'unfriended';
+
+    WHEN 'block' THEN
+      IF v_connection IS NULL THEN
+        INSERT INTO public.connections(user_one_id, user_two_id, status, action_user_id)
+        VALUES (v_user_one_id, v_user_two_id, 'blocked', v_current_user_id);
+      ELSE
+        IF v_connection.status = 'blocked' AND v_connection.action_user_id = v_current_user_id THEN RETURN 'already_blocked'; END IF;
+        UPDATE public.connections SET status = 'blocked', action_user_id = v_current_user_id
+        WHERE id = v_connection.id;
+      END IF;
+      RETURN 'blocked';
+
+    WHEN 'unblock' THEN
+      IF v_connection IS NULL OR v_connection.status != 'blocked' OR v_connection.action_user_id != v_current_user_id THEN
+        RAISE EXCEPTION 'You have not blocked this user.';
+      END IF;
+      DELETE FROM public.connections WHERE id = v_connection.id;
+      RETURN 'unblocked';
+
+    ELSE
+      RAISE EXCEPTION 'Invalid action: %', p_action;
+  END CASE;
+END;
+$$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.update_connection_counts()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- On insert or update to 'accepted'
+  IF (TG_OP = 'INSERT' AND NEW.status = 'accepted') OR (TG_OP = 'UPDATE' AND NEW.status = 'accepted' AND OLD.status != 'accepted') THEN
+    UPDATE public.users SET connection_count = connection_count + 1 WHERE id = NEW.user_one_id;
+    UPDATE public.users SET connection_count = connection_count + 1 WHERE id = NEW.user_two_id;
+  -- On leaving 'accepted' status (unfriend, block, etc.)
+  ELSIF (TG_OP = 'DELETE' AND OLD.status = 'accepted') OR (TG_OP = 'UPDATE' AND OLD.status = 'accepted' AND NEW.status != 'accepted') THEN
+    UPDATE public.users SET connection_count = connection_count - 1 WHERE id = OLD.user_one_id;
+    UPDATE public.users SET connection_count = connection_count - 1 WHERE id = OLD.user_two_id;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Triggers to automatically update connection counts
+DROP TRIGGER IF EXISTS on_connection_insert_or_update_or_delete ON public.connections;
+CREATE TRIGGER on_connection_insert_or_update_or_delete
+  AFTER INSERT OR UPDATE OR DELETE ON public.connections
+  FOR EACH ROW EXECUTE FUNCTION public.update_connection_counts();
+
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS handle_connections_updated_at ON public.connections;
+CREATE TRIGGER handle_connections_updated_at
+  BEFORE UPDATE ON public.connections
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ==========================================
+-- 6. CONSTRAINTS & INDEXES
+-- ==========================================
+
+-- This index ensures a relationship between two users is unique, regardless of who is user_one or user_two.
+CREATE UNIQUE INDEX IF NOT EXISTS connections_unique_pair_idx ON public.connections (least(user_one_id, user_two_id), greatest(user_one_id, user_two_id));

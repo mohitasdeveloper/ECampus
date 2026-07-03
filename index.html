@@ -36,6 +36,22 @@
             },
         }
     </script>
+    <style type="text/tailwindcss">
+        @layer components {
+            .btn-primary {
+                @apply bg-primary text-white px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-all shadow-md shadow-primary/25 disabled:bg-primary/50 disabled:cursor-not-allowed;
+            }
+            .btn-secondary {
+                @apply bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed;
+            }
+            .btn-error {
+                @apply bg-error text-white px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-all shadow-md shadow-error/25 disabled:bg-error/50 disabled:cursor-not-allowed;
+            }
+            .btn-warning {
+                 @apply bg-orange-500 text-white px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-all shadow-md shadow-orange-500/25 disabled:bg-orange-500/50 disabled:cursor-not-allowed;
+            }
+        }
+    </style>
 
 </head>
 
@@ -370,9 +386,9 @@
                     <h4 class="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-1">This Account is Private</h4>
                     <p class="text-[12px] text-gray-500 dark:text-gray-400 px-4">Connect to see their full profile.</p>
                 </div>
-                <button id="private-connect-btn"
-                    class="w-full bg-primary text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform">Request
-                    to Connect</button>
+                <div id="private-profile-actions" class="w-full">
+                    <!-- JS will inject button here -->
+                </div>
             </div>
         </div>
     </div>
@@ -394,15 +410,29 @@
                 <h3 id="public-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
                 <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-2">
                     Student</p>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    <span id="public-profile-connection-count"
+                        class="font-bold text-gray-700 dark:text-gray-300">0</span> connections
+                </div>
                 <p id="public-profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-4 px-4">---</p>
                 <div class="flex gap-3 justify-center mb-6" id="public-profile-social-links"></div>
-                <div class="flex gap-3 w-full">
-                    <button
-                        class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-transform"><span
-                            class="material-symbols-outlined">mail</span> Message</button>
-                    <button id="public-connect-btn"
-                        class="flex-1 bg-primary text-white py-3.5 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-transform shadow-md"><span
-                            class="material-symbols-outlined">person_add</span> Connect</button>
+                <div class="mt-6 flex items-stretch justify-center gap-2 w-full">
+                    <button class="btn-secondary flex-1"><span
+                            class="material-symbols-outlined text-base leading-none mr-1">mail</span> Message</button>
+                    <div id="public-profile-actions" class="flex items-stretch gap-2 flex-1">
+                        <!-- Main action buttons will be rendered here by main.js -->
+                    </div>
+                    <!-- "More" options menu -->
+                    <div class="relative">
+                        <button id="public-profile-more-btn" onclick="toggleMoreMenu()"
+                            class="hidden btn-secondary !p-0 w-12 h-auto">
+                            <span class="material-symbols-outlined">more_horiz</span>
+                        </button>
+                        <div id="public-profile-more-menu"
+                            class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-800 p-2 z-20">
+                            <!-- More menu items will be rendered here by main.js -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -489,6 +519,39 @@
             <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Connections</h3>
             <div id="connections-list" class="flex-1 overflow-y-auto space-y-3 pr-1">
                 <!-- Connections will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Report User Modal -->
+    <div id="modal-report-user" class="fixed inset-0 bg-black/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-md animate-slideUp">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Report User</h2>
+                <button onclick="closeReportModal()"
+                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">You are reporting <strong id="report-user-name"
+                    class="text-gray-800 dark:text-gray-200"></strong>. Please provide a reason.</p>
+
+            <div class="space-y-4">
+                <select id="report-reason"
+                    class="w-full bg-gray-100 dark:bg-neutral-800 border-2 border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm">
+                    <option value="">-- Select a reason --</option>
+                    <option value="spam">Spam or Misleading Content</option>
+                    <option value="harassment">Harassment or Bullying</option>
+                    <option value="inappropriate_content">Inappropriate Content</option>
+                    <option value="impersonation">Impersonation / Fake Account</option>
+                    <option value="other">Other</option>
+                </select>
+                <textarea id="report-description" placeholder="Provide additional details (optional)"
+                    class="w-full bg-gray-100 dark:bg-neutral-800 border-2 border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm h-24 resize-none"></textarea>
+            </div>
+
+            <div class="mt-6">
+                <button id="submit-report-btn" onclick="submitReport()" class="btn-error w-full">Submit Report</button>
             </div>
         </div>
     </div>
@@ -635,10 +698,11 @@
                     <!-- Viewers will be injected here -->
                 </div>
             </div>
-     <div id="details-content-replies" class="details-content hidden flex-1 overflow-y-auto space-y-3 pr-1">
-                </div>
+            <div id="details-content-replies" class="details-content hidden flex-1 overflow-y-auto space-y-3 pr-1">
+            </div>
         </div>
-    </div> <div id="modal-post-comments"
+    </div>
+    <div id="modal-post-comments"
         class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
         <div
             class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
@@ -648,7 +712,7 @@
             <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Comments</h3>
 
             <div id="post-comments-list" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4">
-                </div>
+            </div>
 
             <div class="flex items-center gap-2 shrink-0">
                 <input type="text" id="post-comment-input" placeholder="Add a comment..."
@@ -659,7 +723,8 @@
                 </button>
             </div>
         </div>
-    </div> <nav
+    </div>
+    <nav
         class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-[40]">
         <button onclick="switchTab('dashboard')" id="nav-dashboard"
             class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 bg-primary text-white">
@@ -684,4 +749,5 @@
         </button>
     </nav>
 </body>
+
 </html>
