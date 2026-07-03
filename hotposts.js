@@ -288,22 +288,6 @@ function renderHotpostCircles() {
     createBtnDiv.className = 'w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary';
     createBtnDiv.innerHTML = `<span class="material-symbols-outlined text-[26px]">add</span>`;
 
-    // Add "My Hotposts" button to the feed if it doesn't exist
-    const createBtn = document.getElementById('create-hotpost-btn');
-    if (createBtn && !document.getElementById('my-hotposts-feed-btn')) {
-        const myHotpostsBtn = document.createElement('div');
-        myHotpostsBtn.id = 'my-hotposts-feed-btn';
-        myHotpostsBtn.className = 'flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform';
-        myHotpostsBtn.innerHTML = `
-            <div class="w-[68px] h-[68px] rounded-full border-[2.5px] border-blue-500/40 flex items-center justify-center bg-blue-500/5 text-blue-500 dark:border-blue-400/40 dark:bg-blue-400/10 dark:text-blue-400">
-                <span class="material-symbols-outlined text-[26px]">history</span>
-            </div>
-            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">My Posts</span>
-        `;
-        myHotpostsBtn.addEventListener('click', window.showMyHotposts);
-        createBtn.insertAdjacentElement('afterend', myHotpostsBtn);
-    }
-
     // Get all user IDs with hotposts, excluding the current user
     const finalSortedIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
 
@@ -519,33 +503,32 @@ async function handleReplyToHotpost() {
 
 function openMyHotpostsModal(posts) {
     const list = document.getElementById('my-hotposts-list');
-    list.innerHTML = posts.map(post => {
+    list.innerHTML = ''; // Clear the list before adding new items
+
+    posts.forEach(post => {
         const viewCount = post.hotpost_views[0]?.count || 0;
         const replyCount = post.hotpost_replies[0]?.count || 0;
-        return `
-            <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800">
-                <div class="flex-1 flex items-center gap-4 cursor-pointer" onclick="openStoryDetailsModal('${post.id}')">
-                    <img src="${post.media_url}" class="w-14 h-20 rounded-xl object-cover">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-gray-800 dark:text-gray-100">Posted ${timeAgo(post.created_at)}</p>
-                        <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            <div class="flex items-center gap-1">
-                                <span class="material-symbols-outlined text-sm">visibility</span>
-                                <span>${viewCount} Views</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <span class="material-symbols-outlined text-sm">reply</span>
-                                <span>${replyCount} Replies</span>
-                            </div>
+        const postEl = document.createElement('div');
+        postEl.className = "flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800";
+        postEl.innerHTML = `
+            <div class="flex-1 flex items-center gap-4 cursor-pointer">
+                <img src="${post.media_url}" class="w-14 h-20 rounded-xl object-cover">
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-gray-800 dark:text-gray-100">Posted ${timeAgo(post.created_at)}</p>
+                    <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">visibility</span><span>${viewCount} Views</span></div>
+                        <div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">reply</span><span>${replyCount} Replies</span></div>
                         </div>
                     </div>
                 </div>
-                <button onclick="handleDeleteHotpost('${post.id}')" class="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors self-center">
-                    <span class="material-symbols-outlined text-xl">delete</span>
-                </button>
-            </div>
+            <button class="delete-btn p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors self-center">
+                <span class="material-symbols-outlined text-xl">delete</span>
+            </button>
         `;
-    }).join('');
+        postEl.querySelector('.cursor-pointer').addEventListener('click', () => openStoryDetailsModal(post.id));
+        postEl.querySelector('.delete-btn').addEventListener('click', () => handleDeleteHotpost(post.id));
+        list.appendChild(postEl);
+    });
 
     document.getElementById('modal-my-hotposts').classList.replace('hidden', 'flex');
 }
@@ -573,10 +556,23 @@ async function handleDeleteHotpost(hotpostId) {
 
 async function openStoryDetailsModal(hotpostId, defaultTab = 'viewers') {
     const modal = document.getElementById('modal-story-details');
+    if (!modal) {
+        console.error('UI Error: modal-story-details not found.');
+        showToast('Cannot open story details.', 'error');
+        return;
+    }
     modal.classList.replace('hidden', 'flex');
 
     const viewersList = document.getElementById('hotpost-viewers-list');
     const repliesList = document.getElementById('hotpost-replies-list');
+
+    if (!viewersList || !repliesList) {
+        console.error('UI Error: hotpost-viewers-list or hotpost-replies-list not found inside modal-story-details.');
+        showToast('Cannot load story details content.', 'error');
+        closeStoryDetailsModal(); // Close the broken modal
+        return;
+    }
+
     viewersList.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading...</p>`;
     repliesList.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading...</p>`;
 

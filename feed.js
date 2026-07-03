@@ -8,6 +8,21 @@ export function initFeed(user) {
     currentUser = user;
     fetchPosts();
 
+    const dashboardView = document.getElementById('view-dashboard');
+    if (dashboardView && !document.getElementById('my-hotposts-feed-pill-btn')) {
+        const myHotpostsBtn = document.createElement('button');
+        myHotpostsBtn.id = 'my-hotposts-feed-pill-btn';
+        myHotpostsBtn.className = 'absolute top-5 right-5 z-10 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 shadow-sm rounded-full px-4 py-2 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors';
+        myHotpostsBtn.innerHTML = `<span class="material-symbols-outlined text-lg">history</span> My Posts`;
+        myHotpostsBtn.onclick = () => window.showMyHotposts();
+
+        // The dashboard view needs to be a positioning context for the absolute button
+        if (getComputedStyle(dashboardView).position === 'static') {
+            dashboardView.style.position = 'relative';
+        }
+        dashboardView.prepend(myHotpostsBtn);
+    }
+
     const sendBtn = document.getElementById('send-post-btn');
     if (sendBtn) {
         sendBtn.addEventListener('click', submitPost);
