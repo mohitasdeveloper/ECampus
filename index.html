@@ -34,34 +34,6 @@
         }
     </script>
 
-    <script>
-        function switchTab(tabId) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.add('hidden');
-                tab.classList.remove('animate-fadeIn');
-            });
-            // Show target tab
-            const target = document.getElementById(`view-${tabId}`);
-            if (target) {
-                target.classList.remove('hidden');
-                target.classList.add('animate-fadeIn');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-
-            // Update Nav colors
-            document.querySelectorAll('.nav-item').forEach(nav => {
-                nav.classList.remove('bg-primary', 'text-white');
-                nav.classList.add('text-gray-500', 'dark:text-gray-400');
-            });
-            const activeNav = document.getElementById(`nav-${tabId}`);
-            if (activeNav) {
-                activeNav.classList.remove('text-gray-500', 'dark:text-gray-400');
-                activeNav.classList.add('bg-primary', 'text-white');
-            }
-        }
-
-    </script>
 </head>
 
 <body
@@ -69,6 +41,10 @@
 
     <header
         class="fixed top-0 w-full z-[40] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-neutral-800 shadow-sm transition-colors duration-300">
+        <!-- Toast Notification Container -->
+        <div id="toast-container"
+            class="absolute top-full left-1/2 -translate-x-1/2 w-full max-w-md p-4 space-y-2 z-[200]"></div>
+
         <div class="flex items-center px-6 h-16 w-full max-w-screen-xl mx-auto relative">
             <div class="flex-none z-10">
                 <div

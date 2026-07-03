@@ -20,15 +20,17 @@ export function initHotposts(user) {
 
 function setupEventListeners() {
     document.getElementById('create-hotpost-btn').addEventListener('click', handleCreateOrViewMyHotposts);
-    document.getElementById('close-hotpost-camera-btn').addEventListener('click', closeCameraModal);
-    document.getElementById('switch-hotpost-camera-btn').addEventListener('click', switchCamera);
-    document.getElementById('capture-hotpost-btn').addEventListener('click', capturePhoto);
+    document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
+    document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
+    document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
 
-    document.getElementById('retake-hotpost-btn').addEventListener('click', openCameraModal);
-    document.getElementById('close-hotpost-create-btn').addEventListener('click', closeCreateHotpostModal);
+    document.getElementById('retake-hotpost-btn')?.addEventListener('click', openCameraModal);
+    document.getElementById('close-hotpost-create-btn')?.addEventListener('click', closeCreateHotpostModal);
     document.getElementById('close-my-hotposts-btn').addEventListener('click', closeMyHotpostsModal);
     document.getElementById('submit-hotpost-btn').addEventListener('click', submitHotpost);
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
+    document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
+    document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
 }
 
 async function openCameraModal() {
@@ -213,30 +215,57 @@ function renderHotpostCircles() {
 
 let currentViewerState = {
     userId: null,
+    userOrder: [], // Array of user IDs with stories
+    userIndex: -1,
     postIndex: 0,
-    timeoutId: null,
+    storyTimer: null,
+    storyDuration: 5000, // 5 seconds
 };
 
 function openHotpostViewer(userId) {
     const userData = hotpostsByUser.get(userId);
     if (!userData || userData.posts.length === 0) return;
 
-    currentViewerState.userId = userId;
-    currentViewerState.postIndex = 0;
+    // Set the order of users to view, starting with the clicked one
+    const allUserIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
+    const clickedUserIndex = allUserIds.indexOf(userId);
+    currentViewerState.userOrder = [
+        ...allUserIds.slice(clickedUserIndex),
+        ...allUserIds.slice(0, clickedUserIndex)
+    ];
 
     document.getElementById('modal-view-hotpost').classList.replace('hidden', 'flex');
-    recordView(userData.posts[0].id);
-    showCurrentHotpost();
+    playUserStories(0); // Start with the first user in our new order
 }
 
 function closeHotpostViewer() {
     document.getElementById('modal-view-hotpost').classList.replace('flex', 'hidden');
-    clearTimeout(currentViewerState.timeoutId);
+    clearTimeout(currentViewerState.storyTimer);
+    // Stop any active progress bar animation
+    const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
+    if (activeBar) activeBar.style.animation = 'none';
 }
 
-function showCurrentHotpost() {
+function playUserStories(userIndex, postIndex = 0) {
+    if (userIndex >= currentViewerState.userOrder.length) {
+        closeHotpostViewer();
+        return;
+    }
+
+    currentViewerState.userIndex = userIndex;
+    currentViewerState.postIndex = postIndex;
+    currentViewerState.userId = currentViewerState.userOrder[userIndex];
+
     const userData = hotpostsByUser.get(currentViewerState.userId);
     const post = userData.posts[currentViewerState.postIndex];
+
+    // Render progress bars
+    const progressContainer = document.getElementById('hotpost-progress-bars');
+    progressContainer.innerHTML = userData.posts.map((p, index) => `
+        <div class="flex-1 bg-white/30 rounded-full overflow-hidden">
+            <div class="progress-bar-inner h-full bg-white rounded-full ${index < postIndex ? 'w-full' : ''}" data-index="${index}"></div>
+        </div>
+    `).join('');
 
     // Update UI
     document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
@@ -246,20 +275,48 @@ function showCurrentHotpost() {
     document.getElementById('hotpost-viewer-caption').textContent = post.caption || '';
     document.getElementById('hotpost-viewer-caption').classList.toggle('hidden', !post.caption);
 
-    // Auto-advance after 5 seconds
-    clearTimeout(currentViewerState.timeoutId);
-    currentViewerState.timeoutId = setTimeout(() => {
-        // Logic to move to next post or close
-        closeHotpostViewer(); // Simple for now
-    }, 5000);
+    // Record the view
+    recordView(post.id);
+
+    // Start animation for the current progress bar
+    const activeBar = progressContainer.querySelector(`.progress-bar-inner[data-index="${postIndex}"]`);
+    if (activeBar) {
+        activeBar.style.animation = `fill-progress ${currentViewerState.storyDuration}ms linear forwards`;
+        activeBar.classList.add('active');
+    }
+
+    // Auto-advance
+    clearTimeout(currentViewerState.storyTimer);
+    currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.storyDuration);
+}
+
+function nextStory() {
+    const currentUserData = hotpostsByUser.get(currentViewerState.userId);
+    if (currentViewerState.postIndex < currentUserData.posts.length - 1) {
+        // Go to next post of the same user
+        playUserStories(currentViewerState.userIndex, currentViewerState.postIndex + 1);
+    } else {
+        // Go to the first post of the next user
+        playUserStories(currentViewerState.userIndex + 1, 0);
+    }
+}
+
+function prevStory() {
+    if (currentViewerState.postIndex > 0) {
+        // Go to previous post of the same user
+        playUserStories(currentViewerState.userIndex, currentViewerState.postIndex - 1);
+    } else if (currentViewerState.userIndex > 0) {
+        // Go to the last post of the previous user
+        const prevUserIndex = currentViewerState.userIndex - 1;
+        const prevUserData = hotpostsByUser.get(currentViewerState.userOrder[prevUserIndex]);
+        playUserStories(prevUserIndex, prevUserData.posts.length - 1);
+    }
 }
 
 async function recordView(hotpostId) {
     // Don't record views on your own posts
-    const postData = Array.from(hotpostsByUser.values()).flatMap(u => u.posts).find(p => p.id === hotpostId);
-    if (postData && postData.users.id === currentUser.id) {
-        return;
-    }
+    const postOwnerId = Array.from(hotpostsByUser.values()).find(u => u.posts.some(p => p.id === hotpostId))?.user.id;
+    if (postOwnerId === currentUser.id) return;
 
     const { error } = await supabase.from('hotpost_views').insert({
         hotpost_id: hotpostId,
