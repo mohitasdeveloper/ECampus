@@ -2,6 +2,7 @@ import { initHotposts } from './hotposts.js';
 import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { supabase } from './supabase.js';
+import { initUpdates } from './updates.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 
 let currentUserProfile = null;
@@ -43,6 +44,7 @@ function initializeApp(profile) {
 
     // Initialize features that need the user object
     initHotposts(profile);
+    initUpdates();
 
     // Setup UI elements
     updateHeaderAvatar(profile.profile_img_url, profile.full_name);
