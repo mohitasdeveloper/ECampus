@@ -635,62 +635,53 @@
                     <!-- Viewers will be injected here -->
                 </div>
             </div>
-         <div id="details-content-replies" class="details-content hidden flex-1 overflow-y-auto space-y-3 pr-1">
+     <div id="details-content-replies" class="details-content hidden flex-1 overflow-y-auto space-y-3 pr-1">
                 </div>
-        </div> 
+        </div>
     </div> <div id="modal-post-comments"
         class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        </div>
+        <div
+            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
+            <button id="close-post-comments-btn"
+                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
+                    class="material-symbols-outlined text-[18px]">close</span></button>
+            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Comments</h3>
 
-    <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-[40]">
-        </nav>
-            class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-            <div
-                class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
-                <button id="close-post-comments-btn"
-                    class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                        class="material-symbols-outlined text-[18px]">close</span></button>
-                <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Comments</h3>
-
-                <div id="post-comments-list" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4">
-                    <!-- Comments will be injected here -->
+            <div id="post-comments-list" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4">
                 </div>
 
-                <div class="flex items-center gap-2 shrink-0">
-                    <input type="text" id="post-comment-input" placeholder="Add a comment..."
-                        class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-transparent outline-none focus:border-primary placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-                    <button id="send-comment-btn"
-                        class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
-                        <span class="material-symbols-outlined text-[20px] ml-1">send</span>
-                    </button>
-                </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <input type="text" id="post-comment-input" placeholder="Add a comment..."
+                    class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-transparent outline-none focus:border-primary placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+                <button id="send-comment-btn"
+                    class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
+                    <span class="material-symbols-outlined text-[20px] ml-1">send</span>
+                </button>
             </div>
         </div>
-
-        <nav
-            class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-[40]">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard"
-                class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95">
-                <span class="material-symbols-outlined text-[24px]"
-                    style="font-variation-settings: 'FILL' 1;">dashboard</span><span
-                    class="text-[10px] font-bold mt-0.5">Feed</span>
-            </button>
-            <button onclick="switchTab('search')" id="nav-search"
-                class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95">
-                <span class="material-symbols-outlined text-[24px]">search</span><span
-                    class="text-[10px] font-bold mt-0.5">Search</span>
-            </button>
-            <button onclick="switchTab('updates')" id="nav-updates"
-                class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95">
-                <span class="material-symbols-outlined text-[24px]">campaign</span><span
-                    class="text-[10px] font-bold mt-0.5">Updates</span>
-            </button>
-            <button onclick="switchTab('profile')" id="nav-profile"
-                class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95">
-                <span class="material-symbols-outlined text-[24px]">person</span><span
-                    class="text-[10px] font-bold mt-0.5">Profile</span>
-            </button>
-        </nav>
+    </div> <nav
+        class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-[40]">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard"
+            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 bg-primary text-white">
+            <span class="material-symbols-outlined text-[24px]"
+                style="font-variation-settings: 'FILL' 1;">dashboard</span><span
+                class="text-[10px] font-bold mt-0.5">Feed</span>
+        </button>
+        <button onclick="switchTab('search')" id="nav-search"
+            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 text-gray-500 dark:text-gray-400">
+            <span class="material-symbols-outlined text-[24px]">search</span><span
+                class="text-[10px] font-bold mt-0.5">Search</span>
+        </button>
+        <button onclick="switchTab('updates')" id="nav-updates"
+            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 text-gray-500 dark:text-gray-400">
+            <span class="material-symbols-outlined text-[24px]">campaign</span><span
+                class="text-[10px] font-bold mt-0.5">Updates</span>
+        </button>
+        <button onclick="switchTab('profile')" id="nav-profile"
+            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 text-gray-500 dark:text-gray-400">
+            <span class="material-symbols-outlined text-[24px]">person</span><span
+                class="text-[10px] font-bold mt-0.5">Profile</span>
+        </button>
+    </nav>
 </body>
-
 </html>
