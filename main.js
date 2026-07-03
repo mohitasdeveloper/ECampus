@@ -3,6 +3,8 @@ import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { supabase } from './supabase.js';
 import { initFeed } from './feed.js';
+import { initDiscover } from './discover.js';
+import { initNotifications } from './notifications.js';
 import { initUpdates } from './updates.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 
@@ -46,6 +48,8 @@ function initializeApp(profile) {
     // Initialize features that need the user object
     initHotposts(profile);
     initFeed(profile);
+    initDiscover(profile);
+    initNotifications(profile);
     initUpdates();
 
     // Setup UI elements

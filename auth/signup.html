@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sign Up - EcoCampus</title>
-    
+
     <link rel="icon" type="image/png" href="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
-    
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <script>
@@ -32,27 +35,46 @@
         }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .fade-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
+
 <body class="bg-white min-h-[100dvh] w-full flex flex-col items-center justify-center py-10 px-6 text-gray-900 fade-in">
 
     <div class="text-center mb-8">
-        <img src="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png" class="w-20 h-20 mx-auto mb-3" alt="EcoBirla Logo">
-        
-        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 text-transparent bg-clip-text pb-1">
+        <img src="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png" class="w-20 h-20 mx-auto mb-3"
+            alt="EcoBirla Logo">
+
+        <h1
+            class="text-3xl font-extrabold bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 text-transparent bg-clip-text pb-1">
             EcoCampus
         </h1>
-        
+
         <p class="text-[10px] font-bold text-slate-500 mt-1 tracking-widest uppercase">
             A BKBNC DIGITAL INITIATIVE
         </p>
     </div>
 
     <div class="w-full max-w-[380px]">
-        
+
         <div class="mb-6 text-left">
             <h2 class="text-2xl font-bold text-gray-900 mb-1">Create Account</h2>
             <p class="text-sm text-gray-500 font-medium">Join the EcoCampus network today.</p>
@@ -61,35 +83,31 @@
         <div id="auth-message" class="text-red-500 text-sm text-center mb-4 h-5 font-bold empty:hidden"></div>
 
         <form id="signup-form" class="space-y-4">
-            
+
             <div class="space-y-1.5">
                 <label for="signup-college" class="block text-sm font-bold text-gray-800 ml-1">College Name</label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="building" class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                        <i data-lucide="building"
+                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                     </div>
-                    <select 
-                        id="signup-college" 
-                        required 
-                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none text-sm"
-                    >
+                    <select id="signup-college" required
+                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none text-sm">
                         <option value="" disabled selected>Loading Colleges...</option>
-                        </select>
+                    </select>
                 </div>
             </div>
 
             <div id="other-college-container" class="space-y-1.5 hidden mt-2">
-                <label for="signup-college-other" class="block text-sm font-bold text-gray-800 ml-1">Type College Name</label>
+                <label for="signup-college-other" class="block text-sm font-bold text-gray-800 ml-1">Type College
+                    Name</label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="pencil" class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                        <i data-lucide="pencil"
+                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                     </div>
-                    <input 
-                        type="text" 
-                        id="signup-college-other" 
-                        placeholder="Enter your college name" 
-                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm"
-                    >
+                    <input type="text" id="signup-college-other" placeholder="Enter your college name"
+                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
                 </div>
             </div>
 
@@ -97,15 +115,11 @@
                 <label for="signup-fullname" class="block text-sm font-bold text-gray-800 ml-1">Full Name</label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="user" class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                        <i data-lucide="user"
+                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                     </div>
-                    <input 
-                        type="text" 
-                        id="signup-fullname" 
-                        required 
-                        placeholder="John Doe" 
-                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm"
-                    >
+                    <input type="text" id="signup-fullname" required placeholder="John Doe"
+                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
                 </div>
             </div>
 
@@ -114,15 +128,11 @@
                     <label for="signup-email" class="block text-sm font-bold text-gray-800 ml-1">Email</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="mail" class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                            <i data-lucide="mail"
+                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                         </div>
-                        <input 
-                            type="email" 
-                            id="signup-email" 
-                            required 
-                            placeholder="john@example.com" 
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm"
-                        >
+                        <input type="email" id="signup-email" required placeholder="john@example.com"
+                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
                     </div>
                 </div>
 
@@ -130,15 +140,11 @@
                     <label for="signup-password" class="block text-sm font-bold text-gray-800 ml-1">Password</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="lock" class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                            <i data-lucide="lock"
+                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                         </div>
-                        <input 
-                            type="password" 
-                            id="signup-password" 
-                            required 
-                            placeholder="••••••••" 
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm"
-                        >
+                        <input type="password" id="signup-password" required placeholder="••••••••"
+                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
                     </div>
                 </div>
             </div>
@@ -148,15 +154,11 @@
                     <label for="signup-studentid" class="block text-sm font-bold text-gray-800 ml-1">Student ID</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="badge" class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                            <i data-lucide="badge"
+                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                         </div>
-                        <input 
-                            type="text" 
-                            id="signup-studentid" 
-                            required 
-                            placeholder="e.g. 123456" 
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm"
-                        >
+                        <input type="text" id="signup-studentid" required placeholder="e.g. 123456"
+                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
                     </div>
                 </div>
 
@@ -164,15 +166,11 @@
                     <label for="signup-course" class="block text-sm font-bold text-gray-800 ml-1">Course</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="book-open" class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                            <i data-lucide="book-open"
+                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                         </div>
-                        <input 
-                            type="text" 
-                            id="signup-course" 
-                            required 
-                            placeholder="e.g. SYBCOM" 
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm"
-                        >
+                        <input type="text" id="signup-course" required placeholder="e.g. SYBCOM"
+                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
                     </div>
                 </div>
             </div>
@@ -182,15 +180,11 @@
                     <label for="signup-mobile" class="block text-sm font-bold text-gray-800 ml-1">Mobile</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="phone" class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                            <i data-lucide="phone"
+                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                         </div>
-                        <input 
-                            type="tel" 
-                            id="signup-mobile" 
-                            required 
-                            placeholder="1234567890" 
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm"
-                        >
+                        <input type="tel" id="signup-mobile" required placeholder="1234567890"
+                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
                     </div>
                 </div>
 
@@ -198,13 +192,11 @@
                     <label for="signup-gender" class="block text-sm font-bold text-gray-800 ml-1">Gender</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="users" class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                            <i data-lucide="users"
+                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                         </div>
-                        <select 
-                            id="signup-gender" 
-                            required 
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm appearance-none"
-                        >
+                        <select id="signup-gender" required
+                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm appearance-none">
                             <option value="" disabled selected>Select</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -214,11 +206,8 @@
                 </div>
             </div>
 
-            <button 
-                type="submit" 
-                id="signup-button" 
-                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center justify-center mt-4"
-            >
+            <button type="submit" id="signup-button"
+                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center justify-center mt-4">
                 <span class="btn-text text-base">Create Account</span>
                 <i data-lucide="loader-circle" class="w-5 h-5 animate-spin hidden ml-2"></i>
             </button>
@@ -227,34 +216,20 @@
 
         <div class="mt-6 text-center">
             <p class="text-sm font-medium text-gray-600">
-                Already have an account? 
-                <a href="login.html" class="text-emerald-600 hover:text-emerald-700 font-bold transition-colors">Login here</a>
+                Already have an account?
+                <a href="login.html" class="text-emerald-600 hover:text-emerald-700 font-bold transition-colors">Login
+                    here</a>
             </p>
         </div>
 
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../supabase.js"></script>
-    <script src="signup.js"></script>
-    
+    <script src="signup.js" type="module"></script>
+
     <script>
         lucide.createIcons();
-
-        // 🟢 Toggle logic for the "Other" college field
-        const collegeSelect = document.getElementById('signup-college');
-        const otherContainer = document.getElementById('other-college-container');
-        const otherInput = document.getElementById('signup-college-other');
-
-        collegeSelect.addEventListener('change', () => {
-            if (collegeSelect.value === 'Other') {
-                otherContainer.classList.remove('hidden');
-                otherInput.required = true;
-            } else {
-                otherContainer.classList.add('hidden');
-                otherInput.required = false;
-            }
-        });
     </script>
 </body>
+
 </html>

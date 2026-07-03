@@ -20,7 +20,7 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    document.getElementById('create-hotpost-btn').addEventListener('click', openCameraModal);
+    document.getElementById('create-hotpost-btn').addEventListener('click', handleCreateOrViewMyHotposts);
     document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
@@ -32,6 +32,7 @@ function setupEventListeners() {
     document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
     document.getElementById('close-hotpost-viewers-btn')?.addEventListener('click', closeHotpostViewersModal);
+    document.getElementById('hotpost-reply-btn')?.addEventListener('click', handleReplyToHotpost);
 
     // New listeners for edits
     document.querySelector('[data-edit="filter"]')?.addEventListener('click', toggleFilterTray);
@@ -454,21 +455,60 @@ async function recordView(hotpostId) {
     }
 }
 
+async function handleReplyToHotpost() {
+    const input = document.getElementById('hotpost-reply-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const userData = hotpostsByUser.get(currentViewerState.userId);
+    const post = userData.posts[currentViewerState.postIndex];
+
+    const { error } = await supabase.from('hotpost_replies').insert({
+        hotpost_id: post.id,
+        replier_id: currentUser.id,
+        author_id: userData.user.id,
+        content: content
+    });
+
+    if (error) {
+        showToast('Failed to send reply.', 'error');
+        console.error('Error sending hotpost reply:', error);
+    } else {
+        showToast('Reply sent!', 'success');
+        input.value = '';
+        // Briefly hide input to show it was sent
+        document.getElementById('hotpost-reply-container').style.opacity = '0.5';
+        setTimeout(() => { document.getElementById('hotpost-reply-container').style.opacity = '1'; }, 1000);
+    }
+}
+
+function handleCreateOrViewMyHotposts() {
+    const myHotpostsData = hotpostsByUser.get(currentUser.id);
+    if (myHotpostsData && myHotpostsData.posts.length > 0) {
+        openMyHotpostsModal(myHotpostsData.posts);
+    } else {
+        openCameraModal();
+    }
+}
+
 function openMyHotpostsModal(posts) {
     const list = document.getElementById('my-hotposts-list');
     list.innerHTML = posts.map(post => {
         const viewCount = post.hotpost_views[0]?.count || 0;
         return `
-            <div onclick="openHotpostViewersModal('${post.id}')" class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors">
+            <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800">
                 <img src="${post.media_url}" class="w-14 h-14 rounded-xl object-cover">
-                <div class="flex-1">
+                <div class="flex-1 cursor-pointer" onclick="openHotpostViewersModal('${post.id}')">
                     <p class="text-sm font-bold text-gray-800 dark:text-gray-100 line-clamp-1">${post.caption || 'No Caption'}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">${timeAgo(post.created_at)}</p>
                 </div>
-                <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 cursor-pointer" onclick="openHotpostViewersModal('${post.id}')">
                     <span class="material-symbols-outlined text-[18px]">visibility</span>
                     <span class="text-sm font-bold">${viewCount}</span>
                 </div>
+                <button onclick="handleDeleteHotpost('${post.id}')" class="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors">
+                    <span class="material-symbols-outlined text-xl">delete</span>
+                </button>
             </div>
         `;
     }).join('');
@@ -478,6 +518,23 @@ function openMyHotpostsModal(posts) {
 
 function closeMyHotpostsModal() {
     document.getElementById('modal-my-hotposts').classList.replace('flex', 'hidden');
+}
+
+async function handleDeleteHotpost(hotpostId) {
+    if (!confirm('Are you sure you want to delete this Hotpost? This cannot be undone.')) {
+        return;
+    }
+
+    const { error } = await supabase.from('hotposts').delete().eq('id', hotpostId);
+
+    if (error) {
+        showToast('Failed to delete Hotpost.', 'error');
+        console.error('Error deleting hotpost:', error);
+    } else {
+        showToast('Hotpost deleted.', 'success');
+        fetchHotposts(); // Refresh the list
+        closeMyHotpostsModal();
+    }
 }
 
 async function openHotpostViewersModal(hotpostId) {
@@ -519,5 +576,7 @@ async function openHotpostViewersModal(hotpostId) {
 function closeHotpostViewersModal() {
     document.getElementById('modal-hotpost-viewers').classList.replace('flex', 'hidden');
 }
+
+window.handleDeleteHotpost = handleDeleteHotpost;
 
 window.openHotpostViewersModal = openHotpostViewersModal;
