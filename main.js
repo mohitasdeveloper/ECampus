@@ -52,11 +52,33 @@ function initializeApp(profile) {
     updateHeaderAvatar(profile.profile_img_url, profile.full_name);
     populateProfileUI(profile);
     setupThemeToggle();
+    setupEditProfileAvatarUpload();
     setupProfileAvatarUpload();
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
 
     // Initial tab setup
     switchTab('dashboard');
+}
+
+function renderSocialLinks(links) {
+    const container = document.getElementById('profile-social-links');
+    if (!container) return;
+
+    container.innerHTML = ''; // Clear existing
+    if (!links || Object.keys(links).length === 0) {
+        container.innerHTML = `<p class="text-xs text-gray-400 italic">No social links added.</p>`;
+        return;
+    }
+
+    for (const [platform, url] of Object.entries(links)) {
+        const linkEl = document.createElement('a');
+        linkEl.href = url;
+        linkEl.target = '_blank';
+        linkEl.title = platform.charAt(0).toUpperCase() + platform.slice(1);
+        linkEl.className = 'w-10 h-10 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary transition-all text-lg font-bold';
+        linkEl.textContent = platform.charAt(0).toUpperCase();
+        container.appendChild(linkEl);
+    }
 }
 
 function populateProfileUI(profile) {
@@ -80,6 +102,9 @@ function populateProfileUI(profile) {
 
     // Feed input avatar
     document.getElementById('feed-input-avatar').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+
+    // Render social links
+    renderSocialLinks(profile.social_links);
 }
 
 function updateHeaderAvatar(avatarUrl, fullName) {
@@ -106,6 +131,43 @@ function setupThemeToggle() {
         } else {
             document.documentElement.classList.remove('dark');
             localStorage.setItem('theme', 'light');
+        }
+    });
+}
+
+function setupEditProfileAvatarUpload() {
+    const avatarInput = document.getElementById('edit-avatar-upload-input');
+    if (!avatarInput) return;
+
+    avatarInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const preview = document.getElementById('edit-profile-avatar-preview');
+        const originalSrc = preview.src;
+        preview.src = URL.createObjectURL(file); // Show instant preview
+
+        showToast('Uploading new avatar...', 'info');
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
+
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error.message);
+            const imageUrl = data.secure_url;
+
+            await saveUserProfile({ profile_img_url: imageUrl }, false); // Save only avatar URL, don't close modal
+            preview.src = imageUrl; // Update preview with final URL
+
+        } catch (error) {
+            console.error('Error updating avatar from edit modal:', error);
+            showToast('Failed to update avatar.', 'error');
+            preview.src = originalSrc; // Revert preview on error
+        } finally {
+            avatarInput.value = '';
         }
     });
 }
@@ -172,6 +234,146 @@ async function handleSignOut() {
 window.switchTab = switchTab;
 window.openProfileModal = openProfileModal;
 window.closeProfileModals = closeProfileModals;
+
+// --- PROFILE EDITING ---
+let tempSocialLinks = {};
+
+function openEditProfileModal() {
+    if (!currentUserProfile) return;
+    document.getElementById('edit-profile-name').value = currentUserProfile.full_name || '';
+    document.getElementById('edit-profile-id').value = currentUserProfile.student_id || '';
+    document.getElementById('edit-profile-course').value = currentUserProfile.course || '';
+    document.getElementById('edit-profile-bio').value = currentUserProfile.bio || '';
+    document.getElementById('edit-profile-avatar-preview').src = currentUserProfile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.full_name)}&background=e1e3e4`;
+    document.getElementById('modal-edit-profile').classList.replace('hidden', 'flex');
+}
+
+function closeEditProfileModal() {
+    document.getElementById('modal-edit-profile').classList.replace('flex', 'hidden');
+}
+
+function triggerEditAvatarUpload() {
+    document.getElementById('edit-avatar-upload-input').click();
+}
+
+async function saveUserProfile(extraUpdates = {}, closeModal = true) {
+    const btn = document.getElementById('save-profile-btn');
+    if (closeModal) { // Only show loading state on final save
+        btn.disabled = true;
+        btn.innerHTML = 'Saving...';
+    }
+
+    const updates = {
+        full_name: document.getElementById('edit-profile-name').value.trim(),
+        student_id: document.getElementById('edit-profile-id').value.trim(),
+        course: document.getElementById('edit-profile-course').value.trim(),
+        bio: document.getElementById('edit-profile-bio').value.trim(),
+        ...extraUpdates
+    };
+
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .update(updates)
+            .eq('id', currentUserProfile.id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        currentUserProfile = data; // Update local profile
+        populateProfileUI(currentUserProfile); // Re-render UI
+        updateHeaderAvatar(currentUserProfile.profile_img_url, currentUserProfile.full_name);
+        showToast('Profile updated successfully!', 'success');
+        if (closeModal) closeEditProfileModal();
+
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        showToast('Failed to save profile.', 'error');
+    } finally {
+        if (closeModal) {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Changes';
+        }
+    }
+}
+
+// --- SOCIAL LINKS EDITING ---
+
+function openEditSocialsModal() {
+    if (!currentUserProfile) return;
+    tempSocialLinks = { ...(currentUserProfile.social_links || {}) };
+    renderTempSocialsList();
+    document.getElementById('modal-edit-socials').classList.replace('hidden', 'flex');
+}
+
+function closeSocialsModal() {
+    document.getElementById('modal-edit-socials').classList.replace('flex', 'hidden');
+}
+
+function renderTempSocialsList() {
+    const list = document.getElementById('modal-socials-list');
+    list.innerHTML = '';
+    if (Object.keys(tempSocialLinks).length === 0) {
+        list.innerHTML = `<p class="text-xs text-center text-gray-400 italic py-4">No links added yet.</p>`;
+        return;
+    }
+    for (const [platform, url] of Object.entries(tempSocialLinks)) {
+        list.innerHTML += `
+            <div class="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800/50 p-2 rounded-lg">
+                <span class="font-bold text-xs capitalize text-gray-600 dark:text-gray-300 w-16">${platform}</span>
+                <input type="text" value="${url}" class="flex-1 bg-transparent text-xs text-gray-500 dark:text-gray-400 outline-none" readonly>
+                <button onclick="removeSocialLinkTemp('${platform}')" class="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+            </div>
+        `;
+    }
+}
+
+function addSocialLinkTemp() {
+    const platform = document.getElementById('add-social-platform').value;
+    const url = document.getElementById('add-social-url').value.trim();
+    if (!url) {
+        showToast('Please enter a URL.', 'warning');
+        return;
+    }
+    tempSocialLinks[platform] = url;
+    renderTempSocialsList();
+    document.getElementById('add-social-url').value = '';
+}
+
+function removeSocialLinkTemp(platform) {
+    delete tempSocialLinks[platform];
+    renderTempSocialsList();
+}
+
+async function saveSocialLinks() {
+    const { error } = await supabase
+        .from('users')
+        .update({ social_links: tempSocialLinks })
+        .eq('id', currentUserProfile.id);
+
+    if (error) {
+        showToast('Failed to save social links.', 'error');
+        console.error('Error saving social links:', error);
+    } else {
+        currentUserProfile.social_links = tempSocialLinks;
+        populateProfileUI(currentUserProfile);
+        showToast('Social links updated!', 'success');
+        closeSocialsModal();
+    }
+}
+
+window.openEditProfileModal = openEditProfileModal;
+window.closeEditProfileModal = closeEditProfileModal;
+window.triggerEditAvatarUpload = triggerEditAvatarUpload;
+window.saveUserProfile = saveUserProfile;
+window.openEditSocialsModal = openEditSocialsModal;
+window.closeSocialsModal = closeSocialsModal;
+window.addSocialLinkTemp = addSocialLinkTemp;
+window.removeSocialLinkTemp = removeSocialLinkTemp;
+window.saveSocialLinks = saveSocialLinks;
 
 function switchTab(tabId) {
     // Hide all tabs

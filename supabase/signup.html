@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sign Up - EcoCampus</title>
+
+    <link rel="icon" type="image/png" href="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                        jakarta: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        emerald: {
+                            500: '#10B981',
+                            600: '#059669',
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-white min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 text-gray-900 fade-in">
+
+    <div class="text-center mb-8">
+        <img src="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png" class="w-24 h-24 mx-auto mb-4"
+            alt="EcoBirla Logo">
+
+        <h1
+            class="text-4xl font-extrabold bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 text-transparent bg-clip-text pb-1">
+            EcoCampus
+        </h1>
+
+        <p class="text-xs font-bold text-slate-500 mt-1 tracking-widest uppercase">
+            A BKBNC DIGITAL INITIATIVE
+        </p>
+    </div>
+
+    <div class="w-full max-w-[340px]">
+
+        <div class="mb-8 text-left">
+            <h2 class="text-2xl font-bold text-gray-900 mb-1">Create Account</h2>
+            <p class="text-sm text-gray-500 font-medium">Join the B. K. Birla Night College network.</p>
+        </div>
+
+        <div id="auth-message" class="text-red-500 text-sm text-center mb-4 h-5 font-bold empty:hidden"></div>
+
+        <form id="signup-form" class="space-y-4">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label for="signup-fullname" class="block text-xs font-bold text-gray-800 ml-1">Full Name</label>
+                    <input type="text" id="signup-fullname" required placeholder="John Doe"
+                        class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+                </div>
+                <div class="space-y-1.5">
+                    <label for="signup-studentid" class="block text-xs font-bold text-gray-800 ml-1">Student ID</label>
+                    <input type="text" id="signup-studentid" required placeholder="123456"
+                        class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label for="signup-email" class="block text-xs font-bold text-gray-800 ml-1">Email</label>
+                <input type="email" id="signup-email" required placeholder="student@college.edu"
+                    class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+            </div>
+
+            <div class="space-y-1.5">
+                <label for="signup-password" class="block text-xs font-bold text-gray-800 ml-1">Password</label>
+                <input type="password" id="signup-password" required placeholder="••••••••"
+                    class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label for="signup-course" class="block text-xs font-bold text-gray-800 ml-1">Course</label>
+                    <input type="text" id="signup-course" required placeholder="B.Com"
+                        class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+                </div>
+                <div class="space-y-1.5">
+                    <label for="signup-mobile" class="block text-xs font-bold text-gray-800 ml-1">Mobile</label>
+                    <input type="tel" id="signup-mobile" required placeholder="9876543210"
+                        class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label for="signup-gender" class="block text-xs font-bold text-gray-800 ml-1">Gender</label>
+                    <select id="signup-gender" required
+                        class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium">
+                        <option value="" disabled selected>Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="space-y-1.5">
+                    <label for="signup-college" class="block text-xs font-bold text-gray-800 ml-1">College</label>
+                    <select id="signup-college" required
+                        class="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium disabled:bg-gray-200 disabled:text-gray-500">
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" id="signup-button"
+                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center justify-center mt-2">
+                <span class="btn-text text-base">Sign Up</span>
+                <i data-lucide="loader-circle" class="w-5 h-5 animate-spin hidden ml-2"></i>
+            </button>
+
+        </form>
+
+        <div class="mt-6 text-center">
+            <p class="text-sm font-medium text-gray-600">
+                Already have an account?
+                <a href="login.html" class="text-emerald-600 hover:text-emerald-700 font-bold transition-colors">Login
+                    here</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="signup.js" type="module"></script>
+
+    <script>
+        // Initialize Icons for the UI
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

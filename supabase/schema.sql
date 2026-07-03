@@ -14,41 +14,34 @@ CREATE TABLE IF NOT EXISTS public.colleges (
 );
 
 -- Users Table (Public Profile)
-CREATE TABLE IF NOT EXISTS public.users (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  auth_user_id uuid UNIQUE,
-  student_id character varying NOT NULL UNIQUE,
+create table public.users (
+  id uuid not null default gen_random_uuid (),
+  auth_user_id uuid null,
+  student_id character varying(20) not null,
   full_name text NOT NULL,
   course text,
   email text NOT NULL UNIQUE,
   mobile text,
   gender text,
-  college text,
-  profile_img_url text DEFAULT 'https://t4.ftcdn.net/jpg/05/89/93/27/360_F_589932782_vQAEAZhHnq1QCGu5ikwrYaQD0Mmurm0N.jpg'::text,
-  tick_type text DEFAULT 'blue'::text,
-  role text DEFAULT 'student'::text,
-  is_volunteer boolean DEFAULT false,
-  bio text DEFAULT 'Passionate about sustainability... 🌱',
-  social_links jsonb DEFAULT '{}'::jsonb,
+  profile_img_url text null default 'https://t4.ftcdn.net/jpg/05/89/93/27/360_F_589932782_vQAEAZhHnq1QCGu5ikwrYaQD0Mmurm0N.jpg'::text,
+  tick_type text null default 'blue'::text,
+  role text null default 'student'::text,
+  is_volunteer boolean null default false,
   created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   joined_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT users_pkey PRIMARY KEY (id),
+  college text null,
+  bio text null default ''::text,
+  social_links jsonb null default '{}'::jsonb,
+  is_private boolean null default false,
+  connection_count integer null default 0,
+  constraint users_pkey primary key (id),
+  constraint users_auth_user_id_key unique (auth_user_id),
+  constraint users_email_key unique (email),
+  constraint users_student_id_key unique (student_id),
   CONSTRAINT users_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
-
--- Posts Table (Main Feed)
-CREATE TABLE public.posts (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid NOT NULL,
-  content text NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT posts_pkey PRIMARY KEY (id),
-  CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
-);
-
-COMMENT ON TABLE public.posts IS 'Main feed posts created by users.';
 
 -- Hotposts Table (Stories)
 CREATE TABLE public.hotposts (
@@ -57,10 +50,6 @@ CREATE TABLE public.hotposts (
   media_url text NOT NULL,
   media_type text DEFAULT 'image'::text,
   caption text,
-  visibility text DEFAULT 'everyone'::text,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT hotposts_pkey PRIMARY KEY (id),
-  CONSTRAINT hotposts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE public.hotposts IS 'Stores temporary, 24-hour "story" like posts.';
