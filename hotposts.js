@@ -6,6 +6,7 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_HOTPOSTS_PRESET } from './config.js';
 let hotpostsByUser = new Map();
 let currentUser = null;
 let currentPhotoBlob = null; // This will be a Blob object
+let currentFilter = 'none';
 
 let currentCameraStream = null;
 let currentFacingMode = 'environment'; // 'environment' for back camera, 'user' for front
@@ -30,6 +31,12 @@ function setupEventListeners() {
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
     document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
+
+    // New listeners for edits
+    document.querySelector('[data-edit="filter"]')?.addEventListener('click', toggleFilterTray);
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', applyFilter);
+    });
 
     // Pause/Resume story on long press
     const pauseOverlay = document.getElementById('hotpost-pause-overlay');
@@ -90,19 +97,38 @@ function switchCamera() {
 function resetCameraUI() {
     document.getElementById('hotpost-camera-feed').classList.remove('hidden');
     document.getElementById('hotpost-preview')?.classList.add('hidden');
-    document.getElementById('capture-hotpost-btn').classList.remove('hidden');
+
+    document.getElementById('capture-ui').classList.remove('hidden');
+    document.getElementById('preview-ui').classList.add('hidden');
+
     document.getElementById('switch-hotpost-camera-btn').classList.remove('hidden');
-    document.getElementById('post-options')?.classList.add('hidden');
-    document.getElementById('retake-hotpost-btn')?.classList.add('hidden');
+    document.getElementById('edit-options-bar').classList.add('hidden');
+    document.getElementById('filter-tray').classList.add('hidden');
+
+    currentFilter = 'none';
+    const preview = document.getElementById('hotpost-preview');
+    if (preview) preview.style.filter = 'none';
 }
 
 function showPreviewUI() {
     document.getElementById('hotpost-camera-feed').classList.add('hidden');
     document.getElementById('hotpost-preview')?.classList.remove('hidden');
-    document.getElementById('capture-hotpost-btn').classList.add('hidden');
+
+    document.getElementById('capture-ui').classList.add('hidden');
+    document.getElementById('preview-ui').classList.remove('hidden');
+
     document.getElementById('switch-hotpost-camera-btn').classList.add('hidden');
-    document.getElementById('post-options')?.classList.remove('hidden');
-    document.getElementById('retake-hotpost-btn')?.classList.remove('hidden');
+    document.getElementById('edit-options-bar').classList.remove('hidden');
+}
+
+function toggleFilterTray() {
+    document.getElementById('filter-tray').classList.toggle('hidden');
+    document.getElementById('filter-tray').classList.toggle('flex'); // use flex for justify-center
+}
+
+function applyFilter(event) {
+    currentFilter = event.target.dataset.filter;
+    document.getElementById('hotpost-preview').style.filter = currentFilter;
 }
 
 function capturePhoto() {
@@ -122,7 +148,7 @@ function capturePhoto() {
     canvas.toBlob(blob => {
         currentPhotoBlob = blob;
         const imageUrl = URL.createObjectURL(blob);
-        document.getElementById('hotpost-preview').src = imageUrl; // This was failing because the element was missing
+        document.getElementById('hotpost-preview').src = imageUrl;
         showPreviewUI();
     }, 'image/jpeg', 0.9);
 }
@@ -139,9 +165,32 @@ async function submitHotpost() {
     btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
 
     try {
+        // Create a promise that resolves with the edited blob
+        const getEditedBlob = () => new Promise((resolve) => {
+            if (currentFilter === 'none' || !currentPhotoBlob) {
+                resolve(currentPhotoBlob); // No edits or no photo, use original
+                return;
+            }
+
+            const editCanvas = document.createElement('canvas');
+            const editCtx = editCanvas.getContext('2d');
+            const img = new Image();
+
+            img.onload = () => {
+                editCanvas.width = img.width;
+                editCanvas.height = img.height;
+                editCtx.filter = currentFilter;
+                editCtx.drawImage(img, 0, 0);
+                editCanvas.toBlob(resolve, 'image/jpeg', 0.9);
+            };
+            img.src = URL.createObjectURL(currentPhotoBlob);
+        });
+
+        const finalBlob = await getEditedBlob();
+
         // 1. Upload to Cloudinary
         const formData = new FormData();
-        formData.append('file', currentPhotoBlob, 'hotpost.jpg'); // Send blob as a file
+        formData.append('file', finalBlob, 'hotpost.jpg');
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
 
         const res = await fetch(CLOUDINARY_URL, {

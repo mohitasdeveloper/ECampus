@@ -521,26 +521,46 @@
             class="absolute top-5 right-4 text-white p-2 bg-black/30 rounded-full z-20"><span
                 class="material-symbols-outlined">cameraswitch</span></button>
 
-        <div class="absolute bottom-10 z-20 flex justify-between items-center w-full px-8">
-            <button id="retake-hotpost-btn"
-                class="text-white font-bold flex items-center gap-1 p-2 bg-black/30 rounded-full hidden"><span
-                    class="material-symbols-outlined">refresh</span></button>
+        <!-- Edit/Filter Options - Shown on Preview -->
+        <div id="edit-options-bar" class="absolute top-5 right-4 z-20 hidden flex-col gap-4">
+            <button class="edit-option-btn p-2 bg-black/30 rounded-full" data-edit="filter"><span
+                    class="material-symbols-outlined">tune</span></button>
+        </div>
+        <div id="filter-tray"
+            class="absolute bottom-32 left-0 w-full z-20 hidden justify-center p-4 overflow-x-auto hide-scrollbar">
+            <div class="flex gap-3">
+                <button class="filter-btn" data-filter="none">None</button>
+                <button class="filter-btn" data-filter="saturate(1.5)">Vivid</button>
+                <button class="filter-btn" data-filter="grayscale(1)">B&W</button>
+                <button class="filter-btn" data-filter="sepia(0.8)">Vintage</button>
+                <button class="filter-btn" data-filter="contrast(1.4)">Sharp</button>
+            </div>
+        </div>
 
-            <button id="capture-hotpost-btn"
-                class="w-20 h-20 rounded-full bg-white/30 border-4 border-white flex items-center justify-center active:scale-95 transition-transform">
-                <div class="w-16 h-16 bg-white rounded-full"></div>
-            </button>
-
-            <div class="flex flex-col items-center gap-2 hidden" id="post-options">
-                <select id="hotpost-visibility"
-                    class="bg-black/30 text-white text-xs font-bold border-none rounded-full px-3 py-1.5 focus:ring-0 outline-none">
-                    <option value="everyone">Everyone</option>
-                    <option value="connections">Connections</option>
-                </select>
-                <button id="submit-hotpost-btn"
-                    class="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform">
-                    <span class="material-symbols-outlined text-3xl">send</span>
+        <!-- Bottom Controls -->
+        <div class="absolute bottom-10 z-20 w-full px-8">
+            <!-- Capture State -->
+            <div id="capture-ui" class="flex justify-center">
+                <button id="capture-hotpost-btn"
+                    class="w-20 h-20 rounded-full bg-white/30 border-4 border-white flex items-center justify-center active:scale-95 transition-transform">
+                    <div class="w-16 h-16 bg-white rounded-full"></div>
                 </button>
+            </div>
+            <!-- Preview State -->
+            <div id="preview-ui" class="hidden flex justify-between items-center w-full">
+                <button id="retake-hotpost-btn"
+                    class="text-white font-bold flex items-center gap-1 p-3 bg-black/30 rounded-full"><span
+                        class="material-symbols-outlined">refresh</span> Retake</button>
+                <div class="flex flex-col items-center gap-2">
+                    <select id="hotpost-visibility"
+                        class="bg-black/30 text-white text-xs font-bold border-none rounded-full px-3 py-1.5 focus:ring-0 outline-none">
+                        <option value="everyone">Everyone</option>
+                        <option value="connections">Connections</option>
+                    </select>
+                    <button id="submit-hotpost-btn"
+                        class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"><span
+                            class="material-symbols-outlined text-3xl">send</span></button>
+                </div>
             </div>
         </div>
     </div>
