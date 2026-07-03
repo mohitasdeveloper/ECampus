@@ -513,7 +513,11 @@ function switchTab(tabId) {
     if (target) {
         target.classList.remove('hidden');
         target.classList.add('animate-fadeIn');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            // Scroll the correct container to the top, not the window
+            mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 
     // Update Nav colors
