@@ -88,18 +88,3 @@ window.closeProfileModals = closeProfileModals;
 function switchTab(tabId) { /* ... from index.html ... */ }
 function openProfileModal(type) { /* ... from index.html ... */ }
 function closeProfileModals() { /* ... from index.html ... */ }
-
-// You will also need a ui.js for showToast and utils.js for timeAgo
-// For now, I'll add placeholder functions.
-
-// In a new file `ui.js`
-export function showToast(message, type = 'info') {
-    // A real implementation would create a toast element and show it.
-    alert(`[${type.toUpperCase()}] ${message}`);
-}
-
-// In a new file `utils.js`
-export function timeAgo(date) {
-    // A real implementation would calculate time difference.
-    return new Date(date).toLocaleTimeString();
-}
