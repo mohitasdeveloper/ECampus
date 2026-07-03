@@ -112,8 +112,8 @@ async function fetchHotposts() {
             created_at,
             media_url,
             caption,
-            profiles ( id, full_name, avatar_url )
-        `.replace('profiles', 'users')) // Correct the table name for the join
+            users ( id, full_name, profile_img_url )
+        `)
         .gt('created_at', twentyFourHoursAgo)
         // .eq('visibility', 'everyone') // Add logic for connections later
         .order('created_at', { ascending: false });
@@ -151,7 +151,7 @@ function renderHotpostCircles() {
         circle.innerHTML = `
             <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-orange-500 to-red-500 shadow-sm">
                 <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                    <img src="${user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
+                    <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
                 </div>
             </div>
             <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
@@ -188,7 +188,7 @@ function showCurrentHotpost() {
     const post = userData.posts[currentViewerState.postIndex];
 
     // Update UI
-    document.getElementById('hotpost-viewer-avatar').src = userData.user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
+    document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
     document.getElementById('hotpost-viewer-name').textContent = userData.user.full_name;
     document.getElementById('hotpost-viewer-time').textContent = timeAgo(post.created_at);
     document.getElementById('hotpost-viewer-image').src = post.media_url;

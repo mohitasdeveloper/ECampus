@@ -45,7 +45,7 @@ function initializeApp(profile) {
     initHotposts(profile);
 
     // Setup UI elements
-    updateHeaderAvatar(profile.avatar_url, profile.full_name);
+    updateHeaderAvatar(profile.profile_img_url, profile.full_name);
     setupThemeToggle();
     setupProfileAvatarUpload();
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
@@ -114,13 +114,13 @@ function setupProfileAvatarUpload() {
             // 2. Update Supabase 'profiles' table
             const { error } = await supabase
                 .from('users')
-                .update({ avatar_url: imageUrl })
+                .update({ profile_img_url: imageUrl })
                 .eq('auth_user_id', currentUserProfile.auth_user_id);
 
             if (error) throw error;
 
             // 3. Update UI
-            currentUserProfile.avatar_url = imageUrl;
+            currentUserProfile.profile_img_url = imageUrl;
             document.getElementById('profile-avatar-large').src = imageUrl;
             updateHeaderAvatar(imageUrl, currentUserProfile.full_name);
             showToast('Avatar updated successfully!', 'success');
