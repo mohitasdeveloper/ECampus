@@ -110,12 +110,6 @@
     <!-- MAIN CONTENT -->
     <main class="pt-20 px-5 max-w-screen-md mx-auto relative z-10 pb-6">
         
-        <div id="pull-to-refresh-indicator" class="fixed top-16 left-0 right-0 h-16 flex items-center justify-center z-0 opacity-0 transition-all duration-300 pointer-events-none">
-            <div class="p-3 bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-full shadow-lg">
-                <span id="ptr-icon" class="material-symbols-outlined text-primary transition-transform duration-200">arrow_downward</span>
-            </div>
-        </div>
-
         <!-- DASHBOARD VIEW -->
         <div id="view-dashboard" class="tab-content active animate-fadeIn">
             
@@ -136,20 +130,8 @@
 
             <!-- FEED POSTS -->
             <section class="mt-4">
-                
-                <!-- NEW UI: Sleek Create Post Trigger -->
-                <div id="open-create-post-trigger" onclick="openCreatePostView()" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-full p-2 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-6 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
-                    <img id="feed-input-avatar" src="https://ui-avatars.com/api/?name=User&background=e1e3e4" class="w-10 h-10 rounded-full object-cover border border-surface-variant shadow-sm shrink-0 bg-surface-variant">
-                    <div class="flex-1 bg-surface-variant/30 dark:bg-surface-variant/10 text-on-surface-variant px-4 py-3 rounded-full text-[14px] font-medium">
-                        Share an update, ask a question...
-                    </div>
-                    <div class="w-10 h-10 bg-[#e8f5e9] dark:bg-primary/20 text-[#2e7d32] dark:text-primary rounded-full flex items-center justify-center shrink-0 mr-1 hover:bg-[#c8e6c9] transition-colors">
-                        <span class="material-symbols-outlined text-[20px]">edit</span>
-                    </div>
-                </div>
-
                 <!-- Feed Container -->
-                <div id="feed-posts-container" class="space-y-5">
+                <div id="feed-posts-container" class="space-y-5 mt-2">
                     <p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading live network feed...</p>
                 </div>
             </section>
@@ -296,6 +278,11 @@
         </div>
     </main>
 
+    <!-- FAB FOR CREATING POSTS -->
+    <button onclick="openCreatePostView()" class="fixed bottom-24 right-5 z-[50] w-[56px] h-[56px] bg-primary text-white rounded-[20px] shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all">
+        <span class="material-symbols-outlined text-[28px]">edit_square</span>
+    </button>
+
     <!-- ============================================== -->
     <!-- DEDICATED FULL-SCREEN VIEWS -->
     <!-- ============================================== -->
@@ -341,7 +328,7 @@
             <!-- Image Input -->
             <div id="input-image" class="post-input-section hidden mb-6 relative">
                 <input type="file" id="post-image-upload" accept="image/*" class="hidden">
-                <div id="post-image-preview-container" class="w-full h-48 border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-2xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface-variant/10 relative overflow-hidden" onclick="document.getElementById('post-image-upload').click()">
+                <div id="post-image-preview-container" class="w-full h-auto min-h-[12rem] border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-2xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface-variant/10 relative overflow-hidden p-2" onclick="document.getElementById('post-image-upload').click()">
                     <span class="material-symbols-outlined text-[32px] mb-2" id="img-icon-placeholder">add_photo_alternate</span>
                     <span class="text-sm font-medium" id="img-text-placeholder">Tap to upload image</span>
                 </div>
@@ -386,7 +373,7 @@
                 <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Event Details</h4>
                 
                 <input type="file" id="event-image-upload" accept="image/*" class="hidden">
-                <div id="event-image-preview-container" class="w-full h-32 border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface dark:bg-[#121212] relative overflow-hidden" onclick="document.getElementById('event-image-upload').click()">
+                <div id="event-image-preview-container" class="w-full h-auto min-h-[8rem] border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface dark:bg-[#121212] relative overflow-hidden p-2" onclick="document.getElementById('event-image-upload').click()">
                     <span class="material-symbols-outlined text-[24px] mb-1" id="event-img-icon-placeholder">wallpaper</span>
                     <span class="text-xs font-medium" id="event-img-text-placeholder">Add Event Cover Photo</span>
                 </div>
@@ -410,7 +397,7 @@
 
 
     <!-- ============================================== -->
-    <!-- OVERLAY MODALS SECTION (Action Sheet, Comments, etc.) -->
+    <!-- OVERLAY MODALS SECTION -->
     <!-- ============================================== -->
 
     <div id="modal-action-sheet" class="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
@@ -436,6 +423,21 @@
                 <button id="send-comment-btn" class="w-11 h-11 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-all shrink-0 active:scale-95 shadow-md shadow-primary/20">
                     <span class="material-symbols-outlined text-[20px] ml-1">send</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POLL VOTERS MODAL -->
+    <div id="modal-poll-voters" class="fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] flex flex-col max-h-[70vh]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-extrabold text-on-surface dark:text-gray-100">Poll Voters</h3>
+                <button onclick="document.getElementById('modal-poll-voters').classList.replace('flex', 'hidden')" class="w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <div id="poll-voters-list" class="flex-1 overflow-y-auto space-y-3 pr-1">
+                <!-- Dynamic voters injected here -->
             </div>
         </div>
     </div>
@@ -777,6 +779,7 @@
         function openCreatePostView() {
             const view = document.getElementById('view-create-post');
             view.classList.remove('hidden');
+            // Slight delay to allow display:block before translating
             setTimeout(() => {
                 view.classList.remove('translate-y-full');
             }, 10);
@@ -790,7 +793,7 @@
             view.classList.add('translate-y-full');
             setTimeout(() => {
                 view.classList.add('hidden');
-            }, 300);
+            }, 300); // match duration-300
         }
 
         // Dynamic Poll Options
