@@ -1,21 +1,16 @@
 <!DOCTYPE html>
 <html class="light" lang="en">
-
 <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
     <title>ECampus</title>
-
+    
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet" />
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="main.js" type="module" defer></script>
 
@@ -25,9 +20,32 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: "#006e1c",
-                        secondary: "#4858ab",
-                        error: "#ba1a1a"
+                        "on-surface-variant": "#3f4a3c",
+                        "surface-dim": "#d9dadb",
+                        "on-tertiary": "#ffffff",
+                        "inverse-primary": "#78dc77",
+                        "outline": "#6f7a6b",
+                        "surface-container": "#edeeef",
+                        "surface-container-high": "#e7e8e9",
+                        "error-container": "#ffdad6",
+                        "surface": "#f8f9fa",
+                        "on-background": "#191c1d",
+                        "surface-container-low": "#f3f4f5",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-bright": "#f8f9fa",
+                        "error": "#ba1a1a",
+                        "background": "#f8f9fa",
+                        "secondary": "#4858ab",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#006e1c",
+                        "on-error": "#ffffff",
+                        "on-surface": "#191c1d",
+                        "inverse-surface": "#2e3132",
+                        "surface-variant": "#e1e3e4",
+                        "surface-container-highest": "#e1e3e4",
+                        "primary": "#006e1c"
                     },
                     fontFamily: {
                         sans: ["Inter", "sans-serif"]
@@ -42,745 +60,598 @@
                 @apply bg-primary text-white px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-all shadow-md shadow-primary/25 disabled:bg-primary/50 disabled:cursor-not-allowed;
             }
             .btn-secondary {
-                @apply bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed;
+                @apply bg-surface-variant/50 dark:bg-surface-variant/10 text-on-surface px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed;
             }
             .btn-error {
                 @apply bg-error text-white px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-all shadow-md shadow-error/25 disabled:bg-error/50 disabled:cursor-not-allowed;
             }
-            .btn-warning {
-                 @apply bg-orange-500 text-white px-5 py-3 rounded-xl font-bold flex justify-center items-center gap-1 active:scale-95 transition-all shadow-md shadow-orange-500/25 disabled:bg-orange-500/50 disabled:cursor-not-allowed;
-            }
         }
     </style>
-
 </head>
+<body class="bg-surface dark:bg-[#121212] text-on-surface dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden transition-colors duration-300 selection:bg-primary/20">
 
-<body
-    class="bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden transition-colors duration-300 selection:bg-primary/20">
-
-    <header
-        class="fixed top-0 w-full z-[40] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-neutral-800 shadow-sm transition-colors duration-300">
-        <!-- Toast Notification Container -->
-        <div id="toast-container"
-            class="absolute top-full left-1/2 -translate-x-1/2 w-full max-w-md p-4 space-y-2 z-[200]"></div>
+    <header class="fixed top-0 w-full z-[40] bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-surface-variant/40 dark:border-neutral-800 shadow-sm transition-colors duration-300">
+        <div id="toast-container" class="absolute top-full left-1/2 -translate-x-1/2 w-full max-w-md p-4 space-y-2 z-[200]"></div>
 
         <div class="flex items-center px-6 h-16 w-full max-w-screen-xl mx-auto relative">
             <div class="flex-none z-10">
-                <div
-                    class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-gray-100 dark:bg-neutral-800 shadow-sm shrink-0">
-                    <img id="header-avatar" alt="Profile" class="w-full h-full object-cover"
-                        src="https://ui-avatars.com/api/?name=User&background=e1e3e4" />
+                <div class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-surface-variant shadow-sm shrink-0">
+                    <img id="header-avatar" alt="Profile" class="w-full h-full object-cover" src="https://ui-avatars.com/api/?name=User&background=e1e3e4"/>
                 </div>
             </div>
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span
-                    class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
+                <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
             </div>
             <div class="flex-none ml-auto z-10 relative">
-                <button id="notif-btn"
-                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-all active:scale-95 duration-200 relative text-gray-500 dark:text-gray-400">
+                <button id="notif-btn" class="p-2 rounded-full hover:bg-surface-variant/50 transition-all active:scale-95 duration-200 relative text-on-surface-variant dark:text-gray-400">
                     <span class="material-symbols-outlined">notifications</span>
-                    <span id="notif-badge"
-                        class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-white dark:border-neutral-900 hidden"></span>
+                    <span id="notif-badge" class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface dark:border-[#121212] hidden"></span>
                 </button>
             </div>
         </div>
     </header>
 
-    <div id="full-notif-panel"
-        class="fixed inset-0 z-[100] bg-gray-50 dark:bg-neutral-950 transition-transform duration-300 translate-x-full flex flex-col">
-        <div
-            class="h-16 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl shrink-0">
-            <button id="close-notif-btn"
-                class="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 active:scale-95 transition-transform text-gray-900 dark:text-gray-100">
+    <div id="full-notif-panel" class="fixed inset-0 z-[100] bg-surface dark:bg-[#121212] transition-transform duration-300 translate-x-full flex flex-col">
+        <div class="h-16 border-b border-surface-variant/50 dark:border-neutral-800 flex items-center px-4 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
+            <button id="close-notif-btn" class="p-2 mr-2 rounded-full hover:bg-surface-variant active:scale-95 transition-transform text-on-surface dark:text-gray-100">
                 <span class="material-symbols-outlined">arrow_back</span>
             </button>
-            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex-1">Notifications</h2>
+            <h2 class="text-lg font-bold text-on-surface dark:text-gray-100 flex-1">Notifications</h2>
         </div>
         <div id="notifications-container" class="flex-1 overflow-y-auto">
-            <p class="text-sm italic text-center py-10 text-gray-500 dark:text-gray-400">Loading alerts...</p>
+            <p class="text-sm italic text-center py-10 text-on-surface-variant dark:text-gray-400">Loading alerts...</p>
         </div>
     </div>
 
     <main class="pt-20 px-5 max-w-screen-md mx-auto relative z-10 pb-6">
-        <!-- Pull to Refresh Indicator -->
-        <div id="pull-to-refresh-indicator"
-            class="fixed top-16 left-0 right-0 h-16 flex items-center justify-center z-0 opacity-0 transition-all duration-300 pointer-events-none">
-            <div class="p-3 bg-white dark:bg-neutral-800 rounded-full shadow-lg">
-                <span id="ptr-icon"
-                    class="material-symbols-outlined text-primary transition-transform duration-200">arrow_downward</span>
+        
+        <div id="pull-to-refresh-indicator" class="fixed top-16 left-0 right-0 h-16 flex items-center justify-center z-0 opacity-0 transition-all duration-300 pointer-events-none">
+            <div class="p-3 bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-full shadow-lg">
+                <span id="ptr-icon" class="material-symbols-outlined text-primary transition-transform duration-200">arrow_downward</span>
             </div>
         </div>
 
         <div id="view-dashboard" class="tab-content active animate-fadeIn">
+            
             <section class="mb-4">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-[14px] font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[#e65100] text-[18px]">local_fire_department</span>
-                        Hotposts
+                    <h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[#e65100] text-[18px]">local_fire_department</span> Hotposts
                     </h3>
-                    <button onclick="window.openHotpostCamera()"
-                        class="text-xs font-bold text-primary dark:text-primary uppercase tracking-wider cursor-pointer hover:text-primary/80 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-base">add_circle</span>
-                        Create
+                    <button onclick="window.openHotpostCamera()" class="text-xs font-bold text-primary uppercase tracking-wider cursor-pointer hover:text-primary/80 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base">add_circle</span> Create
                     </button>
                 </div>
                 <div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2 pt-1">
-                    <!-- Hotpost circles will be injected here by hotposts.js -->
-                </div>
+                    </div>
             </section>
 
             <section class="mt-4">
-                <div
-                    class="bg-white dark:bg-neutral-900 rounded-[32px] p-4 border border-gray-200 dark:border-neutral-800 shadow-sm mb-6 flex gap-3 items-center">
-                    <div
-                        class="w-10 h-10 rounded-full border border-gray-200 dark:border-neutral-700 shadow-sm overflow-hidden shrink-0">
-                        <img id="feed-input-avatar" src="https://ui-avatars.com/api/?name=User&background=e1e3e4"
-                            class="w-full h-full object-cover">
+                
+                <div id="open-create-post-modal" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-4 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-6 flex gap-3 items-center cursor-pointer active:scale-[0.98] transition-transform">
+                    <div class="w-10 h-10 rounded-full border border-surface-variant shadow-sm overflow-hidden shrink-0 bg-surface-variant">
+                        <img id="feed-input-avatar" src="https://ui-avatars.com/api/?name=User&background=e1e3e4" class="w-full h-full object-cover">
                     </div>
-                    <input type="text" id="post-input"
-                        class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-transparent outline-none focus:border-primary placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
-                        placeholder="Share an update, ask a question...">
-                    <button id="send-post-btn"
-                        class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
-                        <span class="material-symbols-outlined text-[20px] ml-1">send</span>
+                    <div class="flex-1 bg-surface-variant/30 dark:bg-surface-variant/10 text-on-surface-variant px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-surface-variant/50 dark:border-neutral-700">
+                        Share an update, ask a question...
+                    </div>
+                    <button class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
                     </button>
                 </div>
 
                 <div id="feed-posts-container" class="space-y-5">
-                    <p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Loading live network
-                        feed...</p>
+                    <p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading live network feed...</p>
                 </div>
             </section>
         </div>
 
         <div id="view-search" class="tab-content pt-4 hidden">
-            <div class="relative mb-4">
-                <div
-                    class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-500 dark:text-gray-400">
+            <div class="relative mb-6 mt-2">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[20px]">search</span>
                 </div>
-                <input type="text" id="search-input"
-                    class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-gray-100 text-sm rounded-2xl focus:ring-primary focus:border-primary block pl-11 p-3.5 shadow-sm outline-none placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
-                    placeholder="Search for students...">
+                <input type="text" id="search-input" class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 dark:border-neutral-800 text-on-surface dark:text-gray-100 text-sm rounded-2xl focus:ring-primary focus:border-primary block pl-11 p-3.5 shadow-sm outline-none placeholder-on-surface-variant/70 transition-colors" placeholder="Search students, apps, or resources...">
             </div>
 
-            <div id="search-results-container" class="hidden space-y-3">
-                <!-- Search results will be injected here -->
+            <div class="mb-8" id="mini-apps-section">
+                <div class="flex justify-between items-end mb-4">
+                    <h3 class="text-lg font-bold text-on-surface dark:text-gray-100">Mini Apps</h3>
+                    <span class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">See All</span>
+                </div>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
+                        <div class="w-14 h-14 rounded-2xl bg-[#e3f2fd] dark:bg-[#0d47a1]/30 text-[#1565c0] dark:text-[#90caf9] flex items-center justify-center shadow-sm border border-surface-variant/30 dark:border-neutral-800">
+                            <span class="material-symbols-outlined text-[26px]">calendar_month</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-on-surface dark:text-gray-300 text-center">Timetable</span>
+                    </div>
+                    </div>
             </div>
+
+            <div id="search-results-container" class="hidden space-y-3 mb-8"></div>
 
             <div id="explore-users-container" class="space-y-3">
-                <!-- Explore grid will be injected here -->
+                <p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading popular users...</p>
             </div>
         </div>
 
         <div id="view-updates" class="tab-content pt-4 hidden">
-            <h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mb-6">Campus Updates</h2>
+            <h2 class="text-2xl font-extrabold text-on-surface dark:text-gray-100 mb-6">Campus Updates</h2>
             <div id="updates-container" class="space-y-4">
-                <p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Loading campus
-                    updates...
-                </p>
+                <p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading campus updates...</p>
             </div>
         </div>
 
         <div id="view-profile" class="tab-content pt-4 hidden">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">My Profile</h2>
-                <div class="flex gap-2">
-                    <button id="edit-profile-btn" onclick="openEditProfileModal()"
-                        class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95">Edit</button>
-                </div>
+                <h2 class="text-2xl font-extrabold text-on-surface dark:text-gray-100">My Profile</h2>
+                <button onclick="openEditProfileModal()" class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[12px] font-bold tracking-wide active:scale-95 transition-transform">
+                    Edit Profile
+                </button>
             </div>
+            
+            <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-6 shadow-sm border border-surface-variant/60 dark:border-neutral-800 text-center relative overflow-hidden mb-6">
+                <div class="absolute -top-20 -left-10 w-full h-40 bg-gradient-to-b from-primary/10 to-transparent rounded-full blur-2xl"></div>
+                <div class="relative z-10 flex flex-col items-center mt-2">
+                    <div id="profile-avatar-container" class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface dark:border-[#121212] shadow-md mb-4 bg-surface-variant relative cursor-pointer group">
+                        <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover" src="https://ui-avatars.com/api/?name=User&background=e1e3e4"/>
+                        <div class="absolute bottom-0 right-0 bg-primary w-6 h-6 rounded-full border-2 border-surface flex items-center justify-center">
+                            <span class="material-symbols-outlined text-white text-[12px]">edit</span>
+                        </div>
+                    </div>
+                    <input type="file" id="avatar-upload-input" accept="image/*" class="hidden">
 
-            <div
-                class="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-gray-200 dark:border-neutral-800 text-center relative overflow-hidden mb-6">
-                <div id="profile-avatar-container"
-                    class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 shadow-md mb-4 bg-gray-100 dark:bg-neutral-800 relative cursor-pointer group mx-auto">
-                    <img id="profile-avatar-large" alt="User profile" class="w-full h-full object-cover"
-                        src="https://ui-avatars.com/api/?name=User&background=e1e3e4" />
-                    <div
-                        class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span class="material-symbols-outlined text-white">photo_camera</span>
+                    <h3 id="profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100 tracking-tight">Syncing...</h3>
+                    <div class="flex items-center gap-2 mt-2 mb-3">
+                        <span id="profile-role" class="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-widest border border-primary/20">Student</span>
+                    </div>
+                    <p id="profile-email" class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400 flex items-center justify-center gap-1.5 bg-surface-variant/30 dark:bg-surface-variant/10 px-4 py-2 rounded-xl mb-4">
+                        <span class="material-symbols-outlined text-[16px]">mail</span> ---
+                    </p>
+                    <p id="profile-bio" class="text-[13px] text-on-surface-variant dark:text-gray-400 mb-4 px-4">---</p>
+                    
+                    <div class="flex justify-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-4 w-full">
+                        <button onclick="openConnectionsModal()" class="text-center w-full">
+                            <p id="profile-connection-count" class="text-lg font-bold text-on-surface dark:text-gray-100">0</p>
+                            <p class="text-xs text-on-surface-variant dark:text-gray-500">Connections</p>
+                        </button>
                     </div>
                 </div>
-                <input type="file" id="avatar-upload-input" accept="image/*" class="hidden">
-
-                <h3 id="profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
-                    Syncing...</h3>
-                <div class="flex items-center justify-center gap-2 mt-2 mb-3">
-                    <span id="profile-role"
-                        class="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-widest border border-primary/20">Student</span>
-                </div>
-                <p id="profile-email"
-                    class="text-[13px] font-medium text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-neutral-800 px-4 py-2 rounded-xl mb-4">
-                    <span class="material-symbols-outlined text-[16px]">mail</span> ---
-                </p>
-                <p id="profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-4 px-4">---</p>
-
-                <div class="flex justify-center gap-6 border-t border-gray-100 dark:border-neutral-800 pt-4">
-                    <button onclick="openConnectionsModal()" class="text-center">
-                        <p id="profile-connection-count" class="text-lg font-bold text-gray-900 dark:text-gray-100">0
-                        </p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Connections</p>
-                    </button>
-                </div>
             </div>
 
-            <div
-                class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm p-5">
+            <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[28px] border border-surface-variant/60 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm p-5">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-[14px] font-bold text-gray-900 dark:text-gray-100">Social Profiles</h3>
-                    <span onclick="document.getElementById('modal-edit-socials').classList.replace('hidden','flex')"
-                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors">Manage</span>
+                    <h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100">Social Profiles</h3>
+                    <span onclick="openEditSocialsModal()" class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider cursor-pointer hover:text-primary transition-colors">Manage</span>
                 </div>
                 <div class="flex gap-3 flex-wrap" id="profile-social-links"></div>
             </div>
 
-            <div
-                class="bg-white dark:bg-neutral-900 rounded-[28px] border border-gray-200 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm">
-                <div class="p-5 flex items-center gap-4 border-b border-gray-200 dark:border-neutral-800">
-                    <div
-                        class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                        <span class="material-symbols-outlined">badge</span>
+            <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[28px] border border-surface-variant/60 dark:border-neutral-800 overflow-hidden mb-6 shadow-sm">
+                <div class="p-5 flex items-center gap-4 border-b border-surface-variant/50 dark:border-neutral-800">
+                    <div class="w-10 h-10 bg-secondary/10 rounded-xl text-secondary flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[20px]">badge</span>
                     </div>
                     <div>
-                        <p
-                            class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">
-                            Student ID</p>
-                        <p id="profile-id" class="text-[15px] font-bold text-gray-900 dark:text-gray-100">---</p>
+                        <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-0.5">Student ID</p>
+                        <p id="profile-id" class="text-[15px] font-bold text-on-surface dark:text-gray-100">---</p>
                     </div>
                 </div>
                 <div class="p-5 flex items-center gap-4">
-                    <div
-                        class="w-10 h-10 bg-orange-50 dark:bg-orange-900/30 rounded-xl text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                        <span class="material-symbols-outlined">menu_book</span>
+                    <div class="w-10 h-10 bg-[#e65100]/10 rounded-xl text-[#e65100] flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[20px]">menu_book</span>
                     </div>
                     <div>
-                        <p
-                            class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-0.5">
-                            Course</p>
-                        <p id="profile-course" class="text-[15px] font-bold text-gray-900 dark:text-gray-100">---</p>
+                        <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-0.5">Course</p>
+                        <p id="profile-course" class="text-[15px] font-bold text-on-surface dark:text-gray-100">---</p>
                     </div>
                 </div>
             </div>
 
             <div class="space-y-3 mb-8">
-                <div onclick="openBlockedUsersModal()"
-                    class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <div onclick="openBlockedUsersModal()" class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-surface-variant/20 transition-colors">
                     <div class="flex items-center gap-3.5">
-                        <div
-                            class="w-8 h-8 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                        <div class="w-8 h-8 rounded-full bg-surface-variant/50 dark:bg-neutral-800 flex items-center justify-center text-on-surface-variant">
                             <span class="material-symbols-outlined text-[18px]">block</span>
                         </div>
-                        <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100">Blocked Users</span>
+                        <span class="font-bold text-[14px] text-on-surface dark:text-gray-100">Blocked Users</span>
                     </div>
-                    <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
                 </div>
 
-                <div
-                    class="w-full bg-white dark:bg-neutral-900 border border-primary/30 p-4 rounded-2xl flex items-center justify-between shadow-sm bg-primary/5">
+                <div class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-primary/30 p-4 rounded-2xl flex items-center justify-between shadow-sm bg-primary/5">
                     <div class="flex items-center gap-3.5">
                         <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                             <span class="material-symbols-outlined text-[18px]">lock</span>
                         </div>
                         <div>
-                            <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100 block">Private
-                                Account</span>
-                            <span class="text-[10px] text-gray-500 dark:text-gray-400">Only connections see full
-                                profile</span>
+                            <span class="font-bold text-[14px] text-on-surface dark:text-gray-100 block">Private Account</span>
+                            <span class="text-[10px] text-on-surface-variant">Only connections see full profile</span>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="privacy-toggle-switch" class="sr-only peer">
-                        <div
-                            class="w-11 h-6 bg-gray-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all">
-                        </div>
+                        <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                     </label>
                 </div>
 
-                <div
-                    class="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                <div class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 dark:border-neutral-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3.5">
-                        <div
-                            class="w-8 h-8 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                        <div class="w-8 h-8 rounded-full bg-surface-variant/50 dark:bg-neutral-800 flex items-center justify-center text-on-surface-variant">
                             <span class="material-symbols-outlined text-[18px]">dark_mode</span>
                         </div>
-                        <span class="font-bold text-[14px] text-gray-900 dark:text-gray-100">Dark Theme</span>
+                        <span class="font-bold text-[14px] text-on-surface dark:text-gray-100">Dark Theme</span>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="theme-toggle-switch" class="sr-only peer">
-                        <div
-                            class="w-11 h-6 bg-gray-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all">
-                        </div>
+                        <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                     </label>
                 </div>
 
-                <button id="sign-out-btn"
-                    class="w-full bg-error/10 border border-error/20 p-4 rounded-2xl flex items-center justify-center gap-2 mt-8 shadow-sm hover:bg-error/20 transition-colors">
+                <button id="sign-out-btn" class="w-full bg-error/10 border border-error/20 p-4 rounded-2xl flex items-center justify-center gap-2 mt-8 shadow-sm active:scale-[0.98] transition-transform">
                     <span class="material-symbols-outlined text-error text-[20px]">logout</span>
                     <span class="font-bold text-[15px] text-error">Sign Out</span>
                 </button>
             </div>
         </div>
+
     </main>
 
-    <div id="modal-edit-socials"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full max-w-sm rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[85vh]">
-            <button onclick="closeSocialsModal()"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                <span class="material-symbols-outlined text-[18px]">close</span>
-            </button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Manage Social Links</h3>
-
-            <!-- Add Link Section -->
-            <div
-                class="bg-gray-50 dark:bg-neutral-800/50 p-4 rounded-2xl border border-gray-100 dark:border-neutral-800 mb-4 shrink-0">
-                <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5">Add New
-                    Link</h4>
-                <div class="flex flex-col gap-2">
-                    <div class="flex gap-2">
-                        <select id="add-social-platform"
-                            class="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none w-1/3 shadow-sm">
-                            <option value="linkedin">LinkedIn</option>
-                            <option value="instagram">Instagram</option>
-                            <option value="github">GitHub</option>
-                            <option value="twitter">Twitter/X</option>
-                            <option value="youtube">YouTube</option>
-                            <option value="discord">Discord</option>
-                            <option value="facebook">Facebook</option>
-                            <option value="behance">Behance</option>
-                            <option value="dribbble">Dribbble</option>
-                            <option value="website">Website</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <input type="url" id="add-social-url" placeholder="https://..."
-                            class="flex-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-gray-100 focus:border-primary outline-none shadow-sm">
-                    </div>
-                    <button onclick="addSocialLinkTemp()"
-                        class="w-full bg-primary/10 hover:bg-primary/20 text-primary py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
-                        <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Link
-                    </button>
-                </div>
-            </div>
-
-            <!-- Current Links List -->
-            <div class="flex-1 overflow-y-auto min-h-[120px] mb-4 pr-1">
-                <h4
-                    class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5 sticky top-0 bg-white dark:bg-neutral-900 py-1">
-                    Your Links</h4>
-                <div id="modal-socials-list" class="space-y-2">
-                    <!-- Dynamic links will be injected here -->
-                </div>
-            </div>
-
-            <button onclick="saveSocialLinks()"
-                class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform shrink-0 shadow-md shadow-primary/25">Save
-                Links</button>
-        </div>
-    </div>
-
-    <div id="modal-profile-private"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
-            <button onclick="closeProfileModals()"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                    class="material-symbols-outlined text-[18px]">close</span></button>
-            <div class="flex flex-col items-center text-center">
-                <div
-                    class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-white dark:border-neutral-900 bg-gray-100 dark:bg-neutral-800 mb-4">
-                    <img id="private-profile-avatar" src="" class="w-full h-full object-cover">
-                </div>
-                <h3 id="private-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
-                <p id="private-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-6">
-                    Student</p>
-                <div
-                    class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-5 rounded-2xl mb-6">
-                    <span
-                        class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 mb-2 block">lock</span>
-                    <h4 class="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-1">This Account is Private</h4>
-                    <p class="text-[12px] text-gray-500 dark:text-gray-400 px-4">Connect to see their full profile.</p>
-                </div>
-                <div id="private-profile-actions" class="w-full">
-                    <!-- JS will inject button here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-profile-public"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
-            <button onclick="closeProfileModals()"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                    class="material-symbols-outlined text-[18px]">close</span></button>
-            <div class="flex flex-col items-center text-center">
-                <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4">
-                    <div
-                        class="w-full h-full rounded-full border-[3px] border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                        <img id="public-profile-avatar" src="" class="w-full h-full object-cover">
-                    </div>
-                </div>
-                <h3 id="public-profile-name" class="text-xl font-extrabold text-gray-900 dark:text-gray-100">---</h3>
-                <p id="public-profile-course" class="text-[12px] font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Student</p>
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    <span id="public-profile-connection-count"
-                        class="font-bold text-gray-700 dark:text-gray-300">0</span> connections
-                </div>
-                <p id="public-profile-bio" class="text-[13px] text-gray-500 dark:text-gray-400 mb-4 px-4">---</p>
-                <div class="flex gap-3 justify-center mb-6" id="public-profile-social-links"></div>
-                <div class="mt-6 flex items-stretch justify-center gap-2 w-full">
-                    <div id="public-profile-actions" class="flex items-stretch gap-2 flex-1">
-                        <!-- Main action buttons will be rendered here by main.js -->
-                    </div>
-                    <!-- "More" options menu -->
-                    <div class="relative">
-                        <button id="public-profile-more-btn" onclick="toggleMoreMenu()"
-                            class="hidden btn-secondary !p-0 w-12 h-auto">
-                            <span class="material-symbols-outlined">more_horiz</span>
-                        </button>
-                        <div id="public-profile-more-menu"
-                            class="hidden absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-800 p-2 z-20">
-                            <!-- More menu items will be rendered here by main.js -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="modal-edit-profile"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full max-w-md rounded-[32px] p-6 relative border border-gray-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[90vh]">
-            <button onclick="closeEditProfileModal()"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                <span class="material-symbols-outlined text-[18px]">close</span>
-            </button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Edit Profile</h3>
-
-            <div class="flex-1 overflow-y-auto pr-1 space-y-4 mb-4">
-                <!-- Avatar Editing -->
-                <div class="flex flex-col items-center gap-2 pb-2">
-                    <div
-                        class="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/20 bg-gray-100 dark:bg-neutral-800 relative shadow-sm">
-                        <img id="edit-profile-avatar-preview"
-                            src="https://ui-avatars.com/api/?name=User&background=e1e3e4"
-                            class="w-full h-full object-cover">
-                    </div>
-                    <button type="button" onclick="triggerEditAvatarUpload()"
-                        class="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[14px]">photo_camera</span> Change Photo
-                    </button>
-                    <input type="file" id="edit-avatar-upload-input" accept="image/*" class="hidden">
-                </div>
-
-                <!-- Full Name -->
-                <div>
-                    <label
-                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Full
-                        Name</label>
-                    <input type="text" id="edit-profile-name"
-                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors"
-                        placeholder="Enter full name">
-                </div>
-
-                <!-- Student ID -->
-                <div>
-                    <label
-                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Student
-                        ID</label>
-                    <input type="text" id="edit-profile-id"
-                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors"
-                        placeholder="Enter Student ID">
-                </div>
-
-                <!-- Course -->
-                <div>
-                    <label
-                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Course</label>
-                    <input type="text" id="edit-profile-course"
-                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors"
-                        placeholder="Enter course name">
-                </div>
-
-                <!-- Bio -->
-                <div>
-                    <label
-                        class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Bio</label>
-                    <textarea id="edit-profile-bio" rows="3"
-                        class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-gray-900 dark:text-gray-100 transition-colors resize-none"
-                        placeholder="Write a short bio..."></textarea>
-                </div>
-            </div>
-
-            <button id="save-profile-btn" onclick="saveUserProfile()"
-                class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform shrink-0 shadow-md shadow-primary/25 flex items-center justify-center gap-2">
-                Save Changes
-            </button>
-        </div>
-    </div>
-
-    <!-- Connections Modal -->
-    <div id="modal-connections" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
-            <button onclick="closeConnectionsModal()"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                    class="material-symbols-outlined text-[18px]">close</span></button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Connections</h3>
-            <div id="connections-list" class="flex-1 overflow-y-auto space-y-3 pr-1">
-                <!-- Connections will be injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Blocked Users Modal -->
-    <div id="modal-blocked-users"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
-            <button onclick="closeBlockedUsersModal()"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                    class="material-symbols-outlined text-[18px]">close</span></button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Blocked Users</h3>
-            <div id="blocked-users-list" class="flex-1 overflow-y-auto space-y-3 pr-1">
-                <!-- Blocked users will be injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Report User Modal -->
-    <div id="modal-report-user" class="fixed inset-0 bg-black/60 z-50 hidden items-center justify-center p-4">
-        <div class="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-md animate-slideUp">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Report User</h2>
-                <button onclick="closeReportModal()"
-                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800">
-                    <span class="material-symbols-outlined">close</span>
+    <div id="modal-create-post" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-extrabold text-on-surface dark:text-gray-100">Create Post</h3>
+                <button id="close-create-post-modal" class="w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">You are reporting <strong id="report-user-name"
-                    class="text-gray-800 dark:text-gray-200"></strong>. Please provide a reason.</p>
-
-            <div class="space-y-4">
-                <select id="report-reason"
-                    class="w-full bg-gray-100 dark:bg-neutral-800 border-2 border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm">
-                    <option value="">-- Select a reason --</option>
-                    <option value="spam">Spam or Misleading Content</option>
-                    <option value="harassment">Harassment or Bullying</option>
-                    <option value="inappropriate_content">Inappropriate Content</option>
-                    <option value="impersonation">Impersonation / Fake Account</option>
-                    <option value="other">Other</option>
-                </select>
-                <textarea id="report-description" placeholder="Provide additional details (optional)"
-                    class="w-full bg-gray-100 dark:bg-neutral-800 border-2 border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm h-24 resize-none"></textarea>
+            
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-4">
+                <button data-type="text" class="post-type-tab bg-primary text-white px-4 py-1.5 rounded-full text-xs font-bold shrink-0">Text</button>
+                <button data-type="image" class="post-type-tab bg-surface-variant/50 dark:bg-surface-variant/10 text-on-surface-variant dark:text-gray-300 px-4 py-1.5 rounded-full text-xs font-bold shrink-0">Image</button>
+                <button data-type="poll" class="post-type-tab bg-surface-variant/50 dark:bg-surface-variant/10 text-on-surface-variant dark:text-gray-300 px-4 py-1.5 rounded-full text-xs font-bold shrink-0">Poll</button>
+                <button data-type="event" class="post-type-tab bg-surface-variant/50 dark:bg-surface-variant/10 text-on-surface-variant dark:text-gray-300 px-4 py-1.5 rounded-full text-xs font-bold shrink-0">Event</button>
             </div>
 
-            <div class="mt-6">
-                <button id="submit-report-btn" onclick="submitReport()" class="btn-error w-full">Submit Report</button>
+            <input type="hidden" id="current-post-type" value="text">
+            <textarea id="post-content-input" rows="3" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-2xl p-4 text-[14px] text-on-surface dark:text-gray-100 focus:border-primary outline-none resize-none mb-4" placeholder="What do you want to talk about?"></textarea>
+
+            <div id="input-text" class="post-input-section hidden"></div>
+            
+            <div id="input-image" class="post-input-section hidden mb-4">
+                <input type="url" id="post-image-url" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary" placeholder="Paste image URL">
             </div>
+            
+            <div id="input-poll" class="post-input-section hidden mb-4 space-y-2">
+                <input type="text" id="poll-opt-1" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary" placeholder="Option 1">
+                <input type="text" id="poll-opt-2" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary" placeholder="Option 2">
+            </div>
+
+            <div id="input-event" class="post-input-section hidden mb-4 space-y-2">
+                <input type="datetime-local" id="event-date" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary">
+                <input type="text" id="event-location" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary" placeholder="Location">
+            </div>
+
+            <button id="submit-post-btn" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold tracking-wide active:scale-95 transition-transform">
+                Post
+            </button>
         </div>
     </div>
 
-    <!-- Hotpost Camera Modal -->
-    <div id="modal-hotpost-camera" class="fixed inset-0 z-[115] bg-black hidden flex-col justify-center items-center">
-        <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
-        <img id="hotpost-preview" class="absolute w-full h-full object-cover hidden" />
-        <canvas id="hotpost-camera-canvas" class="hidden"></canvas>
-
-        <button id="close-hotpost-camera-btn"
-            class="absolute top-5 left-4 text-white p-2 bg-black/30 rounded-full z-20"><span
-                class="material-symbols-outlined">close</span></button>
-        <button id="switch-hotpost-camera-btn"
-            class="absolute top-5 right-4 text-white p-2 bg-black/30 rounded-full z-20"><span
-                class="material-symbols-outlined">cameraswitch</span></button>
-
-        <!-- Edit/Filter Options - Shown on Preview -->
-        <div id="edit-options-bar" class="absolute top-5 right-4 z-20 hidden flex-col gap-4">
-            <button class="edit-option-btn p-2 bg-black/30 rounded-full" data-edit="filter"><span
-                    class="material-symbols-outlined">tune</span></button>
-        </div>
-        <div id="filter-tray"
-            class="absolute bottom-32 left-0 w-full z-20 hidden justify-center p-4 overflow-x-auto hide-scrollbar">
-            <div class="flex gap-3">
-                <button class="filter-btn" data-filter="none">None</button>
-                <button class="filter-btn" data-filter="saturate(1.5)">Vivid</button>
-                <button class="filter-btn" data-filter="grayscale(1)">B&W</button>
-                <button class="filter-btn" data-filter="sepia(0.8)">Vintage</button>
-                <button class="filter-btn" data-filter="contrast(1.4)">Sharp</button>
-            </div>
-        </div>
-
-        <!-- Bottom Controls -->
-        <div class="absolute bottom-10 z-20 w-full px-8">
-            <!-- Capture State -->
-            <div id="capture-ui" class="flex justify-center">
-                <button id="capture-hotpost-btn"
-                    class="w-20 h-20 rounded-full bg-white/30 border-4 border-white flex items-center justify-center active:scale-95 transition-transform">
-                    <div class="w-16 h-16 bg-white rounded-full"></div>
-                </button>
-            </div>
-            <!-- Preview State -->
-            <div id="preview-ui" class="hidden flex justify-between items-center w-full">
-                <button id="retake-hotpost-btn"
-                    class="text-white font-bold flex items-center gap-1 p-3 bg-black/30 rounded-full"><span
-                        class="material-symbols-outlined">refresh</span> Retake</button>
-                <div class="flex flex-col items-center gap-2">
-                    <select id="hotpost-visibility"
-                        class="bg-black/30 text-white text-xs font-bold border-none rounded-full px-3 py-1.5 focus:ring-0 outline-none">
-                        <option value="everyone">Everyone</option>
-                        <option value="connections">Connections</option>
-                    </select>
-                    <button id="submit-hotpost-btn"
-                        class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"><span
-                            class="material-symbols-outlined text-3xl">send</span></button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- My Hotposts Viewer Modal -->
-    <div id="modal-my-hotposts" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
-            <button id="close-my-hotposts-btn"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                    class="material-symbols-outlined text-[18px]">close</span></button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">My Active Hotposts</h3>
-
-            <div id="my-hotposts-list" class="flex-1 overflow-y-auto space-y-3 pr-1">
-                <!-- My hotposts will be injected here -->
-                <p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You have no active Hotposts.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hotpost Viewer Modal -->
-    <div id="modal-view-hotpost" class="fixed inset-0 z-[120] bg-black hidden flex-col items-center justify-center">
-        <div id="hotpost-viewer-content"
-            class="w-full h-full max-w-screen-md mx-auto relative flex flex-col animate-fadeIn">
-            <!-- Progress bars will be injected here -->
-            <div id="hotpost-progress-bars" class="absolute top-3 left-2 right-2 h-1 flex gap-1 z-20"></div>
-
-            <!-- Top Gradient for readability -->
-            <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/50 to-transparent z-10"></div>
-
-            <div class="absolute top-5 left-4 flex items-center gap-2 z-20">
-                <img id="hotpost-viewer-avatar" src=""
-                    class="w-9 h-9 rounded-full object-cover border-2 border-white/50">
-                <div>
-                    <p id="hotpost-viewer-name"
-                        class="text-white font-bold text-sm shadow-black/50 [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">
-                        User</name>
-                    <p id="hotpost-viewer-time"
-                        class="text-white/80 text-xs [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">Just now</p>
-                </div>
-            </div>
-            <button id="close-hotpost-viewer-btn"
-                class="absolute top-5 right-4 text-white p-1.5 bg-black/20 rounded-full z-20"><span
-                    class="material-symbols-outlined">close</span></button>
-
-            <div class="flex-1 flex items-center justify-center overflow-hidden relative">
-                <img id="hotpost-viewer-image" src="" class="max-w-full max-h-full object-contain">
-            </div>
-            <div id="hotpost-viewer-bottom-gradient"
-                class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/50 to-transparent z-20 flex items-end p-4">
-                <div id="hotpost-reply-container" class="w-full flex items-center gap-2">
-                    <input type="text" id="hotpost-reply-input" placeholder="Send a message..."
-                        class="flex-1 bg-black/30 border border-white/30 text-white placeholder-white/70 text-sm rounded-full px-4 py-2.5 outline-none focus:border-white transition-colors">
-                    <button id="hotpost-reply-btn"
-                        class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform">
-                        <span class="material-symbols-outlined">send</span>
-                    </button>
-                </div>
-            </div>
-
-            <div id="hotpost-nav-prev" class="absolute left-0 top-0 bottom-0 w-1/3 z-10"></div>
-            <div id="hotpost-nav-next" class="absolute right-0 top-0 bottom-0 w-1/3 z-10"></div>
-        </div>
-    </div>
-
-    <!-- Hotpost Viewers Modal -->
-    <div id="modal-story-details"
-        class="fixed inset-0 z-[125] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[60vh]">
-            <button id="close-story-details-btn"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                    class="material-symbols-outlined text-[18px]">close</span></button>
-
-            <div class="shrink-0 mb-4">
-                <div class="flex border-b border-gray-200 dark:border-neutral-800">
-                    <button id="details-tab-viewers"
-                        class="details-tab active flex-1 py-3 text-sm font-bold border-b-2 border-primary text-primary">Viewers</button>
-                    <button id="details-tab-replies"
-                        class="details-tab flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-primary">Replies</button>
-                </div>
-            </div>
-
-            <div id="details-content-viewers" class="details-content flex-1 overflow-y-auto space-y-2 pr-1">
-                <div id="hotpost-viewers-list">
-                    <!-- Viewers will be injected here -->
-                </div>
-            </div>
-            <div id="details-content-replies" class="details-content hidden flex-1 overflow-y-auto space-y-3 pr-1">
-                <div id="hotpost-replies-list">
-                    <!-- Replies will be injected here -->
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="modal-post-comments"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
-        <div
-            class="bg-white dark:bg-neutral-900 w-full rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
-            <button id="close-post-comments-btn"
-                class="absolute top-4 right-5 w-8 h-8 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><span
-                    class="material-symbols-outlined text-[18px]">close</span></button>
-            <h3 class="text-xl font-extrabold mb-4 text-gray-900 dark:text-gray-100 shrink-0">Comments</h3>
-
-            <div id="post-comments-list" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4">
-            </div>
-
+    <div id="modal-post-comments" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] flex flex-col max-h-[80vh]">
+            <button id="close-post-comments-btn" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold text-on-surface dark:text-gray-100 shrink-0 mb-4">Comments</h3>
+            <div id="post-comments-list" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-4"></div>
             <div class="flex items-center gap-2 shrink-0">
-                <input type="text" id="post-comment-input" placeholder="Add a comment..."
-                    class="flex-1 bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-transparent outline-none focus:border-primary placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-                <button id="send-comment-btn"
-                    class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
+                <input type="text" id="post-comment-input" placeholder="Add a comment..." class="flex-1 bg-surface-variant/30 dark:bg-surface-variant/5 text-on-surface dark:text-gray-100 px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-surface-variant/50 dark:border-neutral-700 outline-none focus:border-primary">
+                <button id="send-comment-btn" class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0">
                     <span class="material-symbols-outlined text-[20px] ml-1">send</span>
                 </button>
             </div>
         </div>
     </div>
-    <nav
-        class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[32px] border-t border-gray-200 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-[40]">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard"
-            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 bg-primary text-white">
-            <span class="material-symbols-outlined text-[24px]"
-                style="font-variation-settings: 'FILL' 1;">dashboard</span><span
-                class="text-[10px] font-bold mt-0.5">Feed</span>
+
+    <div id="modal-profile-public" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModals()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <div class="flex flex-col items-center text-center">
+                <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4">
+                    <div class="w-full h-full rounded-full border-[3px] border-surface dark:border-[#1e1e1e] overflow-hidden bg-surface-variant">
+                        <img id="public-profile-avatar" src="" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <h3 id="public-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100">---</h3>
+                <p id="public-profile-course" class="text-[12px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">Student</p>
+                <div class="text-sm text-on-surface-variant dark:text-gray-400 mb-4">
+                    <span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">0</span> connections
+                </div>
+                <p id="public-profile-bio" class="text-[13px] text-on-surface-variant dark:text-gray-400 mb-4 px-4">---</p>
+                <div class="flex gap-3 justify-center mb-6" id="public-profile-social-links"></div>
+                <div class="mt-6 flex items-stretch justify-center gap-2 w-full">
+                    <div id="public-profile-actions" class="flex items-stretch gap-2 flex-1"></div>
+                    <div class="relative">
+                        <button id="public-profile-more-btn" onclick="toggleMoreMenu()" class="hidden btn-secondary !p-0 w-12 h-auto text-on-surface dark:text-gray-100">
+                            <span class="material-symbols-outlined">more_horiz</span>
+                        </button>
+                        <div id="public-profile-more-menu" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-surface dark:bg-neutral-900 rounded-xl shadow-lg border border-surface-variant/50 dark:border-neutral-800 p-2 z-20"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-profile-private" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
+            <button onclick="closeProfileModals()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <div class="flex flex-col items-center text-center">
+                <div class="relative mb-4">
+                    <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface dark:border-[#1e1e1e] shadow-md bg-surface-variant">
+                        <img id="private-profile-avatar" src="" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <h3 id="private-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100">---</h3>
+                <p id="private-profile-course" class="text-[12px] font-medium text-on-surface-variant dark:text-gray-400 mb-6">Student</p>
+                <div class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-800 p-5 rounded-2xl mb-6">
+                    <span class="material-symbols-outlined text-[32px] text-on-surface-variant opacity-50 mb-2 block">lock</span>
+                    <h4 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-1">This Account is Private</h4>
+                    <p class="text-[12px] text-on-surface-variant dark:text-gray-400 px-4">Connect to see their full profile.</p>
+                </div>
+                <div id="private-profile-actions" class="w-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-profile" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-md rounded-[32px] p-6 relative border border-surface-variant/60 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[90vh]">
+            <button onclick="closeEditProfileModal()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold mb-4 text-on-surface dark:text-gray-100 shrink-0">Edit Profile</h3>
+            <div class="flex-1 overflow-y-auto pr-1 space-y-4 mb-4">
+                <div class="flex flex-col items-center gap-2 pb-2">
+                    <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/20 bg-surface-variant shadow-sm">
+                        <img id="edit-profile-avatar-preview" src="" class="w-full h-full object-cover">
+                    </div>
+                    <button type="button" onclick="triggerEditAvatarUpload()" class="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">photo_camera</span> Change Photo
+                    </button>
+                    <input type="file" id="edit-avatar-upload-input" accept="image/*" class="hidden">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider mb-1 block">Full Name</label>
+                    <input type="text" id="edit-profile-name" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-on-surface dark:text-gray-100">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider mb-1 block">Student ID</label>
+                    <input type="text" id="edit-profile-id" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-on-surface dark:text-gray-100">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider mb-1 block">Course</label>
+                    <input type="text" id="edit-profile-course" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-on-surface dark:text-gray-100">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider mb-1 block">Bio</label>
+                    <textarea id="edit-profile-bio" rows="3" class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-sm focus:border-primary outline-none text-on-surface dark:text-gray-100 resize-none"></textarea>
+                </div>
+            </div>
+            <button id="save-profile-btn" onclick="saveUserProfile()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform">
+                Save Changes
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-edit-socials" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-sm rounded-[32px] p-6 relative border border-surface-variant/60 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <button onclick="closeSocialsModal()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold mb-4 text-on-surface dark:text-gray-100">Manage Socials</h3>
+            
+            <div class="bg-surface-variant/20 dark:bg-surface-variant/5 p-4 rounded-2xl border border-surface-variant/50 dark:border-neutral-700 mb-4 shrink-0">
+                <h4 class="text-xs font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider mb-2.5">Add New Link</h4>
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-2">
+                        <select id="add-social-platform" class="bg-surface dark:bg-neutral-900 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-on-surface dark:text-gray-100 outline-none w-1/3">
+                            <option value="linkedin">LinkedIn</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="github">GitHub</option>
+                            <option value="twitter">Twitter</option>
+                            <option value="website">Website</option>
+                        </select>
+                        <input type="url" id="add-social-url" placeholder="https://..." class="flex-1 bg-surface dark:bg-neutral-900 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-2.5 text-xs text-on-surface dark:text-gray-100 outline-none">
+                    </div>
+                    <button onclick="addSocialLinkTemp()" class="w-full bg-primary/10 text-primary py-2.5 rounded-xl font-bold text-xs flex justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Link
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto min-h-[120px] mb-4 pr-1">
+                <div id="modal-socials-list" class="space-y-2"></div>
+            </div>
+            <button onclick="saveSocialLinks()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold mt-auto active:scale-95 transition-transform">
+                Save Links
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-connections" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-8 relative max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
+            <button onclick="closeConnectionsModal()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold mb-4 text-on-surface dark:text-gray-100 shrink-0">Connections</h3>
+            <div id="connections-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        </div>
+    </div>
+
+    <div id="modal-blocked-users" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-8 relative max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
+            <button onclick="closeBlockedUsersModal()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold mb-4 text-on-surface dark:text-gray-100 shrink-0">Blocked Users</h3>
+            <div id="blocked-users-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        </div>
+    </div>
+    
+    <div id="modal-report-user" class="fixed inset-0 bg-black/60 z-[115] hidden items-center justify-center p-4">
+        <div class="bg-surface dark:bg-[#1e1e1e] rounded-3xl p-6 w-full max-w-md animate-slideUp">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-on-surface dark:text-gray-100">Report User</h2>
+                <button onclick="closeReportModal()" class="p-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <p class="text-sm text-on-surface-variant dark:text-gray-400 mb-4">You are reporting <strong id="report-user-name" class="text-on-surface dark:text-gray-100"></strong>.</p>
+            <div class="space-y-4">
+                <select id="report-reason" class="w-full bg-surface-variant/30 dark:bg-surface-variant/5 border-2 border-transparent focus:border-primary rounded-xl px-4 py-3 text-sm outline-none dark:text-gray-100">
+                    <option value="">-- Select a reason --</option>
+                    <option value="spam">Spam or Misleading Content</option>
+                    <option value="harassment">Harassment or Bullying</option>
+                    <option value="inappropriate_content">Inappropriate Content</option>
+                </select>
+                <textarea id="report-description" placeholder="Additional details..." class="w-full bg-surface-variant/30 dark:bg-surface-variant/5 border-2 border-transparent focus:border-primary rounded-xl px-4 py-3 text-sm h-24 resize-none outline-none dark:text-gray-100"></textarea>
+            </div>
+            <button id="submit-report-btn" onclick="submitReport()" class="btn-error w-full mt-6">Submit Report</button>
+        </div>
+    </div>
+
+    <div id="modal-hotpost-camera" class="fixed inset-0 z-[115] bg-black hidden flex-col justify-center items-center">
+        <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
+        <img id="hotpost-preview" class="absolute w-full h-full object-cover hidden" />
+        <canvas id="hotpost-camera-canvas" class="hidden"></canvas>
+
+        <button id="close-hotpost-camera-btn" class="absolute top-5 left-4 text-white p-2 bg-black/30 rounded-full z-20"><span class="material-symbols-outlined">close</span></button>
+        <button id="switch-hotpost-camera-btn" class="absolute top-5 right-4 text-white p-2 bg-black/30 rounded-full z-20"><span class="material-symbols-outlined">cameraswitch</span></button>
+
+        <div id="edit-options-bar" class="absolute top-5 right-4 z-20 hidden flex-col gap-4">
+            <button class="edit-option-btn p-2 bg-black/30 rounded-full text-white" data-edit="filter"><span class="material-symbols-outlined">tune</span></button>
+        </div>
+        <div id="filter-tray" class="absolute bottom-32 left-0 w-full z-20 hidden justify-center p-4 overflow-x-auto hide-scrollbar">
+            <div class="flex gap-3">
+                <button class="filter-btn text-white" data-filter="none">None</button>
+                <button class="filter-btn text-white" data-filter="saturate(1.5)">Vivid</button>
+                <button class="filter-btn text-white" data-filter="grayscale(1)">B&W</button>
+            </div>
+        </div>
+
+        <div class="absolute bottom-10 z-20 w-full px-8">
+            <div id="capture-ui" class="flex justify-center">
+                <button id="capture-hotpost-btn" class="w-20 h-20 rounded-full bg-white/30 border-4 border-white flex items-center justify-center active:scale-95 transition-transform">
+                    <div class="w-16 h-16 bg-white rounded-full"></div>
+                </button>
+            </div>
+            <div id="preview-ui" class="hidden flex justify-between items-center w-full">
+                <button id="retake-hotpost-btn" class="text-white font-bold flex items-center gap-1 p-3 bg-black/30 rounded-full"><span class="material-symbols-outlined">refresh</span></button>
+                <div class="flex flex-col items-center gap-2">
+                    <select id="hotpost-visibility" class="bg-black/30 text-white text-xs font-bold border-none rounded-full px-3 py-1.5 outline-none">
+                        <option value="everyone">Everyone</option>
+                        <option value="connections">Connections</option>
+                    </select>
+                    <button id="submit-hotpost-btn" class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"><span class="material-symbols-outlined text-3xl">send</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-view-hotpost" class="fixed inset-0 z-[120] bg-black hidden flex-col items-center justify-center">
+        <div id="hotpost-viewer-content" class="w-full h-full max-w-screen-md mx-auto relative flex flex-col animate-fadeIn">
+            <div id="hotpost-progress-bars" class="absolute top-3 left-2 right-2 h-1 flex gap-1 z-20"></div>
+            <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/50 to-transparent z-10"></div>
+            <div class="absolute top-5 left-4 flex items-center gap-2 z-20">
+                <img id="hotpost-viewer-avatar" src="" class="w-9 h-9 rounded-full object-cover border-2 border-white/50">
+                <div>
+                    <p id="hotpost-viewer-name" class="text-white font-bold text-sm shadow-black/50 [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">User</p>
+                    <p id="hotpost-viewer-time" class="text-white/80 text-xs [text-shadow:_0_1px_3px_var(--tw-shadow-color)]">Just now</p>
+                </div>
+            </div>
+            <button id="close-hotpost-viewer-btn" class="absolute top-5 right-4 text-white p-1.5 bg-black/20 rounded-full z-20"><span class="material-symbols-outlined">close</span></button>
+
+            <div class="flex-1 flex items-center justify-center overflow-hidden relative">
+                <img id="hotpost-viewer-image" src="" class="max-w-full max-h-full object-contain">
+            </div>
+            <div id="hotpost-viewer-bottom-gradient" class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/50 to-transparent z-20 flex items-end p-4">
+                <div id="hotpost-reply-container" class="w-full flex items-center gap-2">
+                    <input type="text" id="hotpost-reply-input" placeholder="Send a message..." class="flex-1 bg-black/30 border border-white/30 text-white placeholder-white/70 text-sm rounded-full px-4 py-2.5 outline-none focus:border-white transition-colors">
+                    <button id="hotpost-reply-btn" class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform">
+                        <span class="material-symbols-outlined">send</span>
+                    </button>
+                </div>
+            </div>
+            <div id="hotpost-nav-prev" class="absolute left-0 top-0 bottom-0 w-1/3 z-10"></div>
+            <div id="hotpost-nav-next" class="absolute right-0 top-0 bottom-0 w-1/3 z-10"></div>
+        </div>
+    </div>
+
+    <div id="modal-my-hotposts" class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-8 relative max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
+            <button id="close-my-hotposts-btn" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            <h3 class="text-xl font-extrabold mb-4 text-on-surface dark:text-gray-100">My Hotposts</h3>
+            <div id="my-hotposts-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        </div>
+    </div>
+
+    <div id="modal-story-details" class="fixed inset-0 z-[125] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-8 relative max-w-screen-md mx-auto flex flex-col max-h-[60vh]">
+            <button id="close-story-details-btn" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            <div class="shrink-0 mb-4">
+                <div class="flex border-b border-surface-variant/50 dark:border-neutral-800">
+                    <button id="details-tab-viewers" class="details-tab active flex-1 py-3 text-sm font-bold border-b-2 border-primary text-primary">Viewers</button>
+                    <button id="details-tab-replies" class="details-tab flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-on-surface-variant dark:text-gray-400">Replies</button>
+                </div>
+            </div>
+            <div id="details-content-viewers" class="details-content flex-1 overflow-y-auto space-y-2 pr-1"><div id="hotpost-viewers-list"></div></div>
+            <div id="details-content-replies" class="details-content hidden flex-1 overflow-y-auto space-y-3 pr-1"><div id="hotpost-replies-list"></div></div>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-6 pt-3 bg-surface/80 dark:bg-[#121212]/90 backdrop-blur-2xl rounded-t-[32px] border-t border-surface-variant/40 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.2)] z-[40]">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex flex-col items-center justify-center bg-[#006e1c] dark:bg-primary text-white rounded-2xl px-5 py-2 transition-all active:scale-95">
+            <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Feed</span>
         </button>
-        <button onclick="switchTab('search')" id="nav-search"
-            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 text-gray-500 dark:text-gray-400">
-            <span class="material-symbols-outlined text-[24px]">search</span><span
-                class="text-[10px] font-bold mt-0.5">Search</span>
+        <button onclick="switchTab('search')" id="nav-search" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 px-5 py-2 hover:bg-surface-variant/40 dark:hover:bg-neutral-800 rounded-2xl active:scale-95">
+            <span class="material-symbols-outlined text-[24px]">search</span>
+            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Search</span>
         </button>
-        <button onclick="switchTab('updates')" id="nav-updates"
-            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 text-gray-500 dark:text-gray-400">
-            <span class="material-symbols-outlined text-[24px]">campaign</span><span
-                class="text-[10px] font-bold mt-0.5">Updates</span>
+        <button onclick="switchTab('updates')" id="nav-updates" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 px-5 py-2 hover:bg-surface-variant/40 dark:hover:bg-neutral-800 rounded-2xl active:scale-95">
+            <span class="material-symbols-outlined text-[24px]">campaign</span>
+            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Updates</span>
         </button>
-        <button onclick="switchTab('profile')" id="nav-profile"
-            class="nav-item flex flex-col items-center justify-center rounded-2xl px-5 py-2 transition-all active:scale-95 text-gray-500 dark:text-gray-400">
-            <span class="material-symbols-outlined text-[24px]">person</span><span
-                class="text-[10px] font-bold mt-0.5">Profile</span>
+        <button onclick="switchTab('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 px-5 py-2 hover:bg-surface-variant/40 dark:hover:bg-neutral-800 rounded-2xl active:scale-95">
+            <span class="material-symbols-outlined text-[24px]">person</span>
+            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Profile</span>
         </button>
     </nav>
-</body>
 
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            const targetTab = document.getElementById(`view-${tabId}`);
+            if (targetTab) targetTab.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            document.querySelectorAll('.nav-item').forEach(nav => {
+                nav.classList.remove('bg-[#006e1c]', 'dark:bg-primary', 'text-white');
+                nav.classList.add('text-on-surface-variant', 'dark:text-gray-400');
+                nav.querySelector('span').style.fontVariationSettings = "'FILL' 0";
+            });
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.remove('text-on-surface-variant', 'dark:text-gray-400');
+                activeNav.classList.add('bg-[#006e1c]', 'dark:bg-primary', 'text-white');
+                activeNav.querySelector('span').style.fontVariationSettings = "'FILL' 1";
+            }
+        }
+    </script>
+</body>
 </html>
