@@ -21,7 +21,7 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    document.getElementById('create-hotpost-btn').addEventListener('click', handleCreateOrViewMyHotpost);
+    // The create button is now in the header, its onclick is in the HTML.
     document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
@@ -57,15 +57,6 @@ function setupEventListeners() {
             navEl.addEventListener('pointerleave', resumeStory);
         }
     });
-}
-
-function handleCreateOrViewMyHotpost() {
-    const myHotposts = hotpostsByUser.get(currentUser.id);
-    if (myHotposts && myHotposts.posts.length > 0) {
-        openHotpostViewer(currentUser.id);
-    } else {
-        openCameraModal();
-    }
 }
 
 async function openCameraModal() {
@@ -289,37 +280,20 @@ async function fetchHotposts() {
 
 function renderHotpostCircles() {
     const container = document.querySelector('#view-dashboard .flex.gap-4.overflow-x-auto');
-    // Clear existing circles except the "add" button
-    container.querySelectorAll('.hotpost-circle').forEach(el => el.remove());
+    container.innerHTML = ''; // Clear all previous circles
 
-    const createBtn = document.getElementById('create-hotpost-btn');
-    const createBtnDiv = createBtn.querySelector('div');
-    const createBtnText = createBtn.querySelector('span');
+    const allUserIds = Array.from(hotpostsByUser.keys());
 
-    const myHotposts = hotpostsByUser.get(currentUser.id);
+    // Sort: current user first, then un-viewed users, then viewed users.
+    allUserIds.sort((a, b) => {
+        if (a === currentUser.id) return -1;
+        if (b === currentUser.id) return 1;
+        const viewedA = hotpostsByUser.get(a).viewed || false;
+        const viewedB = hotpostsByUser.get(b).viewed || false;
+        return viewedA - viewedB; // false (0) comes before true (1)
+    });
 
-    if (myHotposts && myHotposts.posts.length > 0) {
-        const isViewed = myHotposts.viewed;
-        let ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-blue-500 to-primary';
-
-        createBtnDiv.className = `w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm`;
-        createBtnDiv.innerHTML = `
-            <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
-            </div>
-        `;
-        createBtnText.textContent = 'Your Story';
-    } else {
-        // No stories, reset to default "Create" button
-        createBtnDiv.className = 'w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary';
-        createBtnDiv.innerHTML = `<span class="material-symbols-outlined text-[26px]">add</span>`;
-        createBtnText.textContent = 'Create';
-    }
-
-    // Get all user IDs with hotposts, excluding the current user
-    const finalSortedIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
-
-    finalSortedIds.forEach(userId => {
+    allUserIds.forEach(userId => {
         const data = hotpostsByUser.get(userId);
         const user = data.user;
         const circle = document.createElement('div');
@@ -327,7 +301,13 @@ function renderHotpostCircles() {
 
         const isSelf = userId === currentUser.id;
         const isViewed = data.viewed;
-        let ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-yellow-400 via-orange-500 to-red-500';
+
+        let ringClass;
+        if (isSelf) {
+            ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-blue-500 to-primary';
+        } else {
+            ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-yellow-400 via-orange-500 to-red-500';
+        }
 
         circle.innerHTML = `
             <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
@@ -335,9 +315,14 @@ function renderHotpostCircles() {
                     <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
                 </div>
             </div>
-            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${isSelf ? 'Your Story' : user.full_name.split(' ')[0]}</span>
         `;
-        circle.addEventListener('click', () => openHotpostViewer(userId));
+
+        if (isSelf) {
+            circle.addEventListener('click', () => showMyHotposts());
+        } else {
+            circle.addEventListener('click', () => openHotpostViewer(userId));
+        }
 
         container.appendChild(circle);
     });
@@ -739,3 +724,4 @@ export async function showMyHotposts() {
 window.handleDeleteHotpost = handleDeleteHotpost;
 window.openStoryDetailsModal = openStoryDetailsModal;
 window.showMyHotposts = showMyHotposts;
+window.openHotpostCamera = openCameraModal;
