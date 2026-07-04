@@ -1,15 +1,20 @@
 import { supabase } from './supabase.js';
 import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
+import { CLOUDINARY_CLOUD_NAME } from './config.js';
 
 let currentUser = null;
 
 export function initFeed(user) {
     currentUser = user;
+    
+    // Check permission to show advanced post tabs
+    setupCreatePostPermissions();
+    
     fetchPosts();
     initPullToRefresh();
 
-    // Event delegation for feed interactions
+    // 1. Event Delegation for Feed Interactions
     const feedContainer = document.getElementById('feed-posts-container');
     if (feedContainer) {
         feedContainer.addEventListener('click', (e) => {
@@ -17,65 +22,172 @@ export function initFeed(user) {
             const commentBtn = e.target.closest('.comment-btn');
             const pollOption = e.target.closest('.poll-option-btn');
             const profileLink = e.target.closest('.profile-link');
+            const optionsBtn = e.target.closest('.post-options-btn');
 
             if (likeBtn) handleLike(likeBtn.dataset.postId, likeBtn.dataset.liked === 'true');
             if (commentBtn) openCommentsModal(commentBtn.dataset.postId);
-            if (pollOption) handlePollVote(pollOption.dataset.postId, parseInt(pollOption.dataset.optionIndex));
+            if (pollOption) handlePollVote(pollOption.dataset.postId, parseInt(pollOption.dataset.optionIndex), pollOption.dataset.isMultiple === 'true');
             if (profileLink) window.viewUserProfile(profileLink.dataset.userId);
+            if (optionsBtn) openPostOptions(optionsBtn.dataset.postId, optionsBtn.dataset.userId);
         });
     }
 
-    // Modal listeners
-    document.getElementById('open-create-post-modal')?.addEventListener('click', () => {
-        document.getElementById('modal-create-post').classList.replace('hidden', 'flex');
-    });
-    document.getElementById('close-create-post-modal')?.addEventListener('click', () => {
-        document.getElementById('modal-create-post').classList.replace('flex', 'hidden');
-    });
+    // 2. Event Delegation for Comment Interactions
+    const commentsList = document.getElementById('post-comments-list');
+    if (commentsList) {
+        commentsList.addEventListener('click', (e) => {
+            const optionsBtn = e.target.closest('.comment-options-btn');
+            if (optionsBtn) openCommentOptions(optionsBtn.dataset.commentId, optionsBtn.dataset.userId);
+        });
+    }
 
-    // Create post submission
+    // 3. Modals and Submissions
     document.getElementById('submit-post-btn')?.addEventListener('click', submitPost);
+    document.getElementById('send-comment-btn')?.addEventListener('click', () => {
+        submitComment(document.getElementById('send-comment-btn').dataset.postId);
+    });
+    
+    document.getElementById('submit-report-post-btn')?.addEventListener('click', submitPostReport);
+    document.getElementById('close-post-comments-btn')?.addEventListener('click', closeCommentsModal);
 
-    // Tab switching in create post modal
+    // 4. Tab switching in create post modal
     document.querySelectorAll('.post-type-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             document.querySelectorAll('.post-type-tab').forEach(t => {
                 t.classList.remove('bg-primary', 'text-white');
-                t.classList.add('bg-surface-variant', 'text-on-surface-variant');
+                t.classList.add('bg-surface-variant/50', 'dark:bg-surface-variant/10', 'text-on-surface-variant', 'dark:text-gray-300');
             });
-            e.currentTarget.classList.remove('bg-surface-variant', 'text-on-surface-variant');
+            e.currentTarget.classList.remove('bg-surface-variant/50', 'dark:bg-surface-variant/10', 'text-on-surface-variant', 'dark:text-gray-300');
             e.currentTarget.classList.add('bg-primary', 'text-white');
             
-            document.querySelectorAll('.post-input-section').forEach(sec => sec.classList.add('hidden'));
-            document.getElementById(`input-${e.currentTarget.dataset.type}`).classList.remove('hidden');
+            document.querySelectorAll('.post-input-section').forEach(sec => {
+                sec.classList.remove('block');
+                sec.classList.add('hidden');
+            });
+            const targetSection = document.getElementById(`input-${e.currentTarget.dataset.type}`);
+            if(targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.add('block');
+            }
             document.getElementById('current-post-type').value = e.currentTarget.dataset.type;
         });
     });
-
-    // Comment Modal Listeners
-    document.getElementById('close-post-comments-btn')?.addEventListener('click', closeCommentsModal);
-    document.getElementById('send-comment-btn')?.addEventListener('click', () => {
-        submitComment(document.getElementById('send-comment-btn').dataset.postId);
-    });
 }
+
+function setupCreatePostPermissions() {
+    // If the user has special_post permission, reveal the extra tabs
+    if (currentUser?.special_post) {
+        document.querySelectorAll('.post-type-tab').forEach(tab => tab.classList.remove('hidden'));
+    } else {
+        // Otherwise, ensure only text is visible
+        document.querySelectorAll('.post-type-tab:not([data-type="text"])').forEach(tab => tab.classList.add('hidden'));
+    }
+}
+
+async function uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'ecampus_posts');
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: formData,
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.secure_url;
+}
+
+// ==========================================
+// POST CREATION
+// ==========================================
+
+async function submitPost() {
+    const postType = document.getElementById('current-post-type').value;
+    const content = document.getElementById('post-content-input').value.trim();
+    
+    if (!content) {
+        showToast('Please write something to post.', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('submit-post-btn');
+    btn.disabled = true;
+    btn.textContent = 'Publishing...';
+
+    let payload = { user_id: currentUser.id, post_type: postType, content: content };
+
+    try {
+        if (postType === 'image') {
+            const fileInput = document.getElementById('post-image-upload');
+            if (!fileInput.files[0]) throw new Error("Please select an image to upload.");
+            payload.media_url = await uploadToCloudinary(fileInput.files[0]);
+        } 
+        else if (postType === 'poll') {
+            const inputs = document.querySelectorAll('.poll-opt-input');
+            const options = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
+            if(options.length < 2) throw new Error("Polls need at least 2 options.");
+            
+            payload.poll_options = options;
+            payload.poll_is_anon = document.getElementById('poll-is-anon').checked;
+            payload.poll_is_multiple_choice = document.getElementById('poll-is-multiple').checked;
+            
+            const expiry = document.getElementById('poll-expiry').value;
+            if (expiry) payload.poll_expires_at = new Date(expiry).toISOString();
+        } 
+        else if (postType === 'event') {
+            const fileInput = document.getElementById('event-image-upload');
+            if (fileInput.files[0]) {
+                payload.event_image_url = await uploadToCloudinary(fileInput.files[0]);
+            }
+            payload.event_date = document.getElementById('event-date').value || null;
+            payload.event_location = document.getElementById('event-location').value.trim();
+            payload.event_register_url = document.getElementById('event-register-url').value.trim();
+        }
+
+        const { error } = await supabase.from('posts').insert(payload);
+        if (error) throw error;
+
+        // Reset and close view
+        window.closeCreatePostView();
+        document.getElementById('post-content-input').value = '';
+        if (document.getElementById('post-image-upload')) document.getElementById('post-image-upload').value = '';
+        if (document.getElementById('event-image-upload')) document.getElementById('event-image-upload').value = '';
+        
+        showToast('Post published successfully!', 'success');
+        fetchPosts();
+
+    } catch (error) {
+        showToast(error.message || 'Failed to create post.', 'error');
+        console.error('Error submitting post:', error);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Publish';
+    }
+}
+
+// ==========================================
+// FETCHING & RENDERING POSTS
+// ==========================================
 
 async function fetchPosts() {
     const container = document.getElementById('feed-posts-container');
     if (!container) return;
-    container.innerHTML = `<p class="text-sm italic text-center py-4 text-on-surface-variant">Loading live network feed...</p>`;
+    container.innerHTML = `<p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading live network feed...</p>`;
 
     try {
         const { data, error } = await supabase
             .from('posts')
             .select(`
                 *,
-                users ( id, full_name, profile_img_url ),
+                users ( id, full_name, profile_img_url, role, tick_type ),
                 post_likes ( user_id ),
                 post_comments ( count ),
                 post_poll_votes ( user_id, option_index )
             `)
             .order('created_at', { ascending: false })
-            .limit(20);
+            .limit(30);
 
         if (error) throw error;
         renderPosts(data);
@@ -89,7 +201,7 @@ async function fetchPosts() {
 function renderPosts(posts) {
     const container = document.getElementById('feed-posts-container');
     if (posts.length === 0) {
-        container.innerHTML = `<p class="text-sm italic text-center py-4 text-on-surface-variant">The feed is empty. Be the first to post!</p>`;
+        container.innerHTML = `<p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">The feed is empty. Be the first to post!</p>`;
         return;
     }
 
@@ -103,95 +215,127 @@ function renderPosts(posts) {
         const commentCount = post.post_comments[0]?.count || 0;
 
         let contentHtml = '';
+        let headerIcon = '';
+
+        // Verification Badge logic
+        const verifiedBadge = user.tick_type === 'blue' 
+            ? `<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">verified</span>` 
+            : '';
 
         // Text Post
         if (post.post_type === 'text') {
-            contentHtml = `<p class="text-[14px] text-on-surface leading-relaxed mb-4 px-1">${post.content}</p>`;
+            contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
         } 
         // Image Post
         else if (post.post_type === 'image') {
             contentHtml = `
-                <p class="text-[14px] text-on-surface leading-relaxed mb-3 px-1">${post.content}</p>
-                <div class="w-full h-56 rounded-2xl overflow-hidden mb-4 border border-surface-variant/50 shadow-inner">
+                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
+                <div class="w-full h-64 rounded-2xl overflow-hidden mb-4 border border-surface-variant/50 dark:border-neutral-800 shadow-inner">
                     <img src="${post.media_url}" class="w-full h-full object-cover">
                 </div>
             `;
         }
         // Event Post
         else if (post.post_type === 'event') {
+            headerIcon = `<div class="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary border border-secondary/30 shrink-0"><span class="material-symbols-outlined text-[20px]">event_note</span></div>`;
+            
+            const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-40 object-cover rounded-t-2xl border-b border-secondary/20">` : '';
+            const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-3 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform">Register Now</a>` : '';
+            const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
+
             contentHtml = `
-                <p class="text-[14px] text-on-surface leading-relaxed mb-3 px-1">${post.content}</p>
-                <div class="bg-secondary/5 border border-secondary/20 rounded-2xl p-4 mb-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="bg-secondary/10 text-secondary px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest">Upcoming Event</div>
+                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
+                <div class="bg-secondary/5 border border-secondary/20 rounded-2xl mb-4 flex flex-col">
+                    ${eventImgHtml}
+                    <div class="p-4">
+                        <div class="bg-secondary/10 text-secondary w-max px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-2">Event</div>
+                        <p class="text-[12px] text-on-surface-variant dark:text-gray-300 flex items-center gap-1.5 mb-1.5 font-medium">
+                            <span class="material-symbols-outlined text-[16px]">calendar_today</span> ${dateStr}
+                        </p>
+                        ${post.event_location ? `<p class="text-[12px] text-on-surface-variant dark:text-gray-300 flex items-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> ${post.event_location}</p>` : ''}
+                        ${registerHtml}
                     </div>
-                    <p class="text-[12px] text-on-surface-variant flex items-center gap-1.5 mb-1.5">
-                        <span class="material-symbols-outlined text-[16px]">calendar_today</span> ${new Date(post.event_date).toLocaleString()}
-                    </p>
-                    <p class="text-[12px] text-on-surface-variant flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[16px]">location_on</span> ${post.event_location}
-                    </p>
                 </div>
             `;
         }
         // Poll Post
         else if (post.post_type === 'poll') {
+            headerIcon = `<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/30 shrink-0"><span class="material-symbols-outlined text-[20px]">poll</span></div>`;
+            
             const votes = post.post_poll_votes || [];
             const totalVotes = votes.length;
-            const userVoted = votes.some(v => v.user_id === currentUser.id);
+            const myVotes = votes.filter(v => v.user_id === currentUser.id).map(v => v.option_index);
+            const userHasVoted = myVotes.length > 0;
+            
+            const isExpired = post.poll_expires_at && new Date(post.poll_expires_at) < new Date();
+            const showResults = userHasVoted || isExpired;
 
             const optionsHtml = (post.poll_options || []).map((opt, index) => {
                 const optVotes = votes.filter(v => v.option_index === index).length;
                 const percentage = totalVotes === 0 ? 0 : Math.round((optVotes / totalVotes) * 100);
                 const isWinner = percentage > 0 && percentage === Math.max(...(post.poll_options || []).map((_, i) => totalVotes === 0 ? 0 : Math.round((votes.filter(v => v.option_index === i).length / totalVotes) * 100)));
+                const iVotedForThis = myVotes.includes(index);
 
                 return `
-                <div data-post-id="${post.id}" data-option-index="${index}" class="poll-option-btn relative w-full bg-surface-variant/30 border border-surface-variant/50 rounded-2xl p-3.5 cursor-pointer overflow-hidden group hover:border-primary/50 transition-colors mb-2">
-                    <div class="absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-500" style="width: ${userVoted ? percentage : 0}%"></div>
-                    <div class="relative flex justify-between text-[13px] font-medium text-on-surface z-10">
+                <div data-post-id="${post.id}" data-option-index="${index}" data-is-multiple="${post.poll_is_multiple_choice}" class="${!isExpired ? 'poll-option-btn cursor-pointer active:scale-[0.98]' : 'cursor-default'} relative w-full bg-surface-variant/30 dark:bg-surface-variant/10 border border-surface-variant/50 dark:border-neutral-700 rounded-2xl p-3.5 overflow-hidden group hover:border-primary/50 transition-all mb-2">
+                    <div class="absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults ? percentage : 0}%"></div>
+                    <div class="relative flex justify-between text-[13px] font-bold text-on-surface dark:text-gray-100 z-10">
                         <span class="flex items-center gap-2">
-                            <span class="w-4 h-4 rounded-full border-2 ${isWinner && userVoted ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80'}">
-                                ${isWinner && userVoted ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}
+                            <span class="w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80 dark:border-gray-500'}">
+                                ${iVotedForThis ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}
                             </span>
                             ${opt}
                         </span>
-                        <span class="opacity-70 ${!userVoted ? 'hidden' : ''}">${percentage}%</span>
+                        <span class="${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
                     </div>
                 </div>`;
             }).join('');
 
+            const expiryText = isExpired ? 'Poll ended' : (post.poll_expires_at ? `Ends ${timeAgo(post.poll_expires_at)}` : 'Ongoing');
+            const typeText = post.poll_is_multiple_choice ? 'Multiple choice' : 'Single choice';
+
             contentHtml = `
-                <p class="text-[15px] font-semibold text-on-surface mb-4 px-1">${post.content}</p>
-                <div class="space-y-2.5 mb-4 px-1">${optionsHtml}</div>
-                <p class="text-[11px] font-medium text-on-surface-variant px-1 mb-2">${totalVotes} votes</p>
+                <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
+                <div class="space-y-2.5 mb-3 px-1">${optionsHtml}</div>
+                <div class="flex justify-between px-2 text-[11px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">
+                    <span>${totalVotes} votes • ${typeText} ${post.poll_is_anon ? '• Anonymous' : ''}</span>
+                    <span>${expiryText}</span>
+                </div>
             `;
         }
 
+        // Default Avatar if no special header icon
+        if (!headerIcon) {
+            headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
+        }
+
         return `
-        <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 shadow-sm mb-5 animate-fadeIn">
+        <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-fadeIn">
             <div class="flex items-center gap-3 mb-3">
-                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity">
+                ${headerIcon}
                 <div class="flex-1">
-                    <h4 data-user-id="${user.id}" class="profile-link font-bold text-[14px] text-on-surface leading-tight cursor-pointer hover:text-primary transition-colors">${user.full_name}</h4>
-                    <p class="text-[11px] text-on-surface-variant mt-0.5">${timeAgo(post.created_at)}</p>
+                    <h4 data-user-id="${user.id}" class="profile-link font-bold text-[14px] text-on-surface dark:text-gray-100 leading-tight cursor-pointer hover:text-primary transition-colors flex items-center gap-1">
+                        ${user.full_name} ${verifiedBadge}
+                    </h4>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
                 </div>
-                <button class="text-on-surface-variant hover:text-on-surface p-1">
+                <button data-post-id="${post.id}" data-user-id="${user.id}" class="post-options-btn text-on-surface-variant hover:text-on-surface dark:text-gray-400 dark:hover:text-gray-100 p-1 rounded-full hover:bg-surface-variant/50 transition-colors">
                     <span class="material-symbols-outlined text-[20px]">more_vert</span>
                 </button>
             </div>
             
             ${contentHtml}
             
-            <div class="flex items-center gap-6 border-t border-surface-variant/40 pt-3 px-1">
-                <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[13px] font-medium active:scale-95 ${userHasLiked ? 'text-primary' : ''}">
+            <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
+                <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[13px] font-medium active:scale-95 ${userHasLiked ? 'text-primary' : 'dark:text-gray-400'}">
                     <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
                     <span>${likeCount}</span>
                 </button>
-                <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
+                <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
                     <span>${commentCount}</span>
                 </button>
-                <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-[#0ea5e9] transition-colors text-[13px] font-medium active:scale-95 ml-auto">
+                <button class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-[#0ea5e9] transition-colors text-[13px] font-medium active:scale-95 ml-auto">
                     <span class="material-symbols-outlined text-[20px]">share</span>
                 </button>
             </div>
@@ -199,6 +343,10 @@ function renderPosts(posts) {
         `;
     }).join('');
 }
+
+// ==========================================
+// INTERACTIONS & ACTIONS
+// ==========================================
 
 async function handleLike(postId, isLiked) {
     const likeBtn = document.querySelector(`.like-btn[data-post-id="${postId}"]`);
@@ -209,7 +357,14 @@ async function handleLike(postId, isLiked) {
 
     likeBtn.dataset.liked = (!isLiked).toString();
     countSpan.textContent = isLiked ? currentCount - 1 : currentCount + 1;
-    likeBtn.classList.toggle('text-primary', !isLiked);
+    
+    if(!isLiked) {
+        likeBtn.classList.add('text-primary');
+        likeBtn.classList.remove('dark:text-gray-400');
+    } else {
+        likeBtn.classList.remove('text-primary');
+        likeBtn.classList.add('dark:text-gray-400');
+    }
     iconSpan.style.fontVariationSettings = `'FILL' ${!isLiked ? 1 : 0}`;
 
     try {
@@ -223,68 +378,156 @@ async function handleLike(postId, isLiked) {
     }
 }
 
-async function handlePollVote(postId, optionIndex) {
+async function handlePollVote(postId, optionIndex, isMultipleChoice) {
     try {
+        if (!isMultipleChoice) {
+            // Single choice: Delete any previous vote from this user for this post first
+            await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id });
+        }
+
+        // Try to insert the vote (if multiple choice and they click an existing, it might fail unique constraint, which is fine, we can toggle it by deleting)
         const { error } = await supabase.from('post_poll_votes').insert({
             post_id: postId,
             user_id: currentUser.id,
             option_index: optionIndex
         });
-        if (error) {
-            if(error.code === '23505') showToast('You already voted on this poll.', 'warning');
-            else throw error;
-        } else {
-            fetchPosts(); // Refresh to show results
+
+        if (error && error.code === '23505' && isMultipleChoice) {
+            // If it's multiple choice and they already voted for THIS option, un-vote it
+            await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id, option_index: optionIndex });
         }
+        
+        fetchPosts(); // Refresh UI to calculate new percentages
     } catch (error) {
         console.error("Poll vote error:", error);
-        showToast("Couldn't submit vote.", "error");
     }
 }
 
-async function submitPost() {
-    const postType = document.getElementById('current-post-type').value;
-    const content = document.getElementById('post-content-input').value.trim();
+// ==========================================
+// ACTION SHEETS (Delete & Report)
+// ==========================================
+
+function openPostOptions(postId, postOwnerId) {
+    const isOwner = currentUser.id === postOwnerId;
+    let buttonsHtml = '';
+
+    if (isOwner) {
+        buttonsHtml = `
+            <button onclick="deletePost('${postId}')" class="w-full flex items-center gap-3 p-4 bg-error/10 text-error rounded-2xl font-bold active:scale-95 transition-transform">
+                <span class="material-symbols-outlined">delete</span> Delete Post
+            </button>
+        `;
+    } else {
+        buttonsHtml = `
+            <button onclick="openReportPostModal('${postId}')" class="w-full flex items-center gap-3 p-4 bg-orange-500/10 text-orange-500 rounded-2xl font-bold active:scale-95 transition-transform">
+                <span class="material-symbols-outlined">flag</span> Report Post
+            </button>
+        `;
+    }
+
+    window.openActionSheet(buttonsHtml);
+}
+
+function openCommentOptions(commentId, commentOwnerId) {
+    const isOwner = currentUser.id === commentOwnerId;
+    let buttonsHtml = '';
+
+    if (isOwner) {
+        buttonsHtml = `
+            <button onclick="deleteComment('${commentId}')" class="w-full flex items-center gap-3 p-4 bg-error/10 text-error rounded-2xl font-bold active:scale-95 transition-transform">
+                <span class="material-symbols-outlined">delete</span> Delete Comment
+            </button>
+        `;
+    } else {
+        // Technically you could add a comment reporting system later, but for now we'll just allow deletion if owner
+        buttonsHtml = `<p class="text-sm text-center text-on-surface-variant">No actions available.</p>`;
+    }
+
+    window.openActionSheet(buttonsHtml);
+}
+
+window.deletePost = async (postId) => {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    window.closeActionSheet();
     
-    if (!content) {
-        showToast('Please write something to post.', 'warning');
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) {
+        showToast('Failed to delete post.', 'error');
+        console.error(error);
+    } else {
+        showToast('Post deleted.', 'success');
+        fetchPosts();
+    }
+};
+
+window.deleteComment = async (commentId) => {
+    window.closeActionSheet();
+    
+    // We need the post ID to refresh the modal, so fetch it before delete or just close modal
+    const { error } = await supabase.from('post_comments').delete().eq('id', commentId);
+    if (error) {
+        showToast('Failed to delete comment.', 'error');
+        console.error(error);
+    } else {
+        showToast('Comment deleted.', 'success');
+        // Safest approach is to close the comment modal and refresh feed
+        closeCommentsModal();
+        fetchPosts(); 
+    }
+};
+
+window.openReportPostModal = (postId) => {
+    window.closeActionSheet();
+    const modal = document.getElementById('modal-report-post');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('submit-report-post-btn').dataset.postId = postId;
+};
+
+window.closeReportPostModal = () => {
+    const modal = document.getElementById('modal-report-post');
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+    document.getElementById('report-post-reason').value = '';
+    document.getElementById('report-post-description').value = '';
+};
+
+async function submitPostReport() {
+    const btn = document.getElementById('submit-report-post-btn');
+    const postId = btn.dataset.postId;
+    const reason = document.getElementById('report-post-reason').value;
+    const desc = document.getElementById('report-post-description').value.trim();
+
+    if (!reason) {
+        showToast('Please select a reason.', 'warning');
         return;
     }
 
-    const btn = document.getElementById('submit-post-btn');
     btn.disabled = true;
-    btn.textContent = 'Posting...';
-
-    let payload = { user_id: currentUser.id, post_type: postType, content: content };
+    btn.textContent = 'Submitting...';
 
     try {
-        if (postType === 'image') {
-            payload.media_url = document.getElementById('post-image-url').value;
-        } else if (postType === 'poll') {
-            const opt1 = document.getElementById('poll-opt-1').value;
-            const opt2 = document.getElementById('poll-opt-2').value;
-            if(!opt1 || !opt2) throw new Error("Polls need at least 2 options");
-            payload.poll_options = [opt1, opt2];
-        } else if (postType === 'event') {
-            payload.event_date = document.getElementById('event-date').value;
-            payload.event_location = document.getElementById('event-location').value;
-        }
-
-        const { error } = await supabase.from('posts').insert(payload);
+        const { error } = await supabase.rpc('report_post', {
+            p_reported_post_id: postId,
+            p_reason: reason,
+            p_description: desc || null
+        });
         if (error) throw error;
-
-        document.getElementById('modal-create-post').classList.replace('flex', 'hidden');
-        document.getElementById('post-content-input').value = '';
-        fetchPosts();
-
+        
+        showToast('Report submitted. Our team will review it.', 'success');
+        window.closeReportPostModal();
     } catch (error) {
-        showToast(error.message || 'Failed to create post.', 'error');
-        console.error('Error submitting post:', error);
+        showToast('Failed to submit report.', 'error');
+        console.error('Report error:', error);
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Post';
+        btn.textContent = 'Submit Report';
     }
 }
+
+// ==========================================
+// COMMENTS
+// ==========================================
 
 async function openCommentsModal(postId) {
     const modal = document.getElementById('modal-post-comments');
@@ -292,7 +535,7 @@ async function openCommentsModal(postId) {
     document.getElementById('send-comment-btn').dataset.postId = postId;
 
     modal.classList.replace('hidden', 'flex');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant">Loading comments...</p>`;
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading comments...</p>`;
 
     try {
         const { data, error } = await supabase
@@ -304,19 +547,23 @@ async function openCommentsModal(postId) {
         if (error) throw error;
 
         if (data.length === 0) {
-            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant">No comments yet. Be the first!</p>`;
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">No comments yet. Be the first!</p>`;
             return;
         }
 
         list.innerHTML = data.map(comment => `
-            <div class="flex items-start gap-3">
+            <div class="flex items-start gap-3 group">
                 <img onclick="window.viewUserProfile('${comment.users.id}')" src="${comment.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.users.full_name)}&background=e1e3e4`}" class="w-8 h-8 rounded-full object-cover mt-1 cursor-pointer hover:opacity-80 transition-opacity">
-                <div class="flex-1 bg-surface-variant/30 rounded-2xl p-3 border border-surface-variant/50">
+                <div class="flex-1 bg-surface-variant/30 dark:bg-surface-variant/10 rounded-2xl p-3 border border-surface-variant/50 dark:border-neutral-700 relative">
                     <div class="flex justify-between items-center mb-1">
-                        <p onclick="window.viewUserProfile('${comment.users.id}')" class="text-xs font-bold text-on-surface cursor-pointer hover:text-primary transition-colors">${comment.users.full_name}</p>
-                        <p class="text-[10px] text-on-surface-variant">${timeAgo(comment.created_at)}</p>
+                        <p onclick="window.viewUserProfile('${comment.users.id}')" class="text-xs font-bold text-on-surface dark:text-gray-100 cursor-pointer hover:text-primary transition-colors">${comment.users.full_name}</p>
+                        <p class="text-[10px] text-on-surface-variant dark:text-gray-400">${timeAgo(comment.created_at)}</p>
                     </div>
-                    <p class="text-sm text-on-surface leading-relaxed">${comment.content}</p>
+                    <p class="text-sm text-on-surface dark:text-gray-200 leading-relaxed pr-6">${comment.content}</p>
+                    
+                    <button data-comment-id="${comment.id}" data-user-id="${comment.user_id}" class="comment-options-btn absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-on-surface dark:hover:text-white transition-all">
+                        <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                    </button>
                 </div>
             </div>
         `).join('');
@@ -339,6 +586,9 @@ async function submitComment(postId) {
     const content = input.value.trim();
     if (!content) return;
 
+    const btn = document.getElementById('send-comment-btn');
+    btn.disabled = true;
+
     const { error } = await supabase.from('post_comments').insert({
         post_id: postId,
         user_id: currentUser.id,
@@ -360,7 +610,12 @@ async function submitComment(postId) {
             countSpan.textContent = currentCount + 1;
         }
     }
+    btn.disabled = false;
 }
+
+// ==========================================
+// PULL TO REFRESH
+// ==========================================
 
 function initPullToRefresh() {
     const ptrIndicator = document.getElementById('pull-to-refresh-indicator');
@@ -387,7 +642,6 @@ function initPullToRefresh() {
         pullDistance = currentY - startY;
 
         if (pullDistance > 0) {
-            // Prevent the whole page from bouncing on iOS/Android
             if (e.cancelable) e.preventDefault();
             const pullRatio = Math.min(pullDistance / pullThreshold, 1);
             ptrIndicator.style.opacity = String(pullRatio);
