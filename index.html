@@ -11,7 +11,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     
+    <!-- Supabase & HTML2Canvas for sharing posts as images -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="main.js" type="module" defer></script>
 
     <script id="tailwind-config">
@@ -108,7 +110,6 @@
     <!-- MAIN CONTENT -->
     <main class="pt-20 px-5 max-w-screen-md mx-auto relative z-10 pb-6">
         
-        <!-- Pull to Refresh Indicator -->
         <div id="pull-to-refresh-indicator" class="fixed top-16 left-0 right-0 h-16 flex items-center justify-center z-0 opacity-0 transition-all duration-300 pointer-events-none">
             <div class="p-3 bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-full shadow-lg">
                 <span id="ptr-icon" class="material-symbols-outlined text-primary transition-transform duration-200">arrow_downward</span>
@@ -135,17 +136,16 @@
 
             <!-- FEED POSTS -->
             <section class="mt-4">
-                <!-- Create Post Trigger -->
-                <div onclick="openCreatePostView()" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-4 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-6 flex gap-3 items-center cursor-pointer active:scale-[0.98] transition-transform">
-                    <div class="w-10 h-10 rounded-full border border-surface-variant shadow-sm overflow-hidden shrink-0 bg-surface-variant">
-                        <img id="feed-input-avatar" src="https://ui-avatars.com/api/?name=User&background=e1e3e4" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 bg-surface-variant/30 dark:bg-surface-variant/10 text-on-surface-variant px-4 py-2.5 rounded-2xl text-[13px] font-medium border border-surface-variant/50 dark:border-neutral-700">
+                
+                <!-- NEW UI: Sleek Create Post Trigger -->
+                <div id="open-create-post-trigger" onclick="openCreatePostView()" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-full p-2 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-6 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform">
+                    <img id="feed-input-avatar" src="https://ui-avatars.com/api/?name=User&background=e1e3e4" class="w-10 h-10 rounded-full object-cover border border-surface-variant shadow-sm shrink-0 bg-surface-variant">
+                    <div class="flex-1 bg-surface-variant/30 dark:bg-surface-variant/10 text-on-surface-variant px-4 py-3 rounded-full text-[14px] font-medium">
                         Share an update, ask a question...
                     </div>
-                    <button class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0 pointer-events-none">
+                    <div class="w-10 h-10 bg-[#e8f5e9] dark:bg-primary/20 text-[#2e7d32] dark:text-primary rounded-full flex items-center justify-center shrink-0 mr-1 hover:bg-[#c8e6c9] transition-colors">
                         <span class="material-symbols-outlined text-[20px]">edit</span>
-                    </button>
+                    </div>
                 </div>
 
                 <!-- Feed Container -->
@@ -199,11 +199,9 @@
 
         <!-- PROFILE VIEW -->
         <div id="view-profile" class="tab-content pt-4 hidden">
-            <div class="flex justify-between items-center mb-6">
+             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-extrabold text-on-surface dark:text-gray-100">My Profile</h2>
-                <button onclick="openEditProfileModal()" class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[12px] font-bold tracking-wide active:scale-95 transition-transform">
-                    Edit Profile
-                </button>
+                <button onclick="openEditProfileModal()" class="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[12px] font-bold tracking-wide active:scale-95 transition-transform">Edit Profile</button>
             </div>
             
             <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-6 shadow-sm border border-surface-variant/60 dark:border-neutral-800 text-center relative overflow-hidden mb-6">
@@ -320,12 +318,12 @@
             <div class="flex items-center gap-3 mb-6">
                 <img id="create-post-avatar" src="https://ui-avatars.com/api/?name=User" class="w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover">
                 <div>
-                    <p id="create-post-name" class="font-bold text-sm text-on-surface dark:text-gray-100">User Name</p>
+                    <p id="create-post-name" class="font-bold text-sm text-on-surface dark:text-gray-100 flex items-center">User Name</p>
                     <p class="text-xs text-on-surface-variant dark:text-gray-400">Public visibility</p>
                 </div>
             </div>
 
-            <!-- Post Type Selector (Hidden options based on permissions via JS) -->
+            <!-- Post Type Selector -->
             <div id="post-type-selector" class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-2">
                 <button data-type="text" class="post-type-tab active bg-primary text-white px-5 py-2 rounded-full text-[13px] font-bold shrink-0 transition-colors shadow-sm">Text</button>
                 <button data-type="image" class="post-type-tab hidden bg-surface-variant/50 dark:bg-surface-variant/10 text-on-surface-variant dark:text-gray-300 px-5 py-2 rounded-full text-[13px] font-bold shrink-0 transition-colors">Image</button>
@@ -341,11 +339,11 @@
             <div id="input-text" class="post-input-section block"></div>
             
             <!-- Image Input -->
-            <div id="input-image" class="post-input-section hidden mb-6">
+            <div id="input-image" class="post-input-section hidden mb-6 relative">
                 <input type="file" id="post-image-upload" accept="image/*" class="hidden">
-                <div id="post-image-preview-container" class="w-full h-48 border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-2xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface-variant/10" onclick="document.getElementById('post-image-upload').click()">
-                    <span class="material-symbols-outlined text-[32px] mb-2">add_photo_alternate</span>
-                    <span class="text-sm font-medium">Tap to upload image</span>
+                <div id="post-image-preview-container" class="w-full h-48 border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-2xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface-variant/10 relative overflow-hidden" onclick="document.getElementById('post-image-upload').click()">
+                    <span class="material-symbols-outlined text-[32px] mb-2" id="img-icon-placeholder">add_photo_alternate</span>
+                    <span class="text-sm font-medium" id="img-text-placeholder">Tap to upload image</span>
                 </div>
             </div>
             
@@ -388,9 +386,9 @@
                 <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Event Details</h4>
                 
                 <input type="file" id="event-image-upload" accept="image/*" class="hidden">
-                <div id="event-image-preview-container" class="w-full h-32 border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface dark:bg-[#121212]" onclick="document.getElementById('event-image-upload').click()">
-                    <span class="material-symbols-outlined text-[24px] mb-1">wallpaper</span>
-                    <span class="text-xs font-medium">Add Event Cover Photo</span>
+                <div id="event-image-preview-container" class="w-full h-32 border-2 border-dashed border-surface-variant/80 dark:border-neutral-700 rounded-xl flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 cursor-pointer hover:border-primary hover:text-primary transition-colors bg-surface dark:bg-[#121212] relative overflow-hidden" onclick="document.getElementById('event-image-upload').click()">
+                    <span class="material-symbols-outlined text-[24px] mb-1" id="event-img-icon-placeholder">wallpaper</span>
+                    <span class="text-xs font-medium" id="event-img-text-placeholder">Add Event Cover Photo</span>
                 </div>
 
                 <div>
@@ -412,16 +410,13 @@
 
 
     <!-- ============================================== -->
-    <!-- OVERLAY MODALS SECTION -->
+    <!-- OVERLAY MODALS SECTION (Action Sheet, Comments, etc.) -->
     <!-- ============================================== -->
 
-    <!-- GENERIC ACTION SHEET MODAL (Used for Post & Comment Options: Report, Delete) -->
     <div id="modal-action-sheet" class="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
         <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-10 relative animate-[slideUp_0.3s_ease-out] max-w-screen-md mx-auto">
             <div class="w-12 h-1.5 bg-surface-variant dark:bg-neutral-700 rounded-full mx-auto mb-6"></div>
-            <div id="action-sheet-buttons" class="space-y-3">
-                <!-- Dynamically injected buttons (e.g. Delete, Report) -->
-            </div>
+            <div id="action-sheet-buttons" class="space-y-3"></div>
             <button onclick="closeActionSheet()" class="mt-4 w-full bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-3.5 rounded-2xl font-bold tracking-wide active:scale-95 transition-transform">
                 Cancel
             </button>
@@ -504,7 +499,7 @@
                         <img id="public-profile-avatar" src="" class="w-full h-full object-cover">
                     </div>
                 </div>
-                <h3 id="public-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100">---</h3>
+                <h3 id="public-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100 flex items-center justify-center">---</h3>
                 <p id="public-profile-course" class="text-[12px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">Student</p>
                 <div class="text-sm text-on-surface-variant dark:text-gray-400 mb-4">
                     <span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">0</span> connections
@@ -536,7 +531,7 @@
                         <img id="private-profile-avatar" src="" class="w-full h-full object-cover">
                     </div>
                 </div>
-                <h3 id="private-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100">---</h3>
+                <h3 id="private-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100 flex items-center justify-center">---</h3>
                 <p id="private-profile-course" class="text-[12px] font-medium text-on-surface-variant dark:text-gray-400 mb-6">Student</p>
                 <div class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-800 p-5 rounded-2xl mb-6">
                     <span class="material-symbols-outlined text-[32px] text-on-surface-variant opacity-50 mb-2 block">lock</span>
@@ -782,10 +777,12 @@
         function openCreatePostView() {
             const view = document.getElementById('view-create-post');
             view.classList.remove('hidden');
-            // Slight delay to allow display:block before translating
             setTimeout(() => {
                 view.classList.remove('translate-y-full');
             }, 10);
+            
+            // Trigger an event so feed.js can populate the user name and tick
+            document.dispatchEvent(new Event('openCreatePostView'));
         }
 
         function closeCreatePostView() {
@@ -793,7 +790,7 @@
             view.classList.add('translate-y-full');
             setTimeout(() => {
                 view.classList.add('hidden');
-            }, 300); // match duration-300
+            }, 300);
         }
 
         // Dynamic Poll Options
@@ -826,6 +823,8 @@
         }
         
         // Expose globally
+        window.openCreatePostView = openCreatePostView;
+        window.closeCreatePostView = closeCreatePostView;
         window.openActionSheet = openActionSheet;
         window.closeActionSheet = closeActionSheet;
     </script>
