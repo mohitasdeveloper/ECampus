@@ -159,8 +159,16 @@ function renderSocialLinks(links, container = null) {
 function populateProfileUI(profile) {
     if (!profile) return;
 
+    const profileAvatarLarge = document.getElementById('profile-avatar-large');
+    // If a key element of the profile UI is missing, we're probably not on the right page/tab.
+    // Abort to prevent a cascade of errors.
+    if (!profileAvatarLarge) {
+        console.warn("Profile UI elements not found, skipping UI population.");
+        return;
+    }
+
     // Main profile card
-    document.getElementById('profile-avatar-large').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+    profileAvatarLarge.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     document.getElementById('profile-name').textContent = profile.full_name;
     document.getElementById('profile-email').innerHTML = `<span class="material-symbols-outlined text-[16px]">mail</span> ${profile.email}`;
     document.getElementById('profile-bio').textContent = profile.bio || 'No bio yet. Click "Edit" to add one!';
@@ -176,7 +184,10 @@ function populateProfileUI(profile) {
     document.getElementById('profile-course').textContent = profile.course;
 
     // Feed input avatar
-    document.getElementById('feed-input-avatar').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+    const feedInputAvatar = document.getElementById('feed-input-avatar');
+    if (feedInputAvatar) {
+        feedInputAvatar.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+    }
 
     // Connection count
     document.getElementById('profile-connection-count').textContent = profile.connection_count || 0;
@@ -712,8 +723,8 @@ function switchTab(tabId) {
     }
 
     // Update Nav active state
-    const activeClasses = ['bg-primary', 'text-white'];
-    const inactiveClasses = ['text-gray-500', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-neutral-800'];
+    const activeClasses = ['bg-primary', 'dark:bg-primary', 'text-white'];
+    const inactiveClasses = ['text-on-surface-variant', 'dark:text-gray-400', 'hover:bg-surface-variant/40', 'dark:hover:bg-neutral-800'];
 
     document.querySelectorAll('.nav-item').forEach(nav => {
         nav.classList.remove(...activeClasses);
