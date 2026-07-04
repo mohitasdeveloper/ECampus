@@ -446,60 +446,60 @@
             </div>
 
            <!-- Event Post Input Section -->
-<div id="input-event" class="post-input-section hidden animate-fadeIn">
-    <div class="space-y-4">
-        <!-- Event Content/Description -->
-        <textarea id="post-content-event" rows="3" placeholder="What's the event about? Add details..." class="w-full bg-transparent text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/70 text-[15px] resize-none focus:outline-none"></textarea>
-        
-        <!-- Cover Photo Upload -->
-        <div class="relative w-full aspect-video bg-surface-variant/20 dark:bg-neutral-800 rounded-2xl border-2 border-dashed border-surface-variant/50 dark:border-neutral-700 hover:border-primary/50 transition-colors flex flex-col items-center justify-center cursor-pointer overflow-hidden group">
-            <input type="file" id="event-image-upload" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-20">
-            <div id="event-image-preview-container" class="absolute inset-0 flex flex-col items-center justify-center text-on-surface-variant/70 group-hover:text-primary transition-colors pointer-events-none">
-                <span class="material-symbols-outlined text-[32px] mb-2">wallpaper</span>
-                <span class="text-sm font-medium">Add Event Cover Photo</span>
-            </div>
-        </div>
+            <div id="input-event" class="post-input-section hidden animate-fadeIn">
+                <div class="space-y-4">
+                    <!-- Event Content/Description -->
+                    <textarea id="post-content-event" rows="3" placeholder="What's the event about? Add details..." class="w-full bg-transparent text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/70 text-[15px] resize-none focus:outline-none"></textarea>
+                    
+                    <!-- Cover Photo Upload -->
+                    <div class="relative w-full aspect-video bg-surface-variant/20 dark:bg-neutral-800 rounded-2xl border-2 border-dashed border-surface-variant/50 dark:border-neutral-700 hover:border-primary/50 transition-colors flex flex-col items-center justify-center cursor-pointer overflow-hidden group">
+                        <input type="file" id="event-image-upload" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-20">
+                        <div id="event-image-preview-container" class="absolute inset-0 flex flex-col items-center justify-center text-on-surface-variant/70 group-hover:text-primary transition-colors pointer-events-none">
+                            <span class="material-symbols-outlined text-[32px] mb-2">wallpaper</span>
+                            <span class="text-sm font-medium">Add Event Cover Photo</span>
+                        </div>
+                    </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <!-- Event Date -->
-            <div class="space-y-1.5">
-                <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Date & Time</label>
-                <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
-                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_today</span>
-                    <input type="datetime-local" id="event-date" class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 focus:outline-none">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Event Date -->
+                        <div class="space-y-1.5">
+                            <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Date & Time</label>
+                            <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_today</span>
+                                <input type="datetime-local" id="event-date" class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Event Location -->
+                        <div class="space-y-1.5">
+                            <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Location</label>
+                            <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
+                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant">location_on</span>
+                                <input type="text" id="event-location" placeholder="Venue or Online Link" class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/60 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Registration Link -->
+                    <div class="space-y-1.5">
+                        <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Action Link (Optional)</label>
+                        <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
+                            <span class="material-symbols-outlined text-[18px] text-on-surface-variant">link</span>
+                            <input type="url" id="event-register-url" placeholder="https://..." class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/60 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- NEW: Custom Button Text -->
+                    <div class="space-y-1.5">
+                        <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Button Text</label>
+                        <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
+                            <span class="material-symbols-outlined text-[18px] text-on-surface-variant">smart_button</span>
+                            <input type="text" id="event-button-text" placeholder="e.g., Register Now, View Link, RSVP" class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/60 focus:outline-none">
+                        </div>
+                        <p class="text-[10px] text-on-surface-variant/70 ml-1">Leave empty to use the default "View Link".</p>
+                    </div>
                 </div>
             </div>
-
-            <!-- Event Location -->
-            <div class="space-y-1.5">
-                <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Location</label>
-                <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
-                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant">location_on</span>
-                    <input type="text" id="event-location" placeholder="Venue or Online Link" class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/60 focus:outline-none">
-                </div>
-            </div>
-        </div>
-
-        <!-- Registration Link -->
-        <div class="space-y-1.5">
-            <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Action Link (Optional)</label>
-            <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
-                <span class="material-symbols-outlined text-[18px] text-on-surface-variant">link</span>
-                <input type="url" id="event-register-url" placeholder="https://..." class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/60 focus:outline-none">
-            </div>
-        </div>
-
-        <!-- NEW: Custom Button Text -->
-        <div class="space-y-1.5">
-            <label class="text-[12px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider ml-1">Button Text</label>
-            <div class="flex items-center gap-2 bg-surface-variant/20 dark:bg-neutral-800 p-3 rounded-xl border border-surface-variant/40 dark:border-neutral-700 focus-within:border-primary/50 transition-colors">
-                <span class="material-symbols-outlined text-[18px] text-on-surface-variant">smart_button</span>
-                <input type="text" id="event-button-text" placeholder="e.g., Register Now, View Link, RSVP" class="w-full bg-transparent text-[13px] text-on-surface dark:text-gray-100 placeholder:text-on-surface-variant/60 focus:outline-none">
-            </div>
-            <p class="text-[10px] text-on-surface-variant/70 ml-1">View Link</p>
-        </div>
-    </div>
-</div>
 
     <!-- ============================================== -->
     <!-- OVERLAY MODALS SECTION -->
