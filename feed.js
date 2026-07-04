@@ -12,13 +12,12 @@ export function initFeed(user) {
     setupCreatePostPermissions();
     
     fetchPosts();
-    initPullToRefresh();
     setupImagePreviews();
 
     // Fill user info in Create Post modal when opened
     document.addEventListener('openCreatePostView', () => {
         if(currentUser) {
-            document.getElementById('create-post-avatar').src = currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}`;
+            document.getElementById('create-post-avatar').src = currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`;
             document.getElementById('create-post-name').innerHTML = `${currentUser.full_name} ${getTickHtml(currentUser.tick_type)}`;
         }
     });
@@ -117,8 +116,8 @@ function setupImagePreviews() {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     container.innerHTML = `
-                        <img src="${event.target.result}" class="w-full h-full object-cover">
-                        <button type="button" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors" onclick="event.stopPropagation(); document.getElementById('${inputId}').value=''; document.getElementById('${containerId}').innerHTML='<span class=\\'material-symbols-outlined text-[32px] mb-2\\'>${iconId}</span><span class=\\'text-sm font-medium\\'>${textId}</span>';">
+                        <img src="${event.target.result}" class="w-full h-auto max-h-[60vh] object-contain rounded-xl">
+                        <button type="button" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors z-10" onclick="event.stopPropagation(); document.getElementById('${inputId}').value=''; document.getElementById('${containerId}').innerHTML='<span class=\\'material-symbols-outlined text-[32px] mb-2\\'>${iconId}</span><span class=\\'text-sm font-medium\\'>${textId}</span>';">
                             <span class="material-symbols-outlined text-[18px]">close</span>
                         </button>
                     `;
@@ -264,9 +263,10 @@ function renderPosts(posts) {
         const commentCount = post.post_comments[0]?.count || 0;
 
         let contentHtml = '';
-        let headerIcon = '';
-
         const verifiedBadge = getTickHtml(user.tick_type);
+        
+        // Consistent DP Header for ALL post types
+        const headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
         // Text Post
         if (post.post_type === 'text') {
@@ -276,29 +276,30 @@ function renderPosts(posts) {
         else if (post.post_type === 'image') {
             contentHtml = `
                 <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
-                <div class="w-full h-64 rounded-2xl overflow-hidden mb-4 border border-surface-variant/50 dark:border-neutral-800 shadow-inner">
-                    <img src="${post.media_url}" class="w-full h-full object-cover">
+                <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
+                    <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
                 </div>
             `;
         }
         // Event Post
         else if (post.post_type === 'event') {
-            headerIcon = `<div class="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary border border-secondary/30 shrink-0"><span class="material-symbols-outlined text-[20px]">event_note</span></div>`;
-            
-            const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-40 object-cover rounded-t-2xl border-b border-secondary/20">` : '';
-            const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-3 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform">Register Now</a>` : '';
+            const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
+            const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-4 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform shadow-md shadow-secondary/20">Register Now</a>` : '';
             const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
 
             contentHtml = `
-                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
-                <div class="bg-secondary/5 border border-secondary/20 rounded-2xl mb-4 flex flex-col">
+                <div class="bg-secondary/5 border border-secondary/20 rounded-2xl mb-4 flex flex-col overflow-hidden">
                     ${eventImgHtml}
-                    <div class="p-4">
-                        <div class="bg-secondary/10 text-secondary w-max px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-2">Event</div>
-                        <p class="text-[12px] text-on-surface-variant dark:text-gray-300 flex items-center gap-1.5 mb-1.5 font-medium">
-                            <span class="material-symbols-outlined text-[16px]">calendar_today</span> ${dateStr}
-                        </p>
-                        ${post.event_location ? `<p class="text-[12px] text-on-surface-variant dark:text-gray-300 flex items-center gap-1.5 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> ${post.event_location}</p>` : ''}
+                    <div class="p-5">
+                        <div class="bg-secondary/10 text-secondary w-max px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-3">Upcoming Event</div>
+                        <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 leading-relaxed mb-4 whitespace-pre-wrap">${post.content}</p>
+                        
+                        <div class="space-y-2">
+                            <p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium">
+                                <span class="material-symbols-outlined text-[18px]">calendar_today</span> ${dateStr}
+                            </p>
+                            ${post.event_location ? `<p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-[18px]">location_on</span> ${post.event_location}</p>` : ''}
+                        </div>
                         ${registerHtml}
                     </div>
                 </div>
@@ -306,8 +307,6 @@ function renderPosts(posts) {
         }
         // Poll Post
         else if (post.post_type === 'poll') {
-            headerIcon = `<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/30 shrink-0"><span class="material-symbols-outlined text-[20px]">poll</span></div>`;
-            
             const votes = post.post_poll_votes || [];
             const totalVotes = votes.length;
             const myVotes = votes.filter(v => v.user_id === currentUser.id).map(v => v.option_index);
@@ -321,18 +320,24 @@ function renderPosts(posts) {
                 const percentage = totalVotes === 0 ? 0 : Math.round((optVotes / totalVotes) * 100);
                 const isWinner = percentage > 0 && percentage === Math.max(...(post.poll_options || []).map((_, i) => totalVotes === 0 ? 0 : Math.round((votes.filter(v => v.option_index === i).length / totalVotes) * 100)));
                 const iVotedForThis = myVotes.includes(index);
+                
+                // Show voters button if public
+                const viewVotersBtn = (!post.poll_is_anon && optVotes > 0) ? `<span onclick="event.stopPropagation(); window.openPollVoters('${post.id}', ${index})" class="material-symbols-outlined text-[16px] ml-1.5 text-on-surface-variant hover:text-primary transition-colors cursor-pointer" title="View Voters">visibility</span>` : '';
 
                 return `
-                <div data-post-id="${post.id}" data-option-index="${index}" data-is-multiple="${post.poll_is_multiple_choice}" class="${!isExpired ? 'poll-option-btn cursor-pointer active:scale-[0.98]' : 'cursor-default'} relative w-full bg-surface-variant/30 dark:bg-surface-variant/10 border border-surface-variant/50 dark:border-neutral-700 rounded-2xl p-3.5 overflow-hidden group hover:border-primary/50 transition-all mb-2">
-                    <div class="absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults ? percentage : 0}%"></div>
-                    <div class="relative flex justify-between text-[13px] font-bold text-on-surface dark:text-gray-100 z-10">
+                <div data-post-id="${post.id}" data-option-index="${index}" data-is-multiple="${post.poll_is_multiple_choice}" class="poll-option-btn ${!isExpired ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'} relative w-full bg-surface-variant/30 dark:bg-surface-variant/10 border border-surface-variant/50 dark:border-neutral-700 rounded-2xl p-3.5 overflow-hidden group hover:border-primary/50 transition-all mb-2">
+                    <div class="poll-progress-bar absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults ? percentage : 0}%"></div>
+                    <div class="relative flex justify-between items-center text-[13px] font-bold text-on-surface dark:text-gray-100 z-10">
                         <span class="flex items-center gap-2">
-                            <span class="w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80 dark:border-gray-500'}">
+                            <span class="poll-check-circle w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80 dark:border-gray-500'}">
                                 ${iVotedForThis ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}
                             </span>
                             ${opt}
                         </span>
-                        <span class="${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
+                        <span class="flex items-center">
+                            <span class="poll-percentage ${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
+                            ${viewVotersBtn}
+                        </span>
                     </div>
                 </div>`;
             }).join('');
@@ -342,16 +347,12 @@ function renderPosts(posts) {
 
             contentHtml = `
                 <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
-                <div class="space-y-2.5 mb-3 px-1">${optionsHtml}</div>
+                <div class="poll-options-wrapper space-y-2.5 mb-3 px-1">${optionsHtml}</div>
                 <div class="flex justify-between px-2 text-[11px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">
-                    <span>${totalVotes} votes • ${typeText} ${post.poll_is_anon ? '• Anonymous' : ''}</span>
+                    <span class="poll-footer-text"><span class="poll-total-votes">${totalVotes}</span> votes • ${typeText} ${post.poll_is_anon ? '• Anonymous' : ''}</span>
                     <span>${expiryText}</span>
                 </div>
             `;
-        }
-
-        if (!headerIcon) {
-            headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
         }
 
         return `
@@ -426,9 +427,11 @@ async function handleLike(postId, isLiked) {
     }
 }
 
+// Fixed Poll Voting with Local DOM Update
 async function handlePollVote(postId, optionIndex, isMultipleChoice) {
     try {
         if (!isMultipleChoice) {
+            // Delete all previous votes from this user on this post
             await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id });
         }
 
@@ -439,14 +442,106 @@ async function handlePollVote(postId, optionIndex, isMultipleChoice) {
         });
 
         if (error && error.code === '23505' && isMultipleChoice) {
+            // If they click an option they already voted for (multiple choice), untoggle it
             await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id, option_index: optionIndex });
         }
         
-        fetchPosts(); 
+        // Fetch just the votes for this post to update math locally
+        const { data: votes } = await supabase.from('post_poll_votes').select('user_id, option_index').eq('post_id', postId);
+        
+        updatePollDOM(postId, votes);
+
     } catch (error) {
         console.error("Poll vote error:", error);
     }
 }
+
+function updatePollDOM(postId, votes) {
+    const postEl = document.querySelector(`div[data-post-id="${postId}"]`);
+    if (!postEl) return;
+    
+    const options = postEl.querySelectorAll('.poll-option-btn');
+    const totalVotes = votes.length;
+    const myVotes = votes.filter(v => v.user_id === currentUser.id).map(v => v.option_index);
+    const userHasVoted = myVotes.length > 0;
+    
+    // Find max votes for winning highlight
+    let maxVotes = 0;
+    const voteCounts = [];
+    options.forEach((opt, idx) => {
+        const count = votes.filter(v => v.option_index === idx).length;
+        voteCounts.push(count);
+        if (count > maxVotes) maxVotes = count;
+    });
+
+    options.forEach((opt, idx) => {
+        const count = voteCounts[idx];
+        const percentage = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+        const iVotedForThis = myVotes.includes(idx);
+        
+        // Update bar
+        const bar = opt.querySelector('.poll-progress-bar');
+        if (bar) bar.style.width = `${userHasVoted ? percentage : 0}%`;
+        
+        // Update circle
+        const circle = opt.querySelector('.poll-check-circle');
+        if (circle) {
+            if (iVotedForThis) {
+                circle.className = 'poll-check-circle w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center';
+                circle.innerHTML = '<span class="w-2 h-2 rounded-full bg-primary"></span>';
+            } else {
+                circle.className = 'poll-check-circle w-4 h-4 rounded-full border-2 border-surface-variant/80 dark:border-gray-500';
+                circle.innerHTML = '';
+            }
+        }
+        
+        // Update text
+        const percSpan = opt.querySelector('.poll-percentage');
+        if (percSpan) {
+            percSpan.textContent = `${percentage}%`;
+            percSpan.className = `poll-percentage ${userHasVoted ? 'opacity-100' : 'opacity-0'} transition-opacity`;
+        }
+    });
+    
+    // Update footer votes text
+    const votesCountSpan = postEl.querySelector('.poll-total-votes');
+    if (votesCountSpan) votesCountSpan.textContent = totalVotes;
+}
+
+// Fetch and display voters for public polls
+window.openPollVoters = async (postId, optionIndex) => {
+    const modal = document.getElementById('modal-poll-voters');
+    const list = document.getElementById('poll-voters-list');
+    if (!modal || !list) return;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading voters...</p>`;
+
+    try {
+        const { data, error } = await supabase
+            .from('post_poll_votes')
+            .select('users(id, full_name, profile_img_url, tick_type)')
+            .eq('post_id', postId)
+            .eq('option_index', optionIndex);
+
+        if (error) throw error;
+        if (data.length === 0) {
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">No votes yet.</p>`;
+            return;
+        }
+
+        list.innerHTML = data.map(v => `
+            <div class="flex items-center gap-3 p-3 bg-surface-variant/10 dark:bg-neutral-800 rounded-2xl border border-surface-variant/30 dark:border-neutral-700">
+                <img onclick="window.viewUserProfile('${v.users.id}')" src="${v.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.users.full_name)}`}" class="w-10 h-10 rounded-full object-cover cursor-pointer">
+                <p onclick="window.viewUserProfile('${v.users.id}')" class="font-bold text-sm text-on-surface dark:text-gray-100 flex items-center gap-1 cursor-pointer hover:text-primary transition-colors">${v.users.full_name} ${getTickHtml(v.users.tick_type)}</p>
+            </div>
+        `).join('');
+    } catch (e) {
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load voters.</p>`;
+        console.error("Voters load error:", e);
+    }
+};
 
 // ==========================================
 // SHARE POST AS IMAGE (HTML2CANVAS)
@@ -464,10 +559,12 @@ async function sharePostAsImage(postId) {
         if (optionsBtn) optionsBtn.style.visibility = 'hidden';
         if (shareBtn) shareBtn.style.visibility = 'hidden';
 
+        // Scale 3 provides ultra crisp resolution. Background enforces no transparency dullness.
         const canvas = await html2canvas(postElement, {
             backgroundColor: document.documentElement.classList.contains('dark') ? '#1e1e1e' : '#ffffff',
-            scale: 2, 
-            useCORS: true 
+            scale: 3, 
+            useCORS: true,
+            allowTaint: true
         });
 
         if (optionsBtn) optionsBtn.style.visibility = 'visible';
@@ -627,7 +724,7 @@ async function submitPostReport() {
 }
 
 // ==========================================
-// COMMENTS & PULL TO REFRESH
+// COMMENTS 
 // ==========================================
 
 async function openCommentsModal(postId) {
@@ -712,61 +809,4 @@ async function submitComment(postId) {
         }
     }
     btn.disabled = false;
-}
-
-function initPullToRefresh() {
-    const ptrIndicator = document.getElementById('pull-to-refresh-indicator');
-    const ptrIcon = document.getElementById('ptr-icon');
-    const mainContent = document.getElementById('view-dashboard');
-
-    if (!ptrIndicator || !ptrIcon || !mainContent) return;
-
-    let startY = 0;
-    let pullDistance = 0;
-    const pullThreshold = 80;
-    let isRefreshing = false;
-
-    document.addEventListener('touchstart', (e) => {
-        if (window.scrollY === 0 && !isRefreshing && mainContent.classList.contains('active')) {
-            startY = e.touches[0].pageY;
-        }
-    }, { passive: true });
-
-    document.addEventListener('touchmove', (e) => {
-        if (startY === 0 || isRefreshing) return;
-
-        const currentY = e.touches[0].pageY;
-        pullDistance = currentY - startY;
-
-        if (pullDistance > 0) {
-            if (e.cancelable) e.preventDefault();
-            const pullRatio = Math.min(pullDistance / pullThreshold, 1);
-            ptrIndicator.style.opacity = String(pullRatio);
-            ptrIndicator.style.transform = `translateY(${Math.min(pullDistance / 1.5, pullThreshold)}px)`;
-            ptrIcon.style.transform = `rotate(${pullRatio * 180}deg)`;
-        }
-    }, { passive: false });
-
-    document.addEventListener('touchend', () => {
-        if (isRefreshing || startY === 0 || pullDistance <= 0) return;
-
-        if (pullDistance > pullThreshold) {
-            isRefreshing = true;
-            ptrIcon.innerHTML = 'progress_activity';
-            ptrIcon.classList.add('animate-spin');
-            ptrIndicator.style.opacity = '1';
-            ptrIndicator.style.transform = `translateY(${pullThreshold - 20}px)`; 
-
-            fetchPosts().finally(() => {
-                isRefreshing = false;
-                ptrIndicator.style.opacity = '0';
-                ptrIcon.classList.remove('animate-spin');
-                ptrIcon.innerHTML = 'arrow_downward';
-            });
-        } else {
-            ptrIndicator.style.opacity = '0';
-        }
-        startY = 0;
-        pullDistance = 0;
-    });
 }
