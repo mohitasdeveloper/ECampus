@@ -7,6 +7,7 @@ let currentUser = null;
 export function initFeed(user) {
     currentUser = user;
     fetchPosts();
+    initPullToRefresh();
 
     const sendBtn = document.getElementById('send-post-btn');
     if (sendBtn) {
@@ -270,4 +271,64 @@ async function submitComment(postId) {
             countSpan.textContent = currentCount + 1;
         }
     }
+}
+
+function initPullToRefresh() {
+    const ptrIndicator = document.getElementById('pull-to-refresh-indicator');
+    const ptrIcon = document.getElementById('ptr-icon');
+    const mainContent = document.getElementById('view-dashboard');
+
+    if (!ptrIndicator || !ptrIcon || !mainContent) return;
+
+    let startY = 0;
+    let pullDistance = 0;
+    const pullThreshold = 80; // pixels to pull down to trigger refresh
+    let isRefreshing = false;
+
+    // Listen on the document for touch events, as the body is the scroll container
+    document.addEventListener('touchstart', (e) => {
+        // Only track pulls if we are on the feed tab, at the top, and not already refreshing
+        if (window.scrollY === 0 && !isRefreshing && mainContent.classList.contains('active')) {
+            startY = e.touches[0].pageY;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (startY === 0 || isRefreshing) return;
+
+        const currentY = e.touches[0].pageY;
+        pullDistance = currentY - startY;
+
+        if (pullDistance > 0) {
+            // Prevent the whole page from bouncing on iOS/Android
+            e.preventDefault();
+            const pullRatio = Math.min(pullDistance / pullThreshold, 1);
+            ptrIndicator.style.opacity = String(pullRatio);
+            ptrIndicator.style.transform = `translateY(${Math.min(pullDistance / 1.5, pullThreshold)}px)`;
+            ptrIcon.style.transform = `rotate(${pullRatio * 180}deg)`;
+        }
+    }, { passive: false }); // passive:false is needed for preventDefault()
+
+    document.addEventListener('touchend', () => {
+        if (isRefreshing || startY === 0 || pullDistance <= 0) return;
+
+        if (pullDistance > pullThreshold) {
+            isRefreshing = true;
+            ptrIcon.innerHTML = 'progress_activity';
+            ptrIcon.classList.add('animate-spin');
+            ptrIndicator.style.opacity = '1';
+            ptrIndicator.style.transform = `translateY(${pullThreshold - 20}px)`; // Settle position
+
+            fetchPosts().finally(() => {
+                isRefreshing = false;
+                ptrIndicator.style.opacity = '0';
+                ptrIcon.classList.remove('animate-spin');
+                ptrIcon.innerHTML = 'arrow_downward';
+            });
+        } else {
+            ptrIndicator.style.opacity = '0';
+        }
+        startY = 0;
+        pullDistance = 0;
+    });
 }

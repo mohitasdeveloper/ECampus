@@ -499,6 +499,12 @@ async function handleReplyToHotpost(event) {
 
     const userData = hotpostsByUser.get(currentViewerState.userId);
     const post = userData.posts[currentViewerState.postIndex];
+    const replyBtn = document.getElementById('hotpost-reply-btn');
+    const originalBtnContent = replyBtn.innerHTML;
+
+    // Disable button and show spinner
+    replyBtn.disabled = true;
+    replyBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
 
     const { error } = await supabase.from('hotpost_replies').insert({
         hotpost_id: post.id,
@@ -510,12 +516,22 @@ async function handleReplyToHotpost(event) {
     if (error) {
         showToast('Failed to send reply.', 'error');
         console.error('Error sending hotpost reply:', error);
+        // Re-enable button on error
+        replyBtn.disabled = false;
+        replyBtn.innerHTML = originalBtnContent;
     } else {
         showToast('Reply sent!', 'success');
         input.value = '';
-        // Briefly hide input to show it was sent
-        document.getElementById('hotpost-reply-container').style.opacity = '0.5';
-        setTimeout(() => { document.getElementById('hotpost-reply-container').style.opacity = '1'; }, 1000);
+
+        // Success animation
+        replyBtn.classList.add('!bg-green-500', 'transition-colors');
+        replyBtn.innerHTML = `<span class="material-symbols-outlined">check</span>`;
+
+        setTimeout(() => {
+            replyBtn.disabled = false;
+            replyBtn.classList.remove('!bg-green-500');
+            replyBtn.innerHTML = originalBtnContent;
+        }, 1500);
     }
 }
 
