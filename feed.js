@@ -132,10 +132,10 @@ async function submitPost() {
         const container = document.getElementById('feed-posts-container');
         const newPostHtml = `
         <div class="bg-white dark:bg-neutral-900 rounded-[28px] p-5 border border-gray-200 dark:border-neutral-800 shadow-sm animate-fadeIn">
-            <div class="flex items-center gap-3 mb-4">
+            <div onclick="window.viewUserProfile('${currentUser.id}')" class="flex items-center gap-3 mb-4 cursor-pointer group">
                 <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
                 <div>
-                    <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${currentUser.full_name}</p>
+                    <p class="font-bold text-sm text-gray-900 dark:text-gray-100 group-hover:text-primary transition-colors">${currentUser.full_name}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">Just now</p>
                 </div>
             </div>
@@ -210,7 +210,7 @@ async function openCommentsModal(postId) {
     try {
         const { data, error } = await supabase
             .from('post_comments')
-            .select('*, users(full_name, profile_img_url)')
+            .select('*, users(id, full_name, profile_img_url)')
             .eq('post_id', postId)
             .order('created_at', { ascending: true });
 
@@ -223,10 +223,10 @@ async function openCommentsModal(postId) {
 
         list.innerHTML = data.map(comment => `
             <div class="flex items-start gap-3">
-                <img src="${comment.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.users.full_name)}&background=e1e3e4`}" class="w-8 h-8 rounded-full object-cover mt-1">
+                <img onclick="window.viewUserProfile('${comment.users.id}')" src="${comment.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.users.full_name)}&background=e1e3e4`}" class="w-8 h-8 rounded-full object-cover mt-1 cursor-pointer">
                 <div class="flex-1 bg-gray-100 dark:bg-neutral-800 rounded-2xl p-3">
                     <div class="flex justify-between items-center">
-                        <p class="text-xs font-bold text-gray-900 dark:text-gray-100">${comment.users.full_name}</p>
+                        <p onclick="window.viewUserProfile('${comment.users.id}')" class="text-xs font-bold text-gray-900 dark:text-gray-100 cursor-pointer hover:text-primary transition-colors">${comment.users.full_name}</p>
                         <p class="text-[10px] text-gray-400 dark:text-gray-500">${timeAgo(comment.created_at)}</p>
                     </div>
                     <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">${comment.content}</p>

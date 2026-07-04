@@ -29,12 +29,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         .eq('auth_user_id', session.user.id)
         .single();
 
-    if (error) {
+    if (error || !profile) {
         console.error('Error fetching profile:', error);
-        showToast('Could not load your profile.', 'error');
+        showToast('Could not load your profile. Please try logging in again.', 'error');
         // Optional: sign out if profile is missing
-        // await supabase.auth.signOut();
-        // window.location.replace('auth/login.html');
+        await supabase.auth.signOut();
+        window.location.replace('auth/login.html');
         return;
     }
 

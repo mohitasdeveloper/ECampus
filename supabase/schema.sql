@@ -285,15 +285,13 @@ DROP POLICY IF EXISTS "Users can insert their own posts" ON public.posts;
 CREATE POLICY "Users can insert their own posts"
 ON public.posts FOR INSERT
 TO authenticated
-WITH CHECK (
-  (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid()
-);
+WITH CHECK (user_id = public.current_user_id());
 
 DROP POLICY IF EXISTS "Users can delete their own posts" ON public.posts;
 CREATE POLICY "Users can delete their own posts"
 ON public.posts FOR DELETE
 TO authenticated
-USING ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() );
+USING (user_id = public.current_user_id());
 
 -- -------------------------
 -- POLICIES FOR 'post_likes' TABLE
@@ -308,13 +306,13 @@ DROP POLICY IF EXISTS "Users can insert their own likes" ON public.post_likes;
 CREATE POLICY "Users can insert their own likes"
 ON public.post_likes FOR INSERT
 TO authenticated
-WITH CHECK ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() );
+WITH CHECK (user_id = public.current_user_id());
 
 DROP POLICY IF EXISTS "Users can delete their own likes" ON public.post_likes;
 CREATE POLICY "Users can delete their own likes"
 ON public.post_likes FOR DELETE
 TO authenticated
-USING ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() );
+USING (user_id = public.current_user_id());
 
 -- -------------------------
 -- POLICIES FOR 'post_comments' TABLE
@@ -329,13 +327,13 @@ DROP POLICY IF EXISTS "Users can insert their own comments" ON public.post_comme
 CREATE POLICY "Users can insert their own comments"
 ON public.post_comments FOR INSERT
 TO authenticated
-WITH CHECK ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() );
+WITH CHECK (user_id = public.current_user_id());
 
 DROP POLICY IF EXISTS "Users can delete their own comments" ON public.post_comments;
 CREATE POLICY "Users can delete their own comments"
 ON public.post_comments FOR DELETE
 TO authenticated
-USING ( (SELECT auth_user_id FROM public.users WHERE id = user_id) = auth.uid() );
+USING (user_id = public.current_user_id());
 
 -- -------------------------
 -- POLICIES FOR 'connections' TABLE
