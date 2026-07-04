@@ -36,25 +36,12 @@ async function fetchPopularUsersForSearch() {
     container.innerHTML = `<p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Loading popular users...</p>`;
 
     try {
-        // 1. Get all user IDs the current user is already connected with or has a pending request with
-        const { data: connections, error: connError } = await supabase
-            .from('connections')
-            .select('user_one_id, user_two_id')
-            .or(`user_one_id.eq.${currentUser.id},user_two_id.eq.${currentUser.id}`);
-        if (connError) throw connError;
-
-        const connectedUserIds = connections.map(c => {
-            return c.user_one_id === currentUser.id ? c.user_two_id : c.user_one_id;
-        });
-        const allExcludedIds = [currentUser.id, ...connectedUserIds];
-
-        // 2. Fetch top 20 users by connection_count, excluding the excluded list
+        // Fetch ALL users except the current user, ordered by highest connection_count
         const { data: users, error } = await supabase
             .from('users')
             .select('id, full_name, profile_img_url, course, connection_count')
-            .not('id', 'in', `(${allExcludedIds.join(',')})`)
-            .order('connection_count', { ascending: false, nulls: 'last' })
-            .limit(20);
+            .neq('id', currentUser.id)
+            .order('connection_count', { ascending: false, nulls: 'last' });
 
         if (error) throw error;
 
@@ -69,11 +56,14 @@ async function fetchPopularUsersForSearch() {
 function renderPopularUsersForSearch(users) {
     const container = document.getElementById('explore-users-container');
     if (users.length === 0) {
-        container.innerHTML = `<p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">No new popular users to show right now.</p>`;
+        container.innerHTML = `<p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">No popular users to show right now.</p>`;
         return;
     }
 
-    container.innerHTML = users.map(user => `
+    // Add the Popular Users label
+    const labelHtml = `<h3 class="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-3 px-1">Popular Users</h3>`;
+
+    const usersHtml = users.map(user => `
         <div class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm">
             <div onclick="viewUserProfile('${user.id}')" class="flex-1 flex items-center gap-4 cursor-pointer">
                 <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover">
@@ -87,6 +77,9 @@ function renderPopularUsersForSearch(users) {
             </button>
         </div>
     `).join('');
+
+    // Render both label and list
+    container.innerHTML = labelHtml + usersHtml;
 }
 
 async function handleSearch(event) {
