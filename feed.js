@@ -4,6 +4,7 @@ import { timeAgo } from './utils.js';
 import { CLOUDINARY_CLOUD_NAME } from './config.js';
 
 let currentUser = null;
+let isVoting = false; // Lock to prevent rapid clicking on polls
 
 export function initFeed(user) {
     currentUser = user;
@@ -191,6 +192,9 @@ async function submitPost() {
             payload.event_date = document.getElementById('event-date').value || null;
             payload.event_location = document.getElementById('event-location').value.trim();
             payload.event_register_url = document.getElementById('event-register-url').value.trim();
+            // Capture the new custom button text, defaulting to 'View Link'
+            const customBtnInput = document.getElementById('event-button-text');
+            payload.event_button_text = (customBtnInput && customBtnInput.value.trim()) ? customBtnInput.value.trim() : 'View Link';
         }
 
         const { error } = await supabase.from('posts').insert(payload);
@@ -201,6 +205,7 @@ async function submitPost() {
         document.getElementById('post-content-input').value = '';
         if (document.getElementById('post-image-upload')) document.getElementById('post-image-upload').value = '';
         if (document.getElementById('event-image-upload')) document.getElementById('event-image-upload').value = '';
+        if (document.getElementById('event-button-text')) document.getElementById('event-button-text').value = '';
         
         showToast('Post published successfully!', 'success');
         fetchPosts();
@@ -284,7 +289,8 @@ function renderPosts(posts) {
         // Event Post
         else if (post.post_type === 'event') {
             const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
-            const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-4 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform shadow-md shadow-secondary/20">Register Now</a>` : '';
+            const btnText = post.event_button_text || 'View Link';
+            const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-4 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform shadow-md shadow-secondary/20">${btnText}</a>` : '';
             const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
 
             contentHtml = `
@@ -349,7 +355,7 @@ function renderPosts(posts) {
                 <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
                 <div class="poll-options-wrapper space-y-2.5 mb-3 px-1">${optionsHtml}</div>
                 <div class="flex justify-between px-2 text-[11px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">
-                    <span class="poll-footer-text"><span class="poll-total-votes">${totalVotes}</span> votes • ${typeText} ${post.poll_is_anon ? '• Anonymous' : ''}</span>
+                    <span class="poll-footer-text"><span class="poll-total-votes">${totalVotes}</span> votes • ${typeText} ${post.poll_is_anon ? 'Anonymous' : 'Public'}</span>
                     <span>${expiryText}</span>
                 </div>
             `;
@@ -427,22 +433,22 @@ async function handleLike(postId, isLiked) {
     }
 }
 
-// Fixed Poll Voting with Local DOM Update
+// Fixed Poll Voting with Local DOM Update and UI state locking
 async function handlePollVote(postId, optionIndex, isMultipleChoice) {
+    if (isVoting) return; // Prevent rapid clicking while processing
+    isVoting = true;
+    
     try {
-        if (!isMultipleChoice) {
-            // Delete all previous votes from this user on this post
-            await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id });
-        }
-
+        // We now rely on the database trigger for single-choice overwrite logic
+        // But we still attempt an insert or toggle.
         const { error } = await supabase.from('post_poll_votes').insert({
             post_id: postId,
             user_id: currentUser.id,
             option_index: optionIndex
         });
 
-        if (error && error.code === '23505' && isMultipleChoice) {
-            // If they click an option they already voted for (multiple choice), untoggle it
+        // If they click an option they already voted for (conflict), untoggle it
+        if (error && error.code === '23505') {
             await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id, option_index: optionIndex });
         }
         
@@ -453,6 +459,8 @@ async function handlePollVote(postId, optionIndex, isMultipleChoice) {
 
     } catch (error) {
         console.error("Poll vote error:", error);
+    } finally {
+        isVoting = false; // Release the lock
     }
 }
 
@@ -559,12 +567,13 @@ async function sharePostAsImage(postId) {
         if (optionsBtn) optionsBtn.style.visibility = 'hidden';
         if (shareBtn) shareBtn.style.visibility = 'hidden';
 
-        // Scale 3 provides ultra crisp resolution. Background enforces no transparency dullness.
+        // Fix dullness: Ensure explicit canvas configuration
         const canvas = await html2canvas(postElement, {
             backgroundColor: document.documentElement.classList.contains('dark') ? '#1e1e1e' : '#ffffff',
             scale: 3, 
             useCORS: true,
-            allowTaint: true
+            allowTaint: true,
+            imageTimeout: 0 // Removes timing delays causing unrendered pixels
         });
 
         if (optionsBtn) optionsBtn.style.visibility = 'visible';
@@ -645,16 +654,21 @@ function openCommentOptions(commentId, commentOwnerId) {
 window.deletePost = async (postId) => {
     if (!confirm('Are you sure you want to delete this post?')) return;
     window.closeActionSheet();
+
+    // Optimistic UI update: hide the post immediately for a better user experience
+    const postElement = document.querySelector(`div[data-post-id="${postId}"]`);
+    if (postElement) postElement.style.display = 'none';
     
     // SOFT DELETE
     const { error } = await supabase.from('posts').update({ is_deleted: true }).eq('id', postId);
     
     if (error) {
+        if (postElement) postElement.style.display = 'block'; // Revert if failed
         showToast('Failed to delete post.', 'error');
         console.error(error);
     } else {
         showToast('Post deleted.', 'success');
-        fetchPosts();
+        // We removed it from the DOM already, but we can refetch in background if needed
     }
 };
 
