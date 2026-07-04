@@ -13,6 +13,15 @@ export function initFeed(user) {
     
     fetchPosts();
     initPullToRefresh();
+    setupImagePreviews();
+
+    // Fill user info in Create Post modal when opened
+    document.addEventListener('openCreatePostView', () => {
+        if(currentUser) {
+            document.getElementById('create-post-avatar').src = currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}`;
+            document.getElementById('create-post-name').innerHTML = `${currentUser.full_name} ${getTickHtml(currentUser.tick_type)}`;
+        }
+    });
 
     // 1. Event Delegation for Feed Interactions
     const feedContainer = document.getElementById('feed-posts-container');
@@ -23,12 +32,14 @@ export function initFeed(user) {
             const pollOption = e.target.closest('.poll-option-btn');
             const profileLink = e.target.closest('.profile-link');
             const optionsBtn = e.target.closest('.post-options-btn');
+            const shareBtn = e.target.closest('.share-post-btn');
 
             if (likeBtn) handleLike(likeBtn.dataset.postId, likeBtn.dataset.liked === 'true');
             if (commentBtn) openCommentsModal(commentBtn.dataset.postId);
             if (pollOption) handlePollVote(pollOption.dataset.postId, parseInt(pollOption.dataset.optionIndex), pollOption.dataset.isMultiple === 'true');
             if (profileLink) window.viewUserProfile(profileLink.dataset.userId);
-            if (optionsBtn) openPostOptions(optionsBtn.dataset.postId, optionsBtn.dataset.userId);
+            if (optionsBtn) openPostOptions(optionsBtn.dataset.postId, optionsBtn.dataset.userId, optionsBtn.dataset.isVerified === 'true');
+            if (shareBtn) sharePostAsImage(shareBtn.dataset.postId);
         });
     }
 
@@ -74,14 +85,51 @@ export function initFeed(user) {
     });
 }
 
+function getTickHtml(tickType) {
+    if (!tickType || tickType === 'none') return '';
+    const colors = {
+        blue: 'text-[#1d9bf0]',
+        gold: 'text-[#e8b339]',
+        green: 'text-primary',
+        gray: 'text-surface-variant'
+    };
+    const colorClass = colors[tickType.toLowerCase()] || colors.blue;
+    return `<span class="material-symbols-outlined text-[14px] ${colorClass} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+}
+
 function setupCreatePostPermissions() {
-    // If the user has special_post permission, reveal the extra tabs
     if (currentUser?.special_post) {
         document.querySelectorAll('.post-type-tab').forEach(tab => tab.classList.remove('hidden'));
     } else {
-        // Otherwise, ensure only text is visible
         document.querySelectorAll('.post-type-tab:not([data-type="text"])').forEach(tab => tab.classList.add('hidden'));
     }
+}
+
+function setupImagePreviews() {
+    const attachPreview = (inputId, containerId, iconId, textId) => {
+        const input = document.getElementById(inputId);
+        const container = document.getElementById(containerId);
+        if(!input || !container) return;
+        
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    container.innerHTML = `
+                        <img src="${event.target.result}" class="w-full h-full object-cover">
+                        <button type="button" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors" onclick="event.stopPropagation(); document.getElementById('${inputId}').value=''; document.getElementById('${containerId}').innerHTML='<span class=\\'material-symbols-outlined text-[32px] mb-2\\'>${iconId}</span><span class=\\'text-sm font-medium\\'>${textId}</span>';">
+                            <span class="material-symbols-outlined text-[18px]">close</span>
+                        </button>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    };
+
+    attachPreview('post-image-upload', 'post-image-preview-container', 'add_photo_alternate', 'Tap to upload image');
+    attachPreview('event-image-upload', 'event-image-preview-container', 'wallpaper', 'Add Event Cover Photo');
 }
 
 async function uploadToCloudinary(file) {
@@ -186,6 +234,7 @@ async function fetchPosts() {
                 post_comments ( count ),
                 post_poll_votes ( user_id, option_index )
             `)
+            .eq('is_deleted', false)
             .order('created_at', { ascending: false })
             .limit(30);
 
@@ -217,10 +266,7 @@ function renderPosts(posts) {
         let contentHtml = '';
         let headerIcon = '';
 
-        // Verification Badge logic
-        const verifiedBadge = user.tick_type === 'blue' 
-            ? `<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">verified</span>` 
-            : '';
+        const verifiedBadge = getTickHtml(user.tick_type);
 
         // Text Post
         if (post.post_type === 'text') {
@@ -268,7 +314,7 @@ function renderPosts(posts) {
             const userHasVoted = myVotes.length > 0;
             
             const isExpired = post.poll_expires_at && new Date(post.poll_expires_at) < new Date();
-            const showResults = userHasVoted || isExpired;
+            const showResults = userHasVoted || isExpired || post.poll_is_anon;
 
             const optionsHtml = (post.poll_options || []).map((opt, index) => {
                 const optVotes = votes.filter(v => v.option_index === index).length;
@@ -304,13 +350,15 @@ function renderPosts(posts) {
             `;
         }
 
-        // Default Avatar if no special header icon
         if (!headerIcon) {
             headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
         }
 
         return `
-        <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-fadeIn">
+        <div data-post-id="${post.id}" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-fadeIn relative">
+            
+            ${post.is_verified ? '<div class="absolute -top-3 -right-3 bg-[#e8b339] text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase shadow-lg shadow-[#e8b339]/30 flex items-center gap-1 z-10"><span class="material-symbols-outlined text-[14px]">stars</span> Verified Post</div>' : ''}
+
             <div class="flex items-center gap-3 mb-3">
                 ${headerIcon}
                 <div class="flex-1">
@@ -319,7 +367,7 @@ function renderPosts(posts) {
                     </h4>
                     <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
                 </div>
-                <button data-post-id="${post.id}" data-user-id="${user.id}" class="post-options-btn text-on-surface-variant hover:text-on-surface dark:text-gray-400 dark:hover:text-gray-100 p-1 rounded-full hover:bg-surface-variant/50 transition-colors">
+                <button data-post-id="${post.id}" data-user-id="${user.id}" data-is-verified="${post.is_verified}" class="post-options-btn text-on-surface-variant hover:text-on-surface dark:text-gray-400 dark:hover:text-gray-100 p-1 rounded-full hover:bg-surface-variant/50 transition-colors">
                     <span class="material-symbols-outlined text-[20px]">more_vert</span>
                 </button>
             </div>
@@ -335,7 +383,7 @@ function renderPosts(posts) {
                     <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
                     <span>${commentCount}</span>
                 </button>
-                <button class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-[#0ea5e9] transition-colors text-[13px] font-medium active:scale-95 ml-auto">
+                <button data-post-id="${post.id}" class="share-post-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-[#0ea5e9] transition-colors text-[13px] font-medium active:scale-95 ml-auto">
                     <span class="material-symbols-outlined text-[20px]">share</span>
                 </button>
             </div>
@@ -381,11 +429,9 @@ async function handleLike(postId, isLiked) {
 async function handlePollVote(postId, optionIndex, isMultipleChoice) {
     try {
         if (!isMultipleChoice) {
-            // Single choice: Delete any previous vote from this user for this post first
             await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id });
         }
 
-        // Try to insert the vote (if multiple choice and they click an existing, it might fail unique constraint, which is fine, we can toggle it by deleting)
         const { error } = await supabase.from('post_poll_votes').insert({
             post_id: postId,
             user_id: currentUser.id,
@@ -393,21 +439,71 @@ async function handlePollVote(postId, optionIndex, isMultipleChoice) {
         });
 
         if (error && error.code === '23505' && isMultipleChoice) {
-            // If it's multiple choice and they already voted for THIS option, un-vote it
             await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id, option_index: optionIndex });
         }
         
-        fetchPosts(); // Refresh UI to calculate new percentages
+        fetchPosts(); 
     } catch (error) {
         console.error("Poll vote error:", error);
     }
 }
 
 // ==========================================
-// ACTION SHEETS (Delete & Report)
+// SHARE POST AS IMAGE (HTML2CANVAS)
 // ==========================================
 
-function openPostOptions(postId, postOwnerId) {
+async function sharePostAsImage(postId) {
+    const postElement = document.querySelector(`div[data-post-id="${postId}"]`);
+    if (!postElement) return;
+
+    showToast('Preparing post to share...', 'info');
+
+    try {
+        const optionsBtn = postElement.querySelector('.post-options-btn');
+        const shareBtn = postElement.querySelector('.share-post-btn');
+        if (optionsBtn) optionsBtn.style.visibility = 'hidden';
+        if (shareBtn) shareBtn.style.visibility = 'hidden';
+
+        const canvas = await html2canvas(postElement, {
+            backgroundColor: document.documentElement.classList.contains('dark') ? '#1e1e1e' : '#ffffff',
+            scale: 2, 
+            useCORS: true 
+        });
+
+        if (optionsBtn) optionsBtn.style.visibility = 'visible';
+        if (shareBtn) shareBtn.style.visibility = 'visible';
+
+        canvas.toBlob(async (blob) => {
+            const file = new File([blob], `ecampus-post-${postId}.png`, { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'ECampus Post',
+                    text: 'Check out this post on ECampus!',
+                    files: [file]
+                });
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ecampus-post-${postId}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Image downloaded to your device!', 'success');
+            }
+        }, 'image/png');
+
+    } catch (err) {
+        console.error('Error taking screenshot:', err);
+        showToast('Failed to generate image.', 'error');
+    }
+}
+
+// ==========================================
+// ACTION SHEETS & SOFT DELETES 
+// ==========================================
+
+function openPostOptions(postId, postOwnerId, isVerified) {
     const isOwner = currentUser.id === postOwnerId;
     let buttonsHtml = '';
 
@@ -418,11 +514,15 @@ function openPostOptions(postId, postOwnerId) {
             </button>
         `;
     } else {
-        buttonsHtml = `
-            <button onclick="openReportPostModal('${postId}')" class="w-full flex items-center gap-3 p-4 bg-orange-500/10 text-orange-500 rounded-2xl font-bold active:scale-95 transition-transform">
-                <span class="material-symbols-outlined">flag</span> Report Post
-            </button>
-        `;
+        if (isVerified) {
+            buttonsHtml = `<p class="text-sm text-center text-on-surface-variant font-medium py-4">Official Verified Posts cannot be reported.</p>`;
+        } else {
+            buttonsHtml = `
+                <button onclick="openReportPostModal('${postId}')" class="w-full flex items-center gap-3 p-4 bg-orange-500/10 text-orange-500 rounded-2xl font-bold active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined">flag</span> Report Post
+                </button>
+            `;
+        }
     }
 
     window.openActionSheet(buttonsHtml);
@@ -439,7 +539,6 @@ function openCommentOptions(commentId, commentOwnerId) {
             </button>
         `;
     } else {
-        // Technically you could add a comment reporting system later, but for now we'll just allow deletion if owner
         buttonsHtml = `<p class="text-sm text-center text-on-surface-variant">No actions available.</p>`;
     }
 
@@ -450,7 +549,9 @@ window.deletePost = async (postId) => {
     if (!confirm('Are you sure you want to delete this post?')) return;
     window.closeActionSheet();
     
-    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    // SOFT DELETE
+    const { error } = await supabase.from('posts').update({ is_deleted: true }).eq('id', postId);
+    
     if (error) {
         showToast('Failed to delete post.', 'error');
         console.error(error);
@@ -463,14 +564,14 @@ window.deletePost = async (postId) => {
 window.deleteComment = async (commentId) => {
     window.closeActionSheet();
     
-    // We need the post ID to refresh the modal, so fetch it before delete or just close modal
-    const { error } = await supabase.from('post_comments').delete().eq('id', commentId);
+    // SOFT DELETE
+    const { error } = await supabase.from('post_comments').update({ is_deleted: true }).eq('id', commentId);
+    
     if (error) {
         showToast('Failed to delete comment.', 'error');
         console.error(error);
     } else {
         showToast('Comment deleted.', 'success');
-        // Safest approach is to close the comment modal and refresh feed
         closeCommentsModal();
         fetchPosts(); 
     }
@@ -517,7 +618,7 @@ async function submitPostReport() {
         showToast('Report submitted. Our team will review it.', 'success');
         window.closeReportPostModal();
     } catch (error) {
-        showToast('Failed to submit report.', 'error');
+        showToast(error.message || 'Failed to submit report.', 'error');
         console.error('Report error:', error);
     } finally {
         btn.disabled = false;
@@ -526,7 +627,7 @@ async function submitPostReport() {
 }
 
 // ==========================================
-// COMMENTS
+// COMMENTS & PULL TO REFRESH
 // ==========================================
 
 async function openCommentsModal(postId) {
@@ -540,8 +641,9 @@ async function openCommentsModal(postId) {
     try {
         const { data, error } = await supabase
             .from('post_comments')
-            .select('*, users(id, full_name, profile_img_url)')
+            .select('*, users(id, full_name, profile_img_url, tick_type)')
             .eq('post_id', postId)
+            .eq('is_deleted', false)
             .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -556,7 +658,7 @@ async function openCommentsModal(postId) {
                 <img onclick="window.viewUserProfile('${comment.users.id}')" src="${comment.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.users.full_name)}&background=e1e3e4`}" class="w-8 h-8 rounded-full object-cover mt-1 cursor-pointer hover:opacity-80 transition-opacity">
                 <div class="flex-1 bg-surface-variant/30 dark:bg-surface-variant/10 rounded-2xl p-3 border border-surface-variant/50 dark:border-neutral-700 relative">
                     <div class="flex justify-between items-center mb-1">
-                        <p onclick="window.viewUserProfile('${comment.users.id}')" class="text-xs font-bold text-on-surface dark:text-gray-100 cursor-pointer hover:text-primary transition-colors">${comment.users.full_name}</p>
+                        <p onclick="window.viewUserProfile('${comment.users.id}')" class="text-xs font-bold text-on-surface dark:text-gray-100 cursor-pointer hover:text-primary transition-colors flex items-center gap-1">${comment.users.full_name} ${getTickHtml(comment.users.tick_type)}</p>
                         <p class="text-[10px] text-on-surface-variant dark:text-gray-400">${timeAgo(comment.created_at)}</p>
                     </div>
                     <p class="text-sm text-on-surface dark:text-gray-200 leading-relaxed pr-6">${comment.content}</p>
@@ -600,9 +702,8 @@ async function submitComment(postId) {
         console.error('Error submitting comment:', error);
     } else {
         input.value = '';
-        openCommentsModal(postId); // Refresh the comments list
+        openCommentsModal(postId); 
 
-        // Optimistically update comment count on the feed
         const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"]`);
         if (commentBtn) {
             const countSpan = commentBtn.querySelector('span:last-child');
@@ -612,10 +713,6 @@ async function submitComment(postId) {
     }
     btn.disabled = false;
 }
-
-// ==========================================
-// PULL TO REFRESH
-// ==========================================
 
 function initPullToRefresh() {
     const ptrIndicator = document.getElementById('pull-to-refresh-indicator');
