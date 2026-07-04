@@ -33,7 +33,11 @@ function setupEventListeners() {
     document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
     document.getElementById('close-story-details-btn')?.addEventListener('click', closeStoryDetailsModal);
-    document.getElementById('hotpost-reply-btn')?.addEventListener('click', handleReplyToHotpost);
+    document.getElementById('hotpost-reply-btn')?.addEventListener('click', (e) => handleReplyToHotpost(e));
+
+    // Listeners for story details tabs
+    document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
+    document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
 
     // Pause/resume on reply input focus
     const replyInput = document.getElementById('hotpost-reply-input');
@@ -315,7 +319,7 @@ function renderHotpostCircles() {
                     <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
                 </div>
             </div>
-            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${isSelf ? 'Your Story' : user.full_name.split(' ')[0]}</span>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
         `;
 
         if (isSelf) {
@@ -486,7 +490,9 @@ async function recordView(hotpostId) {
     }
 }
 
-async function handleReplyToHotpost() {
+async function handleReplyToHotpost(event) {
+    event.stopPropagation(); // Prevent advancing to the next story
+
     const input = document.getElementById('hotpost-reply-input');
     const content = input.value.trim();
     if (!content) return;
