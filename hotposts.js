@@ -21,7 +21,7 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    document.getElementById('create-hotpost-btn').addEventListener('click', openCameraModal);
+    document.getElementById('create-hotpost-btn').addEventListener('click', handleCreateOrViewMyHotpost);
     document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
@@ -57,6 +57,15 @@ function setupEventListeners() {
             navEl.addEventListener('pointerleave', resumeStory);
         }
     });
+}
+
+function handleCreateOrViewMyHotpost() {
+    const myHotposts = hotpostsByUser.get(currentUser.id);
+    if (myHotposts && myHotposts.posts.length > 0) {
+        openHotpostViewer(currentUser.id);
+    } else {
+        openCameraModal();
+    }
 }
 
 async function openCameraModal() {
@@ -272,7 +281,7 @@ async function fetchHotposts() {
                 viewed: false // For "viewed once" logic
             });
         }
-        hotpostsByUser.get(userId).posts.push({ ...post, profiles: undefined, users: undefined }); // Clean up the post object
+        hotpostsByUser.get(userId).posts.unshift({ ...post, profiles: undefined, users: undefined }); // unshift to show oldest first
     }
 
     renderHotpostCircles();
@@ -283,16 +292,32 @@ function renderHotpostCircles() {
     // Clear existing circles except the "add" button
     container.querySelectorAll('.hotpost-circle').forEach(el => el.remove());
 
-    // Reset the create button to its default state
-    const createBtnDiv = document.querySelector('#create-hotpost-btn > div');
-    createBtnDiv.className = 'w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary';
-    createBtnDiv.innerHTML = `<span class="material-symbols-outlined text-[26px]">add</span>`;
+    const createBtn = document.getElementById('create-hotpost-btn');
+    const createBtnDiv = createBtn.querySelector('div');
+    const createBtnText = createBtn.querySelector('span');
+
+    const myHotposts = hotpostsByUser.get(currentUser.id);
+
+    if (myHotposts && myHotposts.posts.length > 0) {
+        const isViewed = myHotposts.viewed;
+        let ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-blue-500 to-primary';
+
+        createBtnDiv.className = `w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm`;
+        createBtnDiv.innerHTML = `
+            <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
+            </div>
+        `;
+        createBtnText.textContent = 'Your Story';
+    } else {
+        // No stories, reset to default "Create" button
+        createBtnDiv.className = 'w-[68px] h-[68px] rounded-full border-[2.5px] border-dashed border-primary/40 flex items-center justify-center bg-primary/5 text-primary';
+        createBtnDiv.innerHTML = `<span class="material-symbols-outlined text-[26px]">add</span>`;
+        createBtnText.textContent = 'Create';
+    }
 
     // Get all user IDs with hotposts, excluding the current user
     const finalSortedIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
-
-    // Sort users: un-viewed first, then viewed
-    finalSortedIds.sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
 
     finalSortedIds.forEach(userId => {
         const data = hotpostsByUser.get(userId);
@@ -302,9 +327,7 @@ function renderHotpostCircles() {
 
         const isSelf = userId === currentUser.id;
         const isViewed = data.viewed;
-        let ringClass = 'from-yellow-400 via-orange-500 to-red-500'; // Default un-viewed
-        if (isSelf) ringClass = 'from-blue-500 to-primary'; // Self is always special color
-        if (isViewed && !isSelf) ringClass = 'from-gray-300 to-gray-500'; // Viewed
+        let ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-yellow-400 via-orange-500 to-red-500';
 
         circle.innerHTML = `
             <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
@@ -387,8 +410,7 @@ function playUserStories(userIndex, postIndex = 0) {
     const isMyStory = currentViewerState.userId === currentUser.id;
 
     // Hide reply for own story, show for others
-    replyContainer.classList.toggle('hidden', isMyStory);
-    replyContainer.classList.toggle('flex', !isMyStory);
+    replyContainer.style.display = isMyStory ? 'none' : 'flex';
 
     document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
     document.getElementById('hotpost-viewer-name').textContent = userData.user.full_name;
@@ -407,6 +429,7 @@ function playUserStories(userIndex, postIndex = 0) {
 
     // Auto-advance
     clearTimeout(currentViewerState.storyTimer);
+    currentViewerState.remainingDuration = currentViewerState.storyDuration; // Reset remaining duration
     currentViewerState.animationStartTime = performance.now();
     currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.storyDuration);
 }
@@ -418,7 +441,7 @@ function nextStory() {
         playUserStories(currentViewerState.userIndex, currentViewerState.postIndex + 1);
     } else {
         // Mark current user's stories as viewed (if not self)
-        if (currentViewerState.userId !== currentUser.id) hotpostsByUser.get(currentViewerState.userId).viewed = true;
+        hotpostsByUser.get(currentViewerState.userId).viewed = true;
         renderHotpostCircles(); // Re-render to show grayed-out state
         // Go to the first post of the next user
         playUserStories(currentViewerState.userIndex + 1, 0);
@@ -440,8 +463,9 @@ function prevStory() {
 function pauseStory() {
     clearTimeout(currentViewerState.storyTimer);
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
-    currentViewerState.remainingDuration = currentViewerState.storyDuration - (performance.now() - currentViewerState.animationStartTime);
     if (activeBar) {
+        const elapsedTime = performance.now() - currentViewerState.animationStartTime;
+        currentViewerState.remainingDuration -= elapsedTime;
         activeBar.style.animationPlayState = 'paused';
     }
 }
@@ -454,6 +478,8 @@ function resumeStory() {
     if (activeBar) {
         activeBar.style.animationPlayState = 'running';
     }
+    currentViewerState.animationStartTime = performance.now(); // Reset start time for next pause
+    clearTimeout(currentViewerState.storyTimer);
     currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.remainingDuration);
 }
 
