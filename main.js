@@ -502,6 +502,53 @@ async function viewUserProfile(userId) {
 
         renderProfileActions(user, connection);
         openProfileModal('public');
+
+        // --- NEW: Fetch and Render User's Feed Grid ---
+        const feedContainer = document.getElementById('public-profile-feed');
+        feedContainer.innerHTML = `<p class="text-xs italic text-center py-6 text-on-surface-variant dark:text-gray-400">Loading posts...</p>`;
+        
+        const { data: posts, error: postsError } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false })
+            .limit(15);
+            
+        if (postsError) {
+            feedContainer.innerHTML = `<p class="text-xs text-center py-4 text-error">Failed to load posts.</p>`;
+        } else if (posts.length === 0) {
+            feedContainer.innerHTML = `
+                <div class="py-10 flex flex-col items-center justify-center opacity-40">
+                    <span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span>
+                    <p class="text-sm font-medium">No posts yet</p>
+                </div>`;
+        } else {
+            // Generate Instagram-style 3-column Grid
+            const gridHtml = posts.map(post => {
+                if (post.post_type === 'image' && post.media_url) {
+                    return `<div class="aspect-square bg-surface-variant dark:bg-neutral-800 overflow-hidden relative cursor-pointer active:scale-95 transition-transform border-[0.5px] border-surface dark:border-[#1e1e1e]">
+                                <img src="${post.media_url}" class="w-full h-full object-cover">
+                            </div>`;
+                } else if (post.post_type === 'text') {
+                    return `<div class="aspect-square bg-surface-variant/40 dark:bg-neutral-800/60 overflow-hidden relative p-3 flex items-center justify-center text-center cursor-pointer active:scale-95 transition-transform border-[0.5px] border-surface dark:border-[#1e1e1e]">
+                                <p class="text-[10px] sm:text-xs text-on-surface dark:text-gray-200 line-clamp-4 leading-tight">${post.content}</p>
+                            </div>`;
+                } else if (post.post_type === 'event') {
+                    return `<div class="aspect-square bg-secondary/10 text-secondary overflow-hidden relative flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform border-[0.5px] border-surface dark:border-[#1e1e1e]">
+                                <span class="material-symbols-outlined mb-1 text-[24px]">event</span>
+                                <span class="text-[9px] font-bold uppercase tracking-widest">Event</span>
+                            </div>`;
+                } else {
+                    return `<div class="aspect-square bg-primary/10 text-primary overflow-hidden relative flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform border-[0.5px] border-surface dark:border-[#1e1e1e]">
+                                <span class="material-symbols-outlined mb-1 text-[24px]">poll</span>
+                                <span class="text-[9px] font-bold uppercase tracking-widest">Poll</span>
+                            </div>`;
+                }
+            }).join('');
+            
+            feedContainer.innerHTML = `<div class="grid grid-cols-3">${gridHtml}</div>`;
+        }
     }
 }
 
@@ -544,9 +591,10 @@ function renderProfileActions(user, connection) {
     } else if (connection.status === 'accepted') {
         mainButtonHtml = `<button class="btn-secondary flex-1" disabled>✓ Connected</button>`;
         actionsContainer.innerHTML = mainButtonHtml;
-        moreMenuItems.push({ label: 'Unfriend', action: 'unfriend', class: 'text-error' });
+        // CHANGE THIS LINE:
+        moreMenuItems.push({ label: 'Remove connection', action: 'unfriend', class: 'text-error' });
         moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
-
+        
     } else if (connection.status === 'blocked') {
         if (connection.action_user_id === currentUserProfile.id) { 
             mainButtonHtml = `<button class="btn-error flex-1">Unblock</button>`;
