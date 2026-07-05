@@ -954,6 +954,21 @@ function switchTab(tabId) {
     }
 }
 
+const topHeader = document.getElementById('app-top-header');
+    
+    if (topHeader) {
+        if (tabId === 'feed') {
+            // Show header only on the feed tab
+            topHeader.classList.remove('hidden');
+            topHeader.classList.add('flex');
+        } else {
+            // Hide header on all other tabs
+            topHeader.classList.add('hidden');
+            topHeader.classList.remove('flex');
+        }
+    }
+}
+
 function openProfileModal(type) {
     const modal = document.getElementById(`modal-profile-${type}`);
     if (modal) {
