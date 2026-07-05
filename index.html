@@ -89,12 +89,16 @@
 
 <div class="flex items-center px-4 h-14 w-full max-w-screen-md mx-auto relative">
     <div class="flex-none z-10">
-    <button id="create-post-header-btn"
-        class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-variant/50 active:scale-95 transition">
-        <span class="material-symbols-outlined text-[30px]">
-            add
-        </span>
-    </button>
+    <button
+    id="create-post-header-btn"
+    onclick="openCreatePostView()"
+    class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-variant/50 dark:hover:bg-neutral-800 active:scale-95 transition-all">
+
+    <span class="material-symbols-outlined text-[28px]">
+        add
+    </span>
+
+</button>
 </div>
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
     <span
@@ -314,12 +318,7 @@
         </div>
     </main>
 
-    <!-- FAB FOR CREATING POSTS -->
-    <button onclick="openCreatePostView()"
-        class="fixed bottom-24 right-5 z-[50] w-[56px] h-[56px] bg-primary text-white rounded-[20px] shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all">
-        <span class="material-symbols-outlined text-[28px]">edit_square</span>
-    </button>
-
+ 
     <!-- ============================================== -->
     <!-- DEDICATED FULL-SCREEN VIEWS -->
     <!-- ============================================== -->
