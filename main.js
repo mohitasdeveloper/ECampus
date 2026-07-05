@@ -15,14 +15,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-        // If on a protected page and no session, redirect to login
         if (window.location.pathname.includes('index.html')) {
             window.location.replace('auth/login.html');
         }
         return;
     }
 
-    // Fetch user profile from your 'profiles' table
+    // Fetch user profile
     const { data: profile, error } = await supabase
         .from('users')
         .select('*')
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (error || !profile) {
         console.error('Error fetching profile:', error);
         showToast('Could not load your profile. Please try logging in again.', 'error');
-        // Optional: sign out if profile is missing
         await supabase.auth.signOut();
         window.location.replace('auth/login.html');
         return;
@@ -45,14 +43,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initializeApp(profile) {
     console.log('Welcome to ECampus,', profile.full_name);
 
-    // Initialize features that need the user object
     initHotposts(profile);
     initFeed(profile);
     initSearch(profile);
     initNotifications(profile);
     initUpdates();
 
-    // Setup UI elements
     updateHeaderAvatar(profile.profile_img_url, profile.full_name);
     populateProfileUI(profile);
     setupMoreMenuListener();
@@ -62,7 +58,6 @@ function initializeApp(profile) {
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
     setupBlockedUsersListener();
 
-    // Initial tab setup
     switchTab('dashboard');
 }
 
@@ -80,14 +75,12 @@ function setupMoreMenuListener() {
 
             if (!action || !userId) return;
 
-            // Hide the menu
             moreMenu.classList.add('hidden');
 
             if (action === 'report') {
                 openReportModal(userId, userName);
             } else {
-                // For 'block', 'unfriend', 'unblock'
-                handleConnectionAction(userId, action, null); // No button to update visually here, modal will refresh
+                handleConnectionAction(userId, action, null); 
             }
         });
     }
@@ -102,13 +95,11 @@ function setupBlockedUsersListener() {
         if (unblockBtn && !unblockBtn.disabled) {
             const userIdToUnblock = unblockBtn.dataset.userId;
 
-            // Temporarily disable button to prevent double clicks
             unblockBtn.disabled = true;
             unblockBtn.textContent = '...';
 
-            // The handleConnectionAction will show toasts on success/error
             await handleConnectionAction(userIdToUnblock, 'unblock', null);
-            openBlockedUsersModal(); // Refresh the list
+            openBlockedUsersModal(); 
         }
     });
 }
@@ -131,7 +122,7 @@ function renderSocialLinks(links, container = null) {
     const targetContainer = container || document.getElementById('profile-social-links');
     if (!targetContainer) return;
 
-    targetContainer.innerHTML = ''; // Clear existing
+    targetContainer.innerHTML = ''; 
 
     if (links && links.length > 0) {
         links.forEach(link => {
@@ -146,7 +137,6 @@ function renderSocialLinks(links, container = null) {
         });
     }
 
-    // Only add the '+' button to the user's own profile (when no container is passed)
     if (!container) {
         const addButton = document.createElement('button');
         addButton.onclick = () => openEditSocialsModal();
@@ -160,39 +150,30 @@ function populateProfileUI(profile) {
     if (!profile) return;
 
     const profileAvatarLarge = document.getElementById('profile-avatar-large');
-    // If a key element of the profile UI is missing, we're probably not on the right page/tab.
-    // Abort to prevent a cascade of errors.
     if (!profileAvatarLarge) {
         console.warn("Profile UI elements not found, skipping UI population.");
         return;
     }
 
-    // Main profile card
     profileAvatarLarge.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     document.getElementById('profile-name').textContent = profile.full_name;
     document.getElementById('profile-email').innerHTML = `<span class="material-symbols-outlined text-[16px]">mail</span> ${profile.email}`;
     document.getElementById('profile-bio').textContent = profile.bio || 'No bio yet. Click "Edit" to add one!';
 
-    // Role badge
     const roleElement = document.getElementById('profile-role');
     if (roleElement) {
         roleElement.textContent = profile.role || 'Student';
     }
 
-    // Details section
     document.getElementById('profile-id').textContent = profile.student_id;
     document.getElementById('profile-course').textContent = profile.course;
 
-    // Feed input avatar
     const feedInputAvatar = document.getElementById('feed-input-avatar');
     if (feedInputAvatar) {
         feedInputAvatar.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     }
 
-    // Connection count
     document.getElementById('profile-connection-count').textContent = profile.connection_count || 0;
-
-    // Render social links
     renderSocialLinks(profile.social_links);
 }
 
@@ -207,12 +188,10 @@ function setupThemeToggle() {
     const themeToggle = document.getElementById('theme-toggle-switch');
     if (!themeToggle) return;
 
-    // Set initial state from localStorage
     const isDarkMode = localStorage.getItem('theme') === 'dark';
     document.documentElement.classList.toggle('dark', isDarkMode);
     themeToggle.checked = isDarkMode;
 
-    // Add event listener
     themeToggle.addEventListener('change', () => {
         if (themeToggle.checked) {
             document.documentElement.classList.add('dark');
@@ -234,7 +213,7 @@ function setupEditProfileAvatarUpload() {
 
         const preview = document.getElementById('edit-profile-avatar-preview');
         const originalSrc = preview.src;
-        preview.src = URL.createObjectURL(file); // Show instant preview
+        preview.src = URL.createObjectURL(file); 
 
         showToast('Uploading new avatar...', 'info');
 
@@ -248,13 +227,13 @@ function setupEditProfileAvatarUpload() {
             if (data.error) throw new Error(data.error.message);
             const imageUrl = data.secure_url;
 
-            await saveUserProfile({ profile_img_url: imageUrl }, false); // Save only avatar URL, don't close modal
-            preview.src = imageUrl; // Update preview with final URL
+            await saveUserProfile({ profile_img_url: imageUrl }, false); 
+            preview.src = imageUrl; 
 
         } catch (error) {
             console.error('Error updating avatar from edit modal:', error);
             showToast('Failed to update avatar.', 'error');
-            preview.src = originalSrc; // Revert preview on error
+            preview.src = originalSrc; 
         } finally {
             avatarInput.value = '';
         }
@@ -277,7 +256,6 @@ function setupProfileAvatarUpload() {
         avatarContainer.style.opacity = '0.6';
 
         try {
-            // 1. Upload to Cloudinary
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
@@ -290,7 +268,6 @@ function setupProfileAvatarUpload() {
             if (data.error) throw new Error(data.error.message);
             const imageUrl = data.secure_url;
 
-            // 2. Update Supabase 'profiles' table
             const { error } = await supabase
                 .from('users')
                 .update({ profile_img_url: imageUrl })
@@ -298,7 +275,6 @@ function setupProfileAvatarUpload() {
 
             if (error) throw error;
 
-            // 3. Update UI
             currentUserProfile.profile_img_url = imageUrl;
             document.getElementById('profile-avatar-large').src = imageUrl;
             updateHeaderAvatar(imageUrl, currentUserProfile.full_name);
@@ -309,7 +285,7 @@ function setupProfileAvatarUpload() {
             showToast('Failed to update avatar. Please try again.', 'error');
         } finally {
             avatarContainer.style.opacity = '1';
-            avatarInput.value = ''; // Reset input
+            avatarInput.value = ''; 
         }
     });
 }
@@ -319,12 +295,10 @@ async function handleSignOut() {
     window.location.replace('auth/login.html');
 }
 
-// Make utility functions globally available if they are called from HTML onclick
 window.switchTab = switchTab;
 window.openProfileModal = openProfileModal;
 window.closeProfileModals = closeProfileModals;
 
-// --- PROFILE EDITING ---
 let tempSocialLinks = [];
 
 function openEditProfileModal() {
@@ -347,7 +321,7 @@ function triggerEditAvatarUpload() {
 
 async function saveUserProfile(extraUpdates = {}, closeModal = true) {
     const btn = document.getElementById('save-profile-btn');
-    if (closeModal) { // Only show loading state on final save
+    if (closeModal) { 
         btn.disabled = true;
         btn.innerHTML = 'Saving...';
     }
@@ -370,8 +344,8 @@ async function saveUserProfile(extraUpdates = {}, closeModal = true) {
 
         if (error) throw error;
 
-        currentUserProfile = data; // Update local profile
-        populateProfileUI(currentUserProfile); // Re-render UI
+        currentUserProfile = data; 
+        populateProfileUI(currentUserProfile); 
         updateHeaderAvatar(currentUserProfile.profile_img_url, currentUserProfile.full_name);
         showToast('Profile updated successfully!', 'success');
         if (closeModal) closeEditProfileModal();
@@ -386,8 +360,6 @@ async function saveUserProfile(extraUpdates = {}, closeModal = true) {
         }
     }
 }
-
-// --- SOCIAL LINKS EDITING ---
 
 function openEditSocialsModal() {
     if (!currentUserProfile) return;
@@ -464,7 +436,6 @@ window.closeEditProfileModal = closeEditProfileModal;
 window.triggerEditAvatarUpload = triggerEditAvatarUpload;
 window.saveUserProfile = saveUserProfile;
 
-// --- SOCIALS ---
 window.openEditSocialsModal = openEditSocialsModal;
 window.closeSocialsModal = closeSocialsModal;
 window.addSocialLinkTemp = addSocialLinkTemp;
@@ -472,7 +443,6 @@ window.removeSocialLinkTemp = removeSocialLinkTemp;
 window.saveSocialLinks = saveSocialLinks;
 
 async function viewUserProfile(userId) {
-    // Close any open 'more' menus
     const moreMenu = document.getElementById('public-profile-more-menu');
     if (moreMenu) {
         moreMenu.classList.add('hidden');
@@ -483,7 +453,6 @@ async function viewUserProfile(userId) {
         return;
     }
 
-    // Fetch user data
     const { data: user, error } = await supabase.from('users').select('*').eq('id', userId).single();
     if (error || !user) {
         showToast('Could not load profile.', 'error');
@@ -491,18 +460,17 @@ async function viewUserProfile(userId) {
         return;
     }
 
-    // Store the userId on the modal for refresh checks
     document.getElementById('modal-profile-public').dataset.userId = userId;
     document.getElementById('modal-profile-private').dataset.userId = userId;
 
-    // Fetch connection status between current user and the viewed user
+    // The .or query correctly grabs the single connection row involving both users, regardless of order
     const { data: connection, error: connError } = await supabase
         .from('connections')
         .select('status, action_user_id')
-        .or(`(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
+        .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
         .single();
 
-    if (connError && connError.code !== 'PGRST116') { // Ignore 'PGRST116' (no rows found)
+    if (connError && connError.code !== 'PGRST116') { 
         showToast('Could not check connection status.', 'error');
         console.error('Error fetching connection:', connError);
     }
@@ -510,7 +478,6 @@ async function viewUserProfile(userId) {
     const isConnected = connection?.status === 'accepted';
 
     if (user.is_private && !isConnected) {
-        // Show Private Profile Modal
         document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('private-profile-name').textContent = user.full_name;
         document.getElementById('private-profile-course').textContent = user.course || 'Student';
@@ -526,7 +493,6 @@ async function viewUserProfile(userId) {
 
         openProfileModal('private');
     } else {
-        // Show Public Profile Modal
         document.getElementById('public-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('public-profile-name').textContent = user.full_name;
         document.getElementById('public-profile-course').textContent = user.course || 'Student';
@@ -534,7 +500,6 @@ async function viewUserProfile(userId) {
         document.getElementById('public-profile-connection-count').textContent = user.connection_count || 0;
         renderSocialLinks(user.social_links, document.getElementById('public-profile-social-links'));
 
-        // Render the dynamic action buttons
         renderProfileActions(user, connection);
         openProfileModal('public');
     }
@@ -545,7 +510,6 @@ function renderProfileActions(user, connection) {
     const moreMenuBtn = document.getElementById('public-profile-more-btn');
     const moreMenu = document.getElementById('public-profile-more-menu');
 
-    // Reset
     actionsContainer.innerHTML = '';
     moreMenu.innerHTML = '';
     moreMenuBtn.classList.add('hidden');
@@ -555,18 +519,18 @@ function renderProfileActions(user, connection) {
     let mainButtonHtml = '';
     let moreMenuItems = [];
 
-    if (!connection) { // No relationship
+    if (!connection) { 
         mainButtonHtml = `<button class="btn-primary flex-1">Connect</button>`;
         actionsContainer.innerHTML = mainButtonHtml;
         actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'request', actionsContainer.firstElementChild);
         moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
 
     } else if (connection.status === 'pending') {
-        if (connection.action_user_id === currentUserProfile.id) { // I sent it
+        if (connection.action_user_id === currentUserProfile.id) { 
             mainButtonHtml = `<button class="btn-secondary flex-1">Cancel Request</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'cancel', actionsContainer.firstElementChild);
-        } else { // I received it
+        } else { 
             mainButtonHtml = `
                 <button class="btn-primary flex-1">Accept</button>
                 <button class="btn-secondary flex-1">Decline</button>
@@ -584,22 +548,20 @@ function renderProfileActions(user, connection) {
         moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
 
     } else if (connection.status === 'blocked') {
-        if (connection.action_user_id === currentUserProfile.id) { // I blocked them
+        if (connection.action_user_id === currentUserProfile.id) { 
             mainButtonHtml = `<button class="btn-error flex-1">Unblock</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'unblock', actionsContainer.firstElementChild);
-        } else { // They blocked me
+        } else { 
             mainButtonHtml = `<button class="btn-secondary flex-1" disabled>Blocked</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
         }
     }
 
-    // Always add "Report" unless they blocked me
     if (!(connection?.status === 'blocked' && connection.action_user_id !== currentUserProfile.id)) {
         moreMenuItems.push({ label: 'Report User', action: 'report', class: 'text-warning' });
     }
 
-    // Render "More" menu if it has items
     if (moreMenuItems.length > 0) {
         moreMenuBtn.classList.remove('hidden');
         moreMenu.innerHTML = moreMenuItems.map(item =>
@@ -625,13 +587,10 @@ export async function handleConnectionAction(targetUserId, action, btn) {
 
         showToast(getSuccessMessage(data), 'success');
 
-        // If a button was passed (i.e., from Discover page), update its state
         if (btn && action === 'request' && data === 'request_sent') {
             btn.textContent = 'Request Sent';
-            // The button is already disabled.
         }
 
-        // If the public profile modal is open for this user, refresh it to show the new state
         const modal = document.getElementById('modal-profile-public');
         if (modal && !modal.classList.contains('hidden') && modal.dataset.userId === targetUserId) {
             viewUserProfile(targetUserId);
@@ -707,22 +666,17 @@ async function submitReport() {
     }
 }
 
-
 window.viewUserProfile = viewUserProfile;
 
 function switchTab(tabId) {
-    // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
 
-    // Show target tab
     const target = document.getElementById(`view-${tabId}`);
     if (target) {
         target.classList.remove('hidden');
-        // The main content area is now the body, so scrolling the window is fine.
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Update Nav active state
     const activeClasses = ['bg-primary', 'dark:bg-primary', 'text-white'];
     const inactiveClasses = ['text-on-surface-variant', 'dark:text-gray-400', 'hover:bg-surface-variant/40', 'dark:hover:bg-neutral-800'];
 
@@ -781,7 +735,7 @@ async function openConnectionsModal() {
 
         const connections = data.map(conn => {
             return conn.user_one.id === currentUserProfile.id ? conn.user_two : conn.user_one;
-        }).filter(Boolean); // Filter out any nulls if a user profile is missing
+        }).filter(Boolean); 
 
         if (connections.length === 0) {
             list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You have no connections yet.</p>`;
@@ -813,7 +767,6 @@ function closeConnectionsModal() {
 
 window.openConnectionsModal = openConnectionsModal;
 window.closeConnectionsModal = closeConnectionsModal;
-
 
 async function openBlockedUsersModal() {
     const modal = document.getElementById('modal-blocked-users');
