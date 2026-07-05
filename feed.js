@@ -434,14 +434,14 @@ async function handleLike(postId, isLiked) {
 }
 
 async function handlePollVote(postId, optionIndex, isSingleChoice) {
-    // 1. Verify user is logged in via Supabase Auth
+    // 1. Get current authenticated user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         alert("Please log in to vote.");
         return;
     }
 
-    // 2. Resolve the Auth ID to the Public User ID (Fixes 23503 Foreign Key Error)
+    // 2. Fetch the correct internal user ID (public.users.id)
     const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id')
@@ -449,8 +449,7 @@ async function handlePollVote(postId, optionIndex, isSingleChoice) {
         .single();
 
     if (userError || !userData) {
-        console.error("Could not find user profile:", userError);
-        alert("Error: User profile not found.");
+        console.error("User not found", userError);
         return;
     }
 
@@ -459,19 +458,21 @@ async function handlePollVote(postId, optionIndex, isSingleChoice) {
 
     try {
         // ==========================================
-        // DATABASE OPERATION
+        // DATABASE LOGIC
         // ==========================================
         
-        // If it's a single choice poll, remove the existing vote first
+        // IF SINGLE CHOICE: Delete any existing vote by this user for this post
         if (isSingleChoice) {
-            await supabase
+            const { error: deleteError } = await supabase
                 .from(tableName)
                 .delete()
                 .eq('post_id', postId)
                 .eq('user_id', publicUserId);
+
+            if (deleteError) throw deleteError;
         }
 
-        // Insert the new vote
+        // INSERT the new vote (this applies to both single and multiple choice)
         const { error: insertError } = await supabase
             .from(tableName)
             .insert([{ 
@@ -483,12 +484,12 @@ async function handlePollVote(postId, optionIndex, isSingleChoice) {
         if (insertError) throw insertError;
 
         // ==========================================
-        // UI REFRESH (Visuals)
+        // INSTANT UI UPDATE
         // ==========================================
         const pollContainer = document.getElementById(`post-${postId}`);
         if (!pollContainer) return;
 
-        // Reset visual selection if single choice
+        // A. Reset all visual selections if it's single choice
         if (isSingleChoice) {
             const allOptions = pollContainer.querySelectorAll('.poll-option');
             allOptions.forEach(option => {
@@ -497,17 +498,14 @@ async function handlePollVote(postId, optionIndex, isSingleChoice) {
             });
         }
 
-        // Highlight the selected option
+        // B. Apply "selected" visual state to the specific clicked option
         const clickedOption = pollContainer.querySelector(`#poll-option-${postId}-${optionIndex}`);
         if (clickedOption) {
             clickedOption.classList.add('border-primary', 'bg-primary/20');
             clickedOption.classList.remove('border-surface-variant/50', 'bg-surface-variant/10');
         }
 
-        // ==========================================
-        // UI REFRESH (Data/Counts)
-        // ==========================================
-        // Fetch fresh counts
+        // C. Refresh Count & Percentages (Live Update)
         const { data: allVotes, error: fetchError } = await supabase
             .from(tableName)
             .select('option_index')
@@ -517,13 +515,13 @@ async function handlePollVote(postId, optionIndex, isSingleChoice) {
 
         const totalVotes = allVotes.length;
         
-        // Update Total Votes Label
+        // Update vote count text
         const voteCountText = pollContainer.querySelector('.poll-total-votes');
         if (voteCountText) {
             voteCountText.innerText = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`;
         }
 
-        // Update Percentages for all options
+        // Update percentages for all options
         const allOptionElements = pollContainer.querySelectorAll('.poll-option');
         allOptionElements.forEach(optionEl => {
             const currentOptionIndex = parseInt(optionEl.dataset.optionIndex);
@@ -542,8 +540,8 @@ async function handlePollVote(postId, optionIndex, isSingleChoice) {
         });
 
     } catch (err) {
-        console.error("Vote processing failed:", err);
-        alert("Unable to record vote. Please ensure you are connected.");
+        console.error("Voting operation failed:", err);
+        alert("Failed to record vote. Please try again.");
     }
 }
 
