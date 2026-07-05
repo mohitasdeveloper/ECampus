@@ -33,20 +33,22 @@ async function fetchDiscoverUsers() {
     container.innerHTML = `<p class="text-sm italic text-center py-4 text-gray-500 dark:text-gray-400">Finding peers...</p>`;
 
     try {
-        // 1. Fetch all connections for the current user
+        // 1. Fetch all connections for the current user (optimized to only grab IDs)
         const { data: connections, error: connError } = await supabase
             .from('connections')
-            .select('*')
+            .select('user_one_id, user_two_id')
             .or(`user_one_id.eq.${currentUser.id},user_two_id.eq.${currentUser.id}`);
         if (connError) throw connError;
 
-        // 2. Get a list of all user IDs the current user is already connected with or has a pending request with
+        // 2. Get a list of all user IDs the current user is already interacting with (pending, accepted, blocked)
         const connectedUserIds = connections.map(c => {
             return c.user_one_id === currentUser.id ? c.user_two_id : c.user_one_id;
         });
+        
+        // Add the current user to the exclusion list so they don't see themselves
         const allExcludedIds = [currentUser.id, ...connectedUserIds];
 
-        // 3. Fetch users who are NOT in the excluded list
+        // 3. Fetch random/new users who are NOT in the excluded list
         const { data: users, error: usersError } = await supabase
             .from('users')
             .select('id, full_name, profile_img_url, course')
@@ -70,13 +72,13 @@ function renderDiscoverUsers(users) {
     }
 
     container.innerHTML = users.map(user => `
-        <div class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm">
-            <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover">
-            <div class="flex-1">
-                <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${user.full_name}</p>
+        <div class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm hover:border-primary/30 transition-colors">
+            <img onclick="window.viewUserProfile('${user.id}')" src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover border border-surface-variant shadow-sm cursor-pointer hover:opacity-80 transition-opacity">
+            <div onclick="window.viewUserProfile('${user.id}')" class="flex-1 cursor-pointer">
+                <p class="font-bold text-sm text-gray-900 dark:text-gray-100 hover:text-primary transition-colors">${user.full_name}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">${user.course || 'Student'}</p>
             </div>
-            <button data-user-id="${user.id}" class="connect-btn bg-primary/10 text-primary px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95">
+            <button data-user-id="${user.id}" class="connect-btn bg-primary/10 text-primary px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95 shrink-0">
                 Connect
             </button>
         </div>
@@ -89,7 +91,7 @@ async function fetchPopularUsers() {
     container.innerHTML = `<p class="text-xs italic text-center py-4 text-gray-500 dark:text-gray-400">Loading popular users...</p>`;
 
     try {
-        // 1. Get all user IDs the current user is already connected with or has a pending request with
+        // 1. Get all user IDs the current user is already interacting with
         const { data: connections, error: connError } = await supabase
             .from('connections')
             .select('user_one_id, user_two_id')
@@ -122,18 +124,18 @@ async function fetchPopularUsers() {
 function renderPopularUsers(users) {
     const container = document.getElementById('popular-users-container');
     if (!container || users.length === 0) {
-        if (container) container.innerHTML = ''; // Hide if no popular users to show
+        if (container) container.innerHTML = ''; 
         return;
     }
 
     container.innerHTML = users.map(user => `
-        <div class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm">
-            <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover">
-            <div class="flex-1">
-                <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${user.full_name}</p>
+        <div class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm hover:border-primary/30 transition-colors">
+            <img onclick="window.viewUserProfile('${user.id}')" src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover border border-surface-variant shadow-sm cursor-pointer hover:opacity-80 transition-opacity">
+            <div onclick="window.viewUserProfile('${user.id}')" class="flex-1 cursor-pointer">
+                <p class="font-bold text-sm text-gray-900 dark:text-gray-100 hover:text-primary transition-colors">${user.full_name}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">${user.connection_count || 0} connections</p>
             </div>
-            <button data-user-id="${user.id}" class="connect-btn bg-primary/10 text-primary px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95">
+            <button data-user-id="${user.id}" class="connect-btn bg-primary/10 text-primary px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95 shrink-0">
                 Connect
             </button>
         </div>
