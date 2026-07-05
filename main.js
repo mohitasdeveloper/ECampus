@@ -937,8 +937,19 @@ function switchTab(tabId) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // Show header only on Feed (Dashboard)
+    const header = document.querySelector('header');
+    if (header) {
+        header.classList.toggle('hidden', tabId !== 'dashboard');
+    }
+
     const activeClasses = ['bg-primary', 'dark:bg-primary', 'text-white'];
-    const inactiveClasses = ['text-on-surface-variant', 'dark:text-gray-400', 'hover:bg-surface-variant/40', 'dark:hover:bg-neutral-800'];
+    const inactiveClasses = [
+        'text-on-surface-variant',
+        'dark:text-gray-400',
+        'hover:bg-surface-variant/40',
+        'dark:hover:bg-neutral-800'
+    ];
 
     document.querySelectorAll('.nav-item').forEach(nav => {
         nav.classList.remove(...activeClasses);
@@ -953,20 +964,6 @@ function switchTab(tabId) {
         activeNav.querySelector('span.material-symbols-outlined').style.fontVariationSettings = "'FILL' 1";
     }
 }
-
-const topHeader = document.getElementById('app-top-header');
-    
-    if (topHeader) {
-        if (tabId === 'feed') {
-            // Show header only on the feed tab
-            topHeader.classList.remove('hidden');
-            topHeader.classList.add('flex');
-        } else {
-            // Hide header on all other tabs
-            topHeader.classList.add('hidden');
-            topHeader.classList.remove('flex');
-        }
-    }
 
 function openProfileModal(type) {
     const modal = document.getElementById(`modal-profile-${type}`);
