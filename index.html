@@ -8,8 +8,8 @@
 
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet" />
+   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cookie&display=swap"
+      rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
@@ -80,14 +80,13 @@
     <!-- HEADER -->
    <header
     class="fixed top-0 inset-x-0 z-[40]
-    bg-surface/90 dark:bg-[#121212]/90
+    bg-surface/95 dark:bg-[#121212]/95
     backdrop-blur-xl
-    border-b border-surface-variant/20 dark:border-neutral-800
     transition-all duration-300">
         <div id="toast-container"
             class="absolute top-full left-1/2 -translate-x-1/2 w-full max-w-md p-4 space-y-2 z-[200]"></div>
 
-<div class="flex items-center px-4 h-14 w-full max-w-screen-md mx-auto relative">
+<div class="flex items-center px-4 h-[54px] w-full max-w-screen-md mx-auto relative">
     <div class="flex-none z-10">
     <button
     id="create-post-header-btn"
@@ -100,15 +99,17 @@
 
 </button>
 </div>
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
     <span
-        class="text-[28px] font-black tracking-tight
+        style="font-family:'Cookie',cursive;"
+        class="text-[44px] leading-none
         bg-gradient-to-r
-        from-[#00a84f]
-        via-[#0077ff]
-        to-[#6f42ff]
+        from-[#00d26a]
+        via-[#1e90ff]
+        to-[#4f46e5]
         bg-clip-text
-        text-transparent">
+        text-transparent
+        select-none">
         ECampus
     </span>
 </div>
