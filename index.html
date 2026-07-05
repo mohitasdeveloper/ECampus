@@ -155,44 +155,25 @@
             </section>
         </div>
 
-        <!-- SEARCH VIEW -->
+<!-- SEARCH VIEW -->
         <div id="view-search" class="tab-content pt-4 hidden">
             <div class="relative mb-6 mt-2">
-                <div
-                    class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-on-surface-variant">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[20px]">search</span>
                 </div>
                 <input type="text" id="search-input"
                     class="w-full bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/60 dark:border-neutral-800 text-on-surface dark:text-gray-100 text-sm rounded-2xl focus:ring-primary focus:border-primary block pl-11 p-3.5 shadow-sm outline-none placeholder-on-surface-variant/70 transition-colors"
-                    placeholder="Search students, apps, or resources...">
+                    placeholder="Search students or resources...">
             </div>
 
-            <!-- Mini Apps (Static Demo) -->
-            <div class="mb-8" id="mini-apps-section">
-                <div class="flex justify-between items-end mb-4">
-                    <h3 class="text-lg font-bold text-on-surface dark:text-gray-100">Mini Apps</h3>
-                    <span class="text-[11px] font-bold text-primary cursor-pointer uppercase tracking-wider">See
-                        All</span>
-                </div>
-                <div class="grid grid-cols-4 gap-4">
-                    <div class="flex flex-col items-center gap-2 cursor-pointer active:scale-95">
-                        <div
-                            class="w-14 h-14 rounded-2xl bg-[#e3f2fd] dark:bg-[#0d47a1]/30 text-[#1565c0] dark:text-[#90caf9] flex items-center justify-center shadow-sm border border-surface-variant/30 dark:border-neutral-800">
-                            <span class="material-symbols-outlined text-[26px]">calendar_month</span>
-                        </div>
-                        <span
-                            class="text-[11px] font-bold text-on-surface dark:text-gray-300 text-center">Timetable</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Mini Apps Section Removed For Now -->
 
             <!-- Dynamic Search Results -->
             <div id="search-results-container" class="hidden space-y-3 mb-8"></div>
 
             <!-- Discover Students -->
             <div id="explore-users-container" class="space-y-3">
-                <p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading popular
-                    users...</p>
+                <p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading popular users...</p>
             </div>
         </div>
 
@@ -599,91 +580,89 @@
         </div>
     </div>
 
-   <!-- PROFILE PUBLIC MODAL -->
+<!-- PROFILE PUBLIC FULL-SCREEN VIEW -->
     <div id="modal-profile-public"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
-        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out] flex flex-col max-h-[90vh]">
-            <button onclick="closeProfileModals()"
-                class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100 z-10">
-                <span class="material-symbols-outlined text-[18px]">close</span>
+        class="fixed inset-0 z-[150] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-y-full">
+        <!-- Header Controls -->
+        <div class="h-16 flex items-center justify-between px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
+            <button onclick="closeProfileModals()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
-            
-            <!-- Scrollable Content Area -->
-            <div class="flex-1 overflow-y-auto hide-scrollbar flex flex-col">
-                <div class="flex flex-col items-center text-center shrink-0">
-                    <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4">
-                        <div class="w-full h-full rounded-full border-[3px] border-surface dark:border-[#1e1e1e] overflow-hidden bg-surface-variant">
-                            <img id="public-profile-avatar" src="" class="w-full h-full object-cover">
-                        </div>
-                    </div>
-                    <h3 id="public-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100 flex items-center justify-center">---</h3>
-                    <p id="public-profile-course" class="text-[12px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">Student</p>
-                    <div class="text-sm text-on-surface-variant dark:text-gray-400 mb-4">
-                        <span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">0</span> connections
-                    </div>
-                    <p id="public-profile-bio" class="text-[13px] text-on-surface-variant dark:text-gray-400 mb-4 px-4">---</p>
-                    <div class="flex gap-3 justify-center mb-6" id="public-profile-social-links"></div>
-                    
-                    <div class="flex items-stretch justify-center gap-2 w-full px-2">
-                        <div id="public-profile-actions" class="flex items-stretch gap-2 flex-1"></div>
-                        <div class="relative">
-                            <button id="public-profile-more-btn" onclick="toggleMoreMenu()" class="hidden btn-secondary !p-0 w-12 h-auto text-on-surface dark:text-gray-100 border border-surface-variant/50">
-                                <span class="material-symbols-outlined">more_horiz</span>
-                            </button>
-                            <div id="public-profile-more-menu" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-surface dark:bg-neutral-900 rounded-xl shadow-lg border border-surface-variant/50 dark:border-neutral-800 p-2 z-20">
-                            </div>
-                        </div>
+            <h2 id="public-profile-header-name" class="text-sm font-bold text-on-surface dark:text-gray-100 truncate max-w-[60%]">Profile</h2>
+            <div class="w-10"></div>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-5">
+            <div class="flex flex-col items-center text-center mb-6">
+                <div class="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-primary to-blue-500 mb-4 shadow-sm">
+                    <div class="w-full h-full rounded-full border-[3px] border-surface dark:border-[#121212] overflow-hidden bg-surface-variant">
+                        <img id="public-profile-avatar" src="" class="w-full h-full object-cover">
                     </div>
                 </div>
+                <h3 id="public-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100 flex items-center justify-center">---</h3>
+                <p id="public-profile-course" class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">Student</p>
+                <div class="text-sm text-on-surface-variant dark:text-gray-400 mb-4">
+                    <span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">0</span> connections
+                </div>
+                <p id="public-profile-bio" class="text-[13px] text-on-surface-variant dark:text-gray-400 mb-4 px-4 whitespace-pre-wrap">---</p>
+                <div class="flex gap-3 justify-center mb-6" id="public-profile-social-links"></div>
+                
+                <!-- Action Controls Row Layout -->
+                <div class="flex items-stretch justify-center gap-2 w-full max-w-sm px-2">
+                    <div id="public-profile-actions" class="flex items-stretch gap-2 flex-1"></div>
+                    <div class="relative flex">
+                        <button id="public-profile-more-btn" onclick="toggleMoreMenu()" class="hidden btn-secondary !p-0 w-12 items-center justify-center text-on-surface dark:text-gray-100 border border-surface-variant/60 dark:border-neutral-800 rounded-xl">
+                            <span class="material-symbols-outlined">more_horiz</span>
+                        </button>
+                        <div id="public-profile-more-menu" class="hidden absolute bottom-full right-0 mb-2 w-48 bg-surface dark:bg-neutral-900 rounded-xl shadow-lg border border-surface-variant/50 dark:border-neutral-800 p-2 z-20"></div>
+                    </div>
+                </div>
+            </div>
 
-                <!-- INSTAGRAM-STYLE PROFILE FEED -->
-                <div class="w-full mt-8 pt-4 border-t border-surface-variant/50 dark:border-neutral-800 flex-1">
-                    <div class="flex justify-center mb-4">
-                        <span class="material-symbols-outlined text-on-surface dark:text-gray-100">grid_on</span>
-                    </div>
-                    <div id="public-profile-feed" class="w-full">
-                        <!-- Grid injects here -->
-                    </div>
+            <!-- Profile Posts Feed Section -->
+            <div class="w-full pt-4 border-t border-surface-variant/40 dark:border-neutral-800">
+                <div class="flex justify-center mb-4 text-on-surface-variant">
+                    <span class="material-symbols-outlined">grid_on</span>
+                </div>
+                <div id="public-profile-feed" class="space-y-5">
+                    <!-- Complete Feed Post Containers Render Dynamically Here -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- PROFILE PRIVATE MODAL -->
+    <!-- PROFILE PRIVATE FULL-SCREEN VIEW -->
     <div id="modal-profile-private"
-        class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
-        <div
-            class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-12 pt-8 relative animate-[slideUp_0.3s_ease-out]">
-            <button onclick="closeProfileModals()"
-                class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
-                <span class="material-symbols-outlined text-[18px]">close</span>
+        class="fixed inset-0 z-[150] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-y-full">
+        <!-- Header Controls -->
+        <div class="h-16 flex items-center justify-between px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
+            <button onclick="closeProfileModals()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
-            <div class="flex flex-col items-center text-center">
-                <div class="relative mb-4">
-                    <div
-                        class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface dark:border-[#1e1e1e] shadow-md bg-surface-variant">
-                        <img id="private-profile-avatar" src="" class="w-full h-full object-cover">
-                    </div>
+            <h2 id="private-profile-header-name" class="text-sm font-bold text-on-surface dark:text-gray-100 truncate max-w-[60%]">Private Profile</h2>
+            <div class="w-10"></div>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-5 flex flex-col items-center">
+            <div class="flex flex-col items-center text-center w-full max-w-sm mt-4">
+                <div class="w-24 h-24 rounded-full overflow-hidden border-[4px] border-surface dark:border-[#121212] shadow-md mb-4 bg-surface-variant">
+                    <img id="private-profile-avatar" src="" class="w-full h-full object-cover">
                 </div>
-                <h3 id="private-profile-name"
-                    class="text-xl font-extrabold text-on-surface dark:text-gray-100 flex items-center justify-center">
-                    ---</h3>
-                <p id="private-profile-course"
-                    class="text-[12px] font-medium text-on-surface-variant dark:text-gray-400 mb-6">Student</p>
-                <div
-                    class="w-full bg-surface-variant/20 dark:bg-surface-variant/5 border border-surface-variant/50 dark:border-neutral-800 p-5 rounded-2xl mb-6">
-                    <span
-                        class="material-symbols-outlined text-[32px] text-on-surface-variant opacity-50 mb-2 block">lock</span>
-                    <h4 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-1">This Account is Private
-                    </h4>
-                    <p class="text-[12px] text-on-surface-variant dark:text-gray-400 px-4">Connect to see their full
-                        profile.</p>
+                <h3 id="private-profile-name" class="text-xl font-extrabold text-on-surface dark:text-gray-100 flex items-center justify-center">---</h3>
+                <p id="private-profile-course" class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400 mb-6">Student</p>
+                
+                <div class="w-full bg-surface-variant/20 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-800 p-6 rounded-3xl mb-6 flex flex-col items-center justify-center shadow-inner">
+                    <span class="material-symbols-outlined text-[36px] text-on-surface-variant opacity-60 mb-2">lock</span>
+                    <h4 class="text-[15px] font-bold text-on-surface dark:text-gray-100 mb-1">This Account is Private</h4>
+                    <p class="text-[12px] text-on-surface-variant dark:text-gray-400 px-4">Connect to see their full profile feed details.</p>
                 </div>
                 <div id="private-profile-actions" class="w-full"></div>
             </div>
         </div>
     </div>
-
+    
     <!-- EDIT PROFILE MODAL -->
     <div id="modal-edit-profile"
         class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center px-4">
