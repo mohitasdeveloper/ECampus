@@ -929,40 +929,63 @@ async function submitReport() {
 window.viewUserProfile = viewUserProfile;
 
 function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-
-    const target = document.getElementById(`view-${tabId}`);
-    if (target) {
-        target.classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Show header only on Feed (Dashboard)
-    const header = document.querySelector('header');
-    if (header) {
-        header.classList.toggle('hidden', tabId !== 'dashboard');
-    }
-
-    const activeClasses = ['bg-primary', 'dark:bg-primary', 'text-white'];
-    const inactiveClasses = [
-        'text-on-surface-variant',
-        'dark:text-gray-400',
-        'hover:bg-surface-variant/40',
-        'dark:hover:bg-neutral-800'
-    ];
-
-    document.querySelectorAll('.nav-item').forEach(nav => {
-        nav.classList.remove(...activeClasses);
-        nav.classList.add(...inactiveClasses);
-        nav.querySelector('span.material-symbols-outlined').style.fontVariationSettings = "'FILL' 0";
+    // Hide all pages
+    document.querySelectorAll(".tab-content").forEach(tab => {
+        tab.classList.add("hidden");
     });
 
-    const activeNav = document.getElementById(`nav-${tabId}`);
-    if (activeNav) {
-        activeNav.classList.remove(...inactiveClasses);
-        activeNav.classList.add(...activeClasses);
-        activeNav.querySelector('span.material-symbols-outlined').style.fontVariationSettings = "'FILL' 1";
+    // Show selected page
+    const activeView = document.getElementById(`view-${tabId}`);
+    if (activeView) {
+        activeView.classList.remove("hidden");
     }
+
+    // Show header only on Feed
+    const header = document.querySelector("header");
+
+    if (tabId === "dashboard") {
+        header.classList.remove("hidden");
+    } else {
+        header.classList.add("hidden");
+    }
+
+    // Bottom navigation
+    document.querySelectorAll(".nav-item").forEach(btn => {
+        btn.classList.remove("bg-primary", "text-white");
+        btn.classList.add(
+            "text-on-surface-variant",
+            "dark:text-gray-400"
+        );
+
+        const icon = btn.querySelector(".material-symbols-outlined");
+        if (icon) {
+            icon.style.fontVariationSettings = "'FILL' 0";
+        }
+    });
+
+    const activeBtn = document.getElementById(`nav-${tabId}`);
+
+    if (activeBtn) {
+        activeBtn.classList.remove(
+            "text-on-surface-variant",
+            "dark:text-gray-400"
+        );
+
+        activeBtn.classList.add(
+            "bg-primary",
+            "text-white"
+        );
+
+        const icon = activeBtn.querySelector(".material-symbols-outlined");
+        if (icon) {
+            icon.style.fontVariationSettings = "'FILL' 1";
+        }
+    }
+
+    window.scrollTo({
+        top: 0,
+        behavior: "instant"
+    });
 }
 
 function openProfileModal(type) {
