@@ -967,7 +967,6 @@ const topHeader = document.getElementById('app-top-header');
             topHeader.classList.remove('flex');
         }
     }
-}
 
 function openProfileModal(type) {
     const modal = document.getElementById(`modal-profile-${type}`);
