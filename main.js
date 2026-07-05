@@ -11,7 +11,7 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 let currentUserProfile = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check user session
+    // Check user sessions
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
