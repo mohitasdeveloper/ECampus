@@ -4,7 +4,7 @@ import { timeAgo } from './utils.js';
 import { CLOUDINARY_CLOUD_NAME } from './config.js';
 
 let currentUser = null;
-let isVoting = false; // Lock to prevent rapid clicking on poll
+let isVoting = false; // Lock to prevent rapid clicking on polls
 
 export function initFeed(user) {
     currentUser = user;
