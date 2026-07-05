@@ -148,34 +148,154 @@ function renderSocialLinks(links, container = null) {
 
 function populateProfileUI(profile) {
     if (!profile) return;
-
-    const profileAvatarLarge = document.getElementById('profile-avatar-large');
-    if (!profileAvatarLarge) {
-        console.warn("Profile UI elements not found, skipping UI population.");
-        return;
-    }
-
-    profileAvatarLarge.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
-    document.getElementById('profile-name').textContent = profile.full_name;
-    document.getElementById('profile-email').innerHTML = `<span class="material-symbols-outlined text-[16px]">mail</span> ${profile.email}`;
-    document.getElementById('profile-bio').textContent = profile.bio || 'No bio yet. Click "Edit" to add one!';
-
-    const roleElement = document.getElementById('profile-role');
-    if (roleElement) {
-        roleElement.textContent = profile.role || 'Student';
-    }
-
-    document.getElementById('profile-id').textContent = profile.student_id;
-    document.getElementById('profile-course').textContent = profile.course;
-
+    
+    // Header
+    document.getElementById('my-profile-header-id').textContent = profile.student_id;
+    
+    // Stats Row
+    document.getElementById('my-profile-avatar').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+    document.getElementById('my-profile-connection-count').textContent = profile.connection_count || 0;
+    
+    // Bio Section
+    document.getElementById('my-profile-name').textContent = profile.full_name;
+    document.getElementById('my-profile-course').textContent = profile.course || 'Student';
+    document.getElementById('my-profile-bio').textContent = profile.bio || 'No bio yet. Click "Edit Profile" to add one!';
+    
+    // Feed avatar & Top Navigation avatar updates
     const feedInputAvatar = document.getElementById('feed-input-avatar');
-    if (feedInputAvatar) {
-        feedInputAvatar.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
-    }
+    if (feedInputAvatar) feedInputAvatar.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
+    
+    // Load Socials & Privacy setting
+    renderSocialLinks(profile.social_links, document.getElementById('my-profile-social-links'));
+    const privacyToggle = document.getElementById('privacy-toggle-switch');
+    if (privacyToggle) privacyToggle.checked = profile.is_private || false;
 
-    document.getElementById('profile-connection-count').textContent = profile.connection_count || 0;
-    renderSocialLinks(profile.social_links);
+    // Fetch this user's personal feed
+    fetchMyProfileFeed(profile.id);
 }
+
+// --- 2. Add these NEW functions anywhere in main.js ---
+
+async function fetchMyProfileFeed(userId) {
+    const feedContainer = document.getElementById('my-profile-feed');
+    if(!feedContainer) return;
+
+    feedContainer.innerHTML = `<p class="text-xs italic text-center py-6 text-on-surface-variant dark:text-gray-400">Loading posts...</p>`;
+    
+    try {
+        const { data: posts, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+
+        // Update post count stat dynamically
+        document.getElementById('my-profile-posts-count').textContent = posts.length;
+
+        if (posts.length === 0) {
+            feedContainer.innerHTML = `
+                <div class="py-12 flex flex-col items-center justify-center opacity-40">
+                    <span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span>
+                    <p class="text-sm font-medium">No posts yet</p>
+                </div>`;
+            return;
+        }
+
+        // Native Instagram style grid
+        const gridHtml = posts.map(post => {
+            if (post.post_type === 'image' && post.media_url) {
+                return `<div class="aspect-square bg-surface-variant dark:bg-neutral-800 overflow-hidden relative border-[0.5px] border-surface dark:border-[#121212]">
+                            <img src="${post.media_url}" class="w-full h-full object-cover">
+                        </div>`;
+            } else if (post.post_type === 'text') {
+                return `<div class="aspect-square bg-surface-variant/40 dark:bg-neutral-800/60 overflow-hidden relative p-3 flex items-center justify-center text-center border-[0.5px] border-surface dark:border-[#121212]">
+                            <p class="text-[10px] sm:text-xs text-on-surface dark:text-gray-200 line-clamp-4 leading-tight">${post.content}</p>
+                        </div>`;
+            } else if (post.post_type === 'event') {
+                return `<div class="aspect-square bg-secondary/10 text-secondary overflow-hidden relative flex flex-col items-center justify-center border-[0.5px] border-surface dark:border-[#121212]">
+                            <span class="material-symbols-outlined mb-1 text-[24px]">event</span>
+                            <span class="text-[9px] font-bold uppercase tracking-widest">Event</span>
+                        </div>`;
+            } else {
+                return `<div class="aspect-square bg-primary/10 text-primary overflow-hidden relative flex flex-col items-center justify-center border-[0.5px] border-surface dark:border-[#121212]">
+                            <span class="material-symbols-outlined mb-1 text-[24px]">poll</span>
+                            <span class="text-[9px] font-bold uppercase tracking-widest">Poll</span>
+                        </div>`;
+            }
+        }).join('');
+        
+        feedContainer.innerHTML = `<div class="grid grid-cols-3">${gridHtml}</div>`;
+
+    } catch (err) {
+        console.error("Error fetching my feed:", err);
+        feedContainer.innerHTML = `<p class="text-xs text-center py-4 text-error">Failed to load posts.</p>`;
+    }
+}
+
+function openSettingsSidebar() {
+    const sidebar = document.getElementById('settings-sidebar');
+    const content = document.getElementById('settings-sidebar-content');
+    sidebar.classList.remove('hidden');
+    sidebar.classList.add('flex');
+    
+    // Force DOM reflow to allow transition animation
+    void sidebar.offsetWidth;
+    
+    sidebar.classList.remove('opacity-0');
+    content.classList.remove('translate-x-full');
+}
+
+function closeSettingsSidebar() {
+    const sidebar = document.getElementById('settings-sidebar');
+    const content = document.getElementById('settings-sidebar-content');
+    
+    sidebar.classList.add('opacity-0');
+    content.classList.add('translate-x-full');
+    
+    setTimeout(() => {
+        sidebar.classList.remove('flex');
+        sidebar.classList.add('hidden');
+    }, 300);
+}
+
+async function togglePrivacy(isPrivate) {
+    try {
+        const { error } = await supabase
+            .from('users')
+            .update({ is_private: isPrivate })
+            .eq('id', currentUserProfile.id);
+        
+        if (error) throw error;
+        currentUserProfile.is_private = isPrivate;
+        showToast(isPrivate ? 'Account is now Private' : 'Account is now Public', 'success');
+    } catch (err) {
+        console.error("Privacy toggle error:", err);
+        showToast('Failed to update privacy settings', 'error');
+        // Revert toggle switch UI on failure
+        document.getElementById('privacy-toggle-switch').checked = !isPrivate;
+    }
+}
+
+function shareMyProfile() {
+    if (navigator.share) {
+        navigator.share({
+            title: `${currentUserProfile.full_name}'s Profile`,
+            text: `Check out my ECampus profile!`,
+            url: window.location.href
+        }).catch(console.error);
+    } else {
+        showToast('Profile link copied to clipboard!', 'success');
+    }
+}
+
+// Bind new functions to the global window object so HTML onClick attributes can call them
+window.openSettingsSidebar = openSettingsSidebar;
+window.closeSettingsSidebar = closeSettingsSidebar;
+window.togglePrivacy = togglePrivacy;
+window.shareMyProfile = shareMyProfile;
 
 function updateHeaderAvatar(avatarUrl, fullName) {
     const avatarImg = document.getElementById('header-avatar');
