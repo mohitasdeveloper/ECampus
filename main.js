@@ -15,11 +15,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-        if (window.location.pathname.includes('index.html')) {
-            window.location.replace('auth/login.html');
-        }
-        return;
-    }
+    window.location.href = "./auth/login.html";
+    return;
+}
 
     // Fetch user profile
     const { data: profile, error } = await supabase
