@@ -78,23 +78,36 @@
     class="bg-surface dark:bg-[#121212] text-on-surface dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden transition-colors duration-300 selection:bg-primary/20">
 
     <!-- HEADER -->
-    <header
-        class="fixed top-0 w-full z-[40] bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-surface-variant/40 dark:border-neutral-800 shadow-sm transition-colors duration-300">
+   <header
+    class="fixed top-0 inset-x-0 z-[40]
+    bg-surface/90 dark:bg-[#121212]/90
+    backdrop-blur-xl
+    border-b border-surface-variant/20 dark:border-neutral-800
+    transition-all duration-300">
         <div id="toast-container"
             class="absolute top-full left-1/2 -translate-x-1/2 w-full max-w-md p-4 space-y-2 z-[200]"></div>
 
-        <div class="flex items-center px-6 h-16 w-full max-w-screen-xl mx-auto relative">
-            <div class="flex-none z-10">
-                <div class="w-10 h-10 rounded-full overflow-hidden border-[1.5px] border-primary/30 bg-surface-variant shadow-sm shrink-0 cursor-pointer"
-                    onclick="switchTab('profile')">
-                    <img id="header-avatar" alt="Profile" class="w-full h-full object-cover"
-                        src="https://ui-avatars.com/api/?name=User&background=e1e3e4" />
-                </div>
-            </div>
+<div class="flex items-center px-4 h-14 w-full max-w-screen-md mx-auto relative">
+    <div class="flex-none z-10">
+    <button id="create-post-header-btn"
+        class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-variant/50 active:scale-95 transition">
+        <span class="material-symbols-outlined text-[30px]">
+            add
+        </span>
+    </button>
+</div>
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span
-                    class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#008a45] via-[#007bb5] to-[#673ab7] bg-clip-text text-transparent pb-[2px]">ECampus</span>
-            </div>
+    <span
+        class="text-[28px] font-black tracking-tight
+        bg-gradient-to-r
+        from-[#00a84f]
+        via-[#0077ff]
+        to-[#6f42ff]
+        bg-clip-text
+        text-transparent">
+        ECampus
+    </span>
+</div>
             <div class="flex-none ml-auto z-10 relative">
                 <button id="notif-btn"
                     class="p-2 rounded-full hover:bg-surface-variant/50 transition-all active:scale-95 duration-200 relative text-on-surface-variant dark:text-gray-400">
@@ -126,8 +139,7 @@
 <main id="main-content" class="px-5 max-w-screen-md mx-auto relative z-10 pb-6">
     
         <!-- DASHBOARD VIEW -->
-<div id="view-dashboard" class="tab-content active animate-fadeIn pt-20">
-    
+<div id="view-dashboard" class="tab-content active animate-fadeIn pt-16">    
             <!-- HOTPOSTS -->
             <section class="mb-4">
                 <div class="flex justify-between items-center mb-3">
