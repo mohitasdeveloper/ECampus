@@ -4,7 +4,7 @@ import { timeAgo } from './utils.js';
 import { CLOUDINARY_CLOUD_NAME } from './config.js';
 
 let currentUser = null;
-let isVoting = false; // Lock to prevent rapid clicking on poll
+let isVoting = false; // Lock to prevent rapid clicking on polls
 
 export function initFeed(user) {
     currentUser = user;
@@ -433,115 +433,34 @@ async function handleLike(postId, isLiked) {
     }
 }
 
-async function handlePollVote(postId, optionIndex, isSingleChoice) {
-    // 1. Get current authenticated user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        alert("Please log in to vote.");
-        return;
-    }
-
-    // 2. Fetch the correct internal user ID (public.users.id)
-    const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-
-    if (userError || !userData) {
-        console.error("User not found", userError);
-        return;
-    }
-
-    const publicUserId = userData.id;
-    const tableName = 'post_poll_votes';
-
+// Fixed Poll Voting with Local DOM Update and UI state locking
+async function handlePollVote(postId, optionIndex, isMultipleChoice) {
+    if (isVoting) return; // Prevent rapid clicking while processing
+    isVoting = true;
+    
     try {
-        // ==========================================
-        // DATABASE LOGIC
-        // ==========================================
-        
-        // IF SINGLE CHOICE: Delete any existing vote by this user for this post
-        if (isSingleChoice) {
-            const { error: deleteError } = await supabase
-                .from(tableName)
-                .delete()
-                .eq('post_id', postId)
-                .eq('user_id', publicUserId);
-
-            if (deleteError) throw deleteError;
-        }
-
-        // INSERT the new vote (this applies to both single and multiple choice)
-        const { error: insertError } = await supabase
-            .from(tableName)
-            .insert([{ 
-                post_id: postId, 
-                option_index: optionIndex, 
-                user_id: publicUserId 
-            }]);
-
-        if (insertError) throw insertError;
-
-        // ==========================================
-        // INSTANT UI UPDATE
-        // ==========================================
-        const pollContainer = document.getElementById(`post-${postId}`);
-        if (!pollContainer) return;
-
-        // A. Reset all visual selections if it's single choice
-        if (isSingleChoice) {
-            const allOptions = pollContainer.querySelectorAll('.poll-option');
-            allOptions.forEach(option => {
-                option.classList.remove('border-primary', 'bg-primary/20');
-                option.classList.add('border-surface-variant/50', 'bg-surface-variant/10');
-            });
-        }
-
-        // B. Apply "selected" visual state to the specific clicked option
-        const clickedOption = pollContainer.querySelector(`#poll-option-${postId}-${optionIndex}`);
-        if (clickedOption) {
-            clickedOption.classList.add('border-primary', 'bg-primary/20');
-            clickedOption.classList.remove('border-surface-variant/50', 'bg-surface-variant/10');
-        }
-
-        // C. Refresh Count & Percentages (Live Update)
-        const { data: allVotes, error: fetchError } = await supabase
-            .from(tableName)
-            .select('option_index')
-            .eq('post_id', postId);
-
-        if (fetchError) throw fetchError;
-
-        const totalVotes = allVotes.length;
-        
-        // Update vote count text
-        const voteCountText = pollContainer.querySelector('.poll-total-votes');
-        if (voteCountText) {
-            voteCountText.innerText = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`;
-        }
-
-        // Update percentages for all options
-        const allOptionElements = pollContainer.querySelectorAll('.poll-option');
-        allOptionElements.forEach(optionEl => {
-            const currentOptionIndex = parseInt(optionEl.dataset.optionIndex);
-            const optionVotes = allVotes.filter(v => v.option_index === currentOptionIndex).length;
-            
-            let percentage = 0;
-            if (totalVotes > 0) {
-                percentage = Math.round((optionVotes / totalVotes) * 100);
-            }
-
-            const percentageText = optionEl.querySelector('.poll-percent-text');
-            if (percentageText) percentageText.innerText = `${percentage}%`;
-
-            const progressBar = optionEl.querySelector('.poll-progress-bar');
-            if (progressBar) progressBar.style.width = `${percentage}%`;
+        // We now rely on the database trigger for single-choice overwrite logic
+        // But we still attempt an insert or toggle.
+        const { error } = await supabase.from('post_poll_votes').insert({
+            post_id: postId,
+            user_id: currentUser.id,
+            option_index: optionIndex
         });
 
-    } catch (err) {
-        console.error("Voting operation failed:", err);
-        alert("Failed to record vote. Please try again.");
+        // If they click an option they already voted for (conflict), untoggle it
+        if (error && error.code === '23505') {
+            await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id, option_index: optionIndex });
+        }
+        
+        // Fetch just the votes for this post to update math locally
+        const { data: votes } = await supabase.from('post_poll_votes').select('user_id, option_index').eq('post_id', postId);
+        
+        updatePollDOM(postId, votes);
+
+    } catch (error) {
+        console.error("Poll vote error:", error);
+    } finally {
+        isVoting = false; // Release the lock
     }
 }
 
