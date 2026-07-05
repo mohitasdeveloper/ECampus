@@ -433,23 +433,22 @@ async function handleLike(postId, isLiked) {
     }
 }
 
-async function handlePollVote(postId, optionId, isSingleChoice) {
+async function handlePollVote(postId, optionIndex, isSingleChoice) {
     // 1. Verify user is logged in
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-        console.error("Please log in to vote.");
+        alert("Please log in to vote.");
         return;
     }
 
-    // UPDATE: Use the correct table name matching your database!
-    const tableName = 'post_poll_votes'; 
+    const tableName = 'post_poll_votes';
 
     try {
         // ==========================================
         // STEP 1: DATABASE UPDATES
         // ==========================================
         if (isSingleChoice) {
-            // Delete old vote from the correct table
+            // Delete old vote
             const { error: deleteError } = await supabase
                 .from(tableName)
                 .delete()
@@ -460,100 +459,81 @@ async function handlePollVote(postId, optionId, isSingleChoice) {
         }
 
         // Insert new vote
+        // Note: Using 'option_index' as required by your SQL schema
         const { error: insertError } = await supabase
             .from(tableName)
-            .insert([{ post_id: postId, option_id: optionId, user_id: user.id }]);
+            .insert([{ 
+                post_id: postId, 
+                option_index: optionIndex, 
+                user_id: user.id 
+            }]);
 
-        if (insertError) throw insertError; // If a 409 happens, it stops here and goes to the catch block
-
+        if (insertError) throw insertError;
 
         // ==========================================
-        // STEP 2: UPDATE THE UI (Only runs if DB success)
+        // STEP 2: UPDATE UI (Only runs if DB success)
         // ==========================================
-        // Note: Make sure 'post-${postId}' matches your actual post container ID
-        const pollContainer = document.getElementById(`post-${postId}`); 
+        const pollContainer = document.getElementById(`post-${postId}`);
         if (!pollContainer) return;
 
-        // Reset all options to clear previous selections
+        // Visual selection reset
         if (isSingleChoice) {
-            // Note: Change '.poll-option' if your HTML uses a different class for the clickable option row
-            const allOptions = pollContainer.querySelectorAll('.poll-option'); 
+            const allOptions = pollContainer.querySelectorAll('.poll-option');
             allOptions.forEach(option => {
                 option.classList.remove('border-primary', 'bg-primary/20');
                 option.classList.add('border-surface-variant/50', 'bg-surface-variant/10');
-                
-                const icon = option.querySelector('.material-symbols-outlined');
-                if (icon) {
-                    icon.innerText = 'radio_button_unchecked';
-                    icon.classList.remove('text-primary');
-                }
             });
         }
 
-        // Apply selected state to the clicked option
-        const clickedOption = pollContainer.querySelector(`#poll-option-${postId}-${optionId}`);
+        // Apply new selection state
+        // Ensure your HTML button/div has a matching ID: `poll-option-${postId}-${optionIndex}`
+        const clickedOption = pollContainer.querySelector(`#poll-option-${postId}-${optionIndex}`);
         if (clickedOption) {
             clickedOption.classList.add('border-primary', 'bg-primary/20');
-            clickedOption.classList.remove('border-surface-variant/50', 'bg-surface-variant/10');
-            
-            const activeIcon = clickedOption.querySelector('.material-symbols-outlined');
-            if (activeIcon) {
-                activeIcon.innerText = 'radio_button_checked';
-                activeIcon.classList.add('text-primary');
-            }
         }
 
         // ==========================================
         // STEP 3: LIVE REFRESH COUNTS & PERCENTAGES
         // ==========================================
-        
-        // Fetch fresh vote data for this poll
+        // Fetch fresh votes, selecting 'option_index'
         const { data: allVotes, error: fetchError } = await supabase
             .from(tableName)
-            .select('option_id')
+            .select('option_index')
             .eq('post_id', postId);
 
         if (fetchError) throw fetchError;
 
         const totalVotes = allVotes.length;
         
-        // Update total votes text at the bottom
-        // Note: Change '.poll-total-votes' to match your HTML class
-        const voteCountText = pollContainer.querySelector('.poll-total-votes'); 
+        // Update Total Votes Text
+        const voteCountText = pollContainer.querySelector('.poll-total-votes');
         if (voteCountText) {
             voteCountText.innerText = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`;
         }
 
-        // Recalculate and update percentages
+        // Calculate and update percentages
         const allOptionElements = pollContainer.querySelectorAll('.poll-option');
-        
         allOptionElements.forEach(optionEl => {
-            const currentOptionId = optionEl.dataset.optionId; 
-            const optionVotes = allVotes.filter(v => v.option_id == currentOptionId).length;
+            // Get index from the dataset (ensure your HTML has data-option-index="0" etc)
+            const currentOptionIndex = parseInt(optionEl.dataset.optionIndex);
+            
+            const optionVotes = allVotes.filter(v => v.option_index === currentOptionIndex).length;
             
             let percentage = 0;
             if (totalVotes > 0) {
                 percentage = Math.round((optionVotes / totalVotes) * 100);
             }
 
-            // Update percentage text (e.g., "50%")
-            // Note: Change '.poll-percent-text' to match your HTML class
-            const percentageText = optionEl.querySelector('.poll-percent-text'); 
-            if (percentageText) {
-                percentageText.innerText = `${percentage}%`;
-            }
+            const percentageText = optionEl.querySelector('.poll-percent-text');
+            if (percentageText) percentageText.innerText = `${percentage}%`;
 
-            // If you have a visual background progress bar width, update it here:
             const progressBar = optionEl.querySelector('.poll-progress-bar');
-            if (progressBar) {
-                progressBar.style.width = `${percentage}%`;
-            }
+            if (progressBar) progressBar.style.width = `${percentage}%`;
         });
 
     } catch (err) {
         console.error("Vote failed:", err);
-        // Because UI updates happen AFTER the DB logic now, if a 409 conflict happens, 
-        // the UI simply won't change, avoiding the double-selected bug.
+        alert("Could not register vote. Please try again.");
     }
 }
 
