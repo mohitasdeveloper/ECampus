@@ -125,24 +125,7 @@
         </div>
     </header>
 
-    <!-- NOTIFICATIONS PANEL -->
-   <div id="full-notif-panel"
-            class="fixed inset-y-0 right-0 w-full max-w-sm bg-surface dark:bg-[#121212] z-[100] transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col border-l border-surface-variant/40 dark:border-neutral-800">
-            <div class="h-16 flex items-center justify-between px-4 border-b border-surface-variant/40 dark:border-neutral-800 shrink-0 pt-4">
-                <div class="flex items-center gap-3">
-                    <button id="close-notif-btn" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors">
-                        <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
-                    </button>
-                    <h2 class="text-lg font-bold text-on-surface dark:text-gray-100">Notifications</h2>
-                </div>
-                <button id="mark-read-btn" class="text-[12px] font-bold text-primary px-3 py-1.5 hover:bg-primary/10 rounded-lg transition-colors cursor-pointer">
-                    Mark Read
-                </button>
-            </div>
-            <div id="notifications-container" class="flex-1 overflow-y-auto hide-scrollbar pb-6 space-y-[1px] bg-surface-variant/20 dark:bg-neutral-900">
-                </div>
-        </div>
-
+ 
     <!-- MAIN CONTENT -->
 <main id="main-content" class="px-5 max-w-screen-md mx-auto relative z-10 pb-6">
     
@@ -952,7 +935,46 @@
             </div>
         </div>
     </div>
+<div id="modal-notifications" class="fixed inset-0 z-[150] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
+        <div class="h-16 flex items-center justify-between px-4 border-b border-surface-variant/40 dark:border-neutral-800 shrink-0 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl">
+            <div class="flex items-center gap-2">
+                <button onclick="closeNotifications()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+                </button>
+                <h2 class="text-xl font-extrabold text-on-surface dark:text-gray-100">Activity</h2>
+            </div>
+            <button id="mark-read-btn" class="text-[13px] font-bold text-primary px-3 py-1.5 hover:bg-primary/10 rounded-lg transition-colors cursor-pointer hidden">
+                Mark all read
+            </button>
+        </div>
 
+        <div class="flex border-b border-surface-variant/40 dark:border-neutral-800 shrink-0 bg-surface dark:bg-[#121212]">
+            <button id="notif-tab-all" class="flex-1 py-3.5 text-[14px] font-bold border-b-2 border-primary text-primary transition-colors">All Activity</button>
+            <button id="notif-tab-requests" class="flex-1 py-3.5 text-[14px] font-bold border-b-2 border-transparent text-on-surface-variant dark:text-gray-400 transition-colors flex items-center justify-center gap-1.5">
+                Requests <span id="requests-badge" class="hidden bg-error text-white text-[10px] px-1.5 py-0.5 rounded-full shadow-sm">0</span>
+            </button>
+        </div>
+
+        <div id="notif-content-all" class="flex-1 overflow-y-auto hide-scrollbar bg-surface-variant/10 dark:bg-neutral-900/20">
+            <div id="notifications-list-all" class="space-y-[1px]"></div>
+        </div>
+        
+        <div id="notif-content-requests" class="hidden flex-1 overflow-y-auto hide-scrollbar bg-surface-variant/10 dark:bg-neutral-900/20">
+            <div id="notifications-list-requests" class="space-y-[1px]"></div>
+        </div>
+    </div>
+
+    <div id="modal-single-post" class="fixed inset-0 z-[170] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
+        <div class="h-16 flex items-center px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
+            <button onclick="closeSinglePostView()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+            </button>
+            <h2 class="text-lg font-bold ml-2 text-on-surface dark:text-gray-100">Post</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 bg-surface-container-lowest dark:bg-[#121212]">
+            <div id="single-post-container" class="max-w-screen-md mx-auto space-y-4"></div>
+        </div>
+    </div>
    <!-- NATIVE CONFIRMATION MODAL -->
     <div id="modal-confirm-action" class="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md hidden items-center justify-center p-4 transition-opacity">
         <div class="bg-surface dark:bg-[#1e1e1e] rounded-[28px] p-6 w-full max-w-[320px] shadow-2xl animate-popIn flex flex-col items-center text-center">
