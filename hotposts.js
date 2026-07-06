@@ -3,17 +3,53 @@ import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_HOTPOSTS_PRESET } from './config.js';
 
+// ==========================================
+// STATE MANAGEMENT
+// ==========================================
 let hotpostsByUser = new Map();
 let currentUser = null;
-let currentPhotoBlob = null; 
-let currentFilter = 'none';
-
-let currentCameraStream = null;
-let currentFacingMode = 'environment'; 
 let sessionViewedPostIds = new Set();
+
+// Camera & Core Image
+let currentCameraStream = null;
+let currentFacingMode = 'environment';
+let currentPhotoBlob = null;
+let baseImageObj = null; // Used for canvas baking
+
+// Filters (Swipeable)
+const FILTER_LIST = [
+    { name: 'NORMAL', css: 'none' },
+    { name: 'VIVID', css: 'saturate(1.6) contrast(1.1)' },
+    { name: 'WARM', css: 'sepia(0.4) saturate(1.2) contrast(1.1)' },
+    { name: 'COOL', css: 'hue-rotate(180deg) saturate(1.2)' },
+    { name: 'B&W', css: 'grayscale(1) contrast(1.2)' }
+];
+let currentFilterIndex = 0;
+
+// Editor: Text Tool
+let isDraggingText = false;
+let textContent = '';
+let textPosX = 0.5; // Normalized (0 to 1) for resolution independence
+let textPosY = 0.5;
+
+// Editor: Doodle Tool
+let isDrawMode = false;
+let isDrawing = false;
+let currentDoodleColor = '#FF3B30'; // Default Red
+let doodlePaths = []; // History for Undo
+let currentPath = [];
+
+// Viewer Physics
+let currentViewerState = {
+    userId: null, userOrder: [], userIndex: -1, postIndex: 0,
+    storyTimer: null, storyDuration: 5000, animationStartTime: 0, remainingDuration: 0,
+};
 
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
+// ==========================================
+// INITIALIZATION
+// ==========================================
 export function initHotposts(user) {
     currentUser = user;
     setupEventListeners();
@@ -21,108 +57,100 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
+    // Top Camera Controls
     document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
     document.getElementById('retake-hotpost-btn')?.addEventListener('click', resetCameraUI);
     document.getElementById('submit-hotpost-btn')?.addEventListener('click', submitHotpost);
 
-    document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () => {
-        const textInput = document.getElementById('hotpost-text-input');
-        textInput.classList.remove('hidden');
-        textInput.focus();
+    // Editor Tools Activation
+    document.getElementById('add-text-hotpost-btn')?.addEventListener('click', activateTextTool);
+    document.getElementById('doodle-hotpost-btn')?.addEventListener('click', toggleDrawMode);
+    document.getElementById('undo-doodle-btn')?.addEventListener('click', undoLastDoodle);
+    document.querySelectorAll('.doodle-color-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => setDoodleColor(e.target.dataset.color));
     });
 
-    document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
-    document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
-    document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
-    
-    // Activity Panel (Self View)
-    document.getElementById('hotpost-activity-btn')?.addEventListener('click', openStoryDetailsModal);
-    document.getElementById('close-story-details-handle')?.addEventListener('click', closeStoryDetailsModal);
-    document.getElementById('delete-hotpost-action-btn')?.addEventListener('click', handleDeleteHotpost);
+    // Setup Touch Physics for Editor (Filters, Text, Doodles)
+    setupEditorTouchPhysics();
 
-    document.getElementById('hotpost-reply-btn')?.addEventListener('click', (e) => handleReplyToHotpost(e));
-    document.getElementById('hotpost-like-btn')?.addEventListener('click', (e) => handleLikeHotpost(e));
+    // Viewer Navigation & Controls
+    document.getElementById('close-hotpost-viewer-btn')?.addEventListener('click', closeHotpostViewer);
+    document.getElementById('hotpost-nav-next')?.addEventListener('click', nextStory);
+    document.getElementById('hotpost-nav-prev')?.addEventListener('click', prevStory);
+    document.getElementById('hotpost-reply-btn')?.addEventListener('click', handleReplyToHotpost);
+    document.getElementById('hotpost-like-btn')?.addEventListener('click', handleLikeHotpost);
 
-    // Tabs
-    document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
-    document.getElementById('details-tab-likes')?.addEventListener('click', () => switchDetailsTab('likes'));
-    document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
-
+    // Pause/Resume interactions
+    const navNext = document.getElementById('hotpost-nav-next');
+    const navPrev = document.getElementById('hotpost-nav-prev');
     const replyInput = document.getElementById('hotpost-reply-input');
+    [navNext, navPrev].forEach(el => {
+        if (el) {
+            el.addEventListener('pointerdown', pauseStory);
+            el.addEventListener('pointerup', resumeStory);
+            el.addEventListener('pointerleave', resumeStory);
+        }
+    });
     replyInput?.addEventListener('focus', pauseStory);
     replyInput?.addEventListener('blur', resumeStory);
 
-    document.querySelector('[data-edit="filter"]')?.addEventListener('click', toggleFilterTray);
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.addEventListener('click', applyFilter));
+    // Setup Touch Physics for Viewer & Activity Panel
+    setupViewerTouchPhysics();
 
-    const navNext = document.getElementById('hotpost-nav-next');
-    const navPrev = document.getElementById('hotpost-nav-prev');
-
-    [navNext, navPrev].forEach(navEl => {
-        if (navEl) {
-            navEl.addEventListener('pointerdown', pauseStory);
-            navEl.addEventListener('pointerup', resumeStory);
-            navEl.addEventListener('pointerleave', resumeStory);
-        }
-
-    // --- NATIVE SWIPE GESTURES ---
-    let startY = 0;
+    // Activity Panel (Self View)
+    document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
+    document.getElementById('details-tab-likes')?.addEventListener('click', () => switchDetailsTab('likes'));
+    document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
     
-    // 1. Viewer Gestures (Swipe Up for Activity, Swipe Down to Close)
-    const viewer = document.getElementById('modal-view-hotpost');
-    if (viewer) {
-        viewer.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-        }, { passive: true });
-        
-        viewer.addEventListener('touchend', (e) => {
-            const endY = e.changedTouches[0].clientY;
-            const deltaY = endY - startY;
-            
-            // Ignore if swiping on the reply input or buttons
-            if (e.target.closest('button') || e.target.closest('input')) return;
-
-            if (deltaY < -50 && currentViewerState.userId === currentUser.id) {
-                // Swipe Up on Own Story -> Open Activity Panel
-                openStoryDetailsModal();
-            } else if (deltaY > 100) {
-                // Swipe Down -> Close Viewer
-                closeHotpostViewer();
-            }
-        }, { passive: true });
-    }
-
-    // 2. Activity Panel Gestures (Swipe Down to Close Activity)
-    const activityPanel = document.getElementById('modal-story-details');
-    if (activityPanel) {
-        activityPanel.addEventListener('touchstart', (e) => {
-            // Only track swipe if we aren't currently scrolling down inside the lists
-            const scrollArea = e.target.closest('.overflow-y-auto');
-            if (scrollArea && scrollArea.scrollTop > 0) {
-                startY = -1; // disable swipe close if scrolled down
-            } else {
-                startY = e.touches[0].clientY;
-            }
-        }, { passive: true });
-
-        activityPanel.addEventListener('touchend', (e) => {
-            if (startY === -1) return;
-            const endY = e.changedTouches[0].clientY;
-            if (endY - startY > 80) {
-                // Swipe Down -> Close Activity Panel and resume story
-                closeStoryDetailsModal();
-            }
-        }, { passive: true });
-    }
+    // Custom Native Delete Connection
+    document.getElementById('delete-hotpost-action-btn')?.addEventListener('click', () => {
+        showCustomConfirm("Delete Hotpost?", "This will permanently remove this post from your story.", executeDeleteHotpost);
     });
 }
 
+// ==========================================
+// NATIVE CONFIRMATION MODAL
+// ==========================================
+function showCustomConfirm(title, message, onConfirm) {
+    pauseStory();
+    const modal = document.getElementById('modal-confirm-action');
+    if(!modal) return;
+    
+    document.getElementById('confirm-action-title').textContent = title;
+    document.getElementById('confirm-action-message').textContent = message;
+    
+    modal.classList.replace('hidden', 'flex');
+    
+    const confirmBtn = document.getElementById('confirm-action-yes');
+    const cancelBtn = document.getElementById('confirm-action-no');
+    
+    // Clear old listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    
+    newCancelBtn.addEventListener('click', () => {
+        modal.classList.replace('flex', 'hidden');
+        resumeStory();
+    });
+    
+    newConfirmBtn.addEventListener('click', () => {
+        modal.classList.replace('flex', 'hidden');
+        onConfirm();
+    });
+}
+
+// ==========================================
+// CAMERA & EDITOR ENGINE
+// ==========================================
 async function openCameraModal() {
     const modal = document.getElementById('modal-hotpost-camera');
     const video = document.getElementById('hotpost-camera-feed');
     modal.classList.replace('hidden', 'flex');
+    resetCameraUI();
 
     if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
 
@@ -133,8 +161,7 @@ async function openCameraModal() {
         video.srcObject = currentCameraStream;
         video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'none';
     } catch (err) {
-        console.warn(`Camera error:`, err);
-        showToast('Could not access camera. Please check permissions.', 'error');
+        showToast('Camera access denied.', 'error');
         closeCameraModal();
     }
 }
@@ -142,7 +169,6 @@ async function openCameraModal() {
 function closeCameraModal() {
     const modal = document.getElementById('modal-hotpost-camera');
     if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
-    resetCameraUI();
     modal.classList.replace('flex', 'hidden');
 }
 
@@ -151,116 +177,303 @@ function switchCamera() {
     openCameraModal();
 }
 
+function capturePhoto() {
+    const video = document.getElementById('hotpost-camera-feed');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+
+    if (currentFacingMode === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+        currentPhotoBlob = blob;
+        baseImageObj = new Image();
+        baseImageObj.onload = () => {
+            document.getElementById('hotpost-preview-img').src = URL.createObjectURL(blob);
+            initDoodleCanvas();
+            showPreviewUI();
+        };
+        baseImageObj.src = URL.createObjectURL(blob);
+    }, 'image/jpeg', 0.9);
+}
+
 function resetCameraUI() {
     document.getElementById('hotpost-camera-feed').classList.remove('hidden');
-    document.getElementById('hotpost-preview')?.classList.add('hidden');
-    
-    const textInput = document.getElementById('hotpost-text-input');
-    if(textInput) {
-        textInput.classList.add('hidden');
-        textInput.value = ''; 
-    }
-
+    document.getElementById('hotpost-preview-container').classList.add('hidden');
     document.getElementById('capture-ui').classList.remove('hidden');
     document.getElementById('preview-ui').classList.add('hidden');
     document.getElementById('switch-hotpost-camera-btn').classList.remove('hidden');
+    document.getElementById('editor-tools-container').classList.add('hidden');
     
-    document.getElementById('add-text-hotpost-btn')?.classList.add('hidden');
-    document.getElementById('filter-hotpost-btn')?.classList.add('hidden');
-    document.getElementById('filter-tray').classList.add('hidden');
-
-    currentFilter = 'none';
-    const preview = document.getElementById('hotpost-preview');
-    if (preview) preview.style.filter = 'none';
+    // Reset States
+    currentFilterIndex = 0;
+    document.getElementById('hotpost-preview-img').style.filter = FILTER_LIST[0].css;
+    isDrawMode = false;
+    doodlePaths = [];
+    document.getElementById('doodle-color-picker').classList.add('hidden');
+    
+    const textLayer = document.getElementById('hotpost-draggable-text');
+    textLayer.textContent = '';
+    textLayer.classList.add('hidden');
+    textContent = '';
+    textPosX = 0.5;
+    textPosY = 0.5;
 }
 
 function showPreviewUI() {
     document.getElementById('hotpost-camera-feed').classList.add('hidden');
-    document.getElementById('hotpost-preview')?.classList.remove('hidden');
-    
+    document.getElementById('hotpost-preview-container').classList.remove('hidden');
     document.getElementById('capture-ui').classList.add('hidden');
-    document.getElementById('preview-ui').classList.remove('hidden');
+    document.getElementById('preview-ui').classList.remove('flex', 'hidden'); 
+    document.getElementById('preview-ui').classList.add('flex'); // Show bottom bar
     document.getElementById('switch-hotpost-camera-btn').classList.add('hidden');
-    
-    document.getElementById('add-text-hotpost-btn')?.classList.remove('hidden');
-    document.getElementById('filter-hotpost-btn')?.classList.remove('hidden');
+    document.getElementById('editor-tools-container').classList.remove('hidden');
 }
 
-function toggleFilterTray() {
-    document.getElementById('filter-tray').classList.toggle('hidden');
-    document.getElementById('filter-tray').classList.toggle('flex'); 
-}
-
-function applyFilter(event) {
-    currentFilter = event.target.dataset.filter;
-    document.getElementById('hotpost-preview').style.filter = currentFilter;
-}
-
-function capturePhoto() {
-    const video = document.getElementById('hotpost-camera-feed');
-    const canvas = document.getElementById('hotpost-camera-canvas');
-    const context = canvas.getContext('2d');
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    if (currentFacingMode === 'user') {
-        context.translate(canvas.width, 0);
-        context.scale(-1, 1);
+// --- Text Tool ---
+function activateTextTool() {
+    const input = prompt("Enter text for your Hotpost:");
+    if (input !== null && input.trim() !== "") {
+        textContent = input.trim();
+        const textLayer = document.getElementById('hotpost-draggable-text');
+        textLayer.textContent = textContent;
+        textLayer.classList.remove('hidden');
+        textPosX = 0.5; textPosY = 0.5; // Reset to center
+        updateTextPosition();
     }
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(blob => {
-        currentPhotoBlob = blob;
-        document.getElementById('hotpost-preview').src = URL.createObjectURL(blob);
-        showPreviewUI();
-    }, 'image/jpeg', 0.9);
 }
 
+function updateTextPosition() {
+    const textLayer = document.getElementById('hotpost-draggable-text');
+    textLayer.style.left = `${textPosX * 100}%`;
+    textLayer.style.top = `${textPosY * 100}%`;
+}
+
+// --- Doodle Tool ---
+function initDoodleCanvas() {
+    const canvas = document.getElementById('hotpost-doodle-canvas');
+    const container = document.getElementById('hotpost-preview-container');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function toggleDrawMode() {
+    isDrawMode = !isDrawMode;
+    const colorPicker = document.getElementById('doodle-color-picker');
+    const penBtn = document.getElementById('doodle-hotpost-btn');
+    
+    if (isDrawMode) {
+        colorPicker.classList.remove('hidden');
+        colorPicker.classList.add('flex');
+        penBtn.classList.add('bg-white', 'text-black');
+        penBtn.classList.remove('bg-black/40', 'text-white');
+    } else {
+        colorPicker.classList.add('hidden');
+        colorPicker.classList.remove('flex');
+        penBtn.classList.remove('bg-white', 'text-black');
+        penBtn.classList.add('bg-black/40', 'text-white');
+    }
+}
+
+function setDoodleColor(color) {
+    currentDoodleColor = color;
+}
+
+function undoLastDoodle() {
+    if (doodlePaths.length > 0) {
+        doodlePaths.pop();
+        redrawDoodleCanvas();
+    }
+}
+
+function redrawDoodleCanvas() {
+    const canvas = document.getElementById('hotpost-doodle-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.lineWidth = 5;
+
+    doodlePaths.forEach(pathObj => {
+        ctx.strokeStyle = pathObj.color;
+        ctx.shadowColor = pathObj.color;
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        pathObj.points.forEach((point, index) => {
+            if (index === 0) ctx.moveTo(point.x, point.y);
+            else ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+    });
+}
+
+// --- Editor Touch Physics (Swiping, Dragging, Drawing) ---
+function setupEditorTouchPhysics() {
+    const container = document.getElementById('hotpost-preview-container');
+    const textLayer = document.getElementById('hotpost-draggable-text');
+    let startX = 0, startY = 0;
+    
+    // Text Dragging specific flag
+    let draggingTextActive = false;
+
+    // 1. Text Drag Listeners
+    textLayer.addEventListener('touchstart', (e) => {
+        draggingTextActive = true;
+    }, { passive: true });
+
+    // 2. Container Listeners (Handles Swiping and Drawing)
+    container.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+
+        if (isDrawMode && !draggingTextActive) {
+            isDrawing = true;
+            const rect = container.getBoundingClientRect();
+            currentPath = [{ x: startX - rect.left, y: startY - rect.top }];
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const rect = container.getBoundingClientRect();
+
+        if (draggingTextActive) {
+            // Drag Text
+            textPosX = (currentX - rect.left) / rect.width;
+            textPosY = (currentY - rect.top) / rect.height;
+            
+            // Clamp to screen edges
+            textPosX = Math.max(0.05, Math.min(0.95, textPosX));
+            textPosY = Math.max(0.05, Math.min(0.95, textPosY));
+            updateTextPosition();
+        } 
+        else if (isDrawMode && isDrawing) {
+            // Draw Doodle
+            currentPath.push({ x: currentX - rect.left, y: currentY - rect.top });
+            // Quick draw current segment for instant feedback
+            const canvas = document.getElementById('hotpost-doodle-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.lineWidth = 5;
+            ctx.strokeStyle = currentDoodleColor; ctx.shadowColor = currentDoodleColor; ctx.shadowBlur = 4;
+            
+            ctx.beginPath();
+            const prev = currentPath[currentPath.length - 2];
+            const curr = currentPath[currentPath.length - 1];
+            ctx.moveTo(prev.x, prev.y);
+            ctx.lineTo(curr.x, curr.y);
+            ctx.stroke();
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchend', (e) => {
+        if (draggingTextActive) {
+            draggingTextActive = false;
+            return;
+        }
+
+        if (isDrawMode && isDrawing) {
+            isDrawing = false;
+            if (currentPath.length > 1) {
+                doodlePaths.push({ color: currentDoodleColor, points: [...currentPath] });
+            }
+            currentPath = [];
+            return;
+        }
+
+        // Swipe for Filters (Only if not drawing or dragging text)
+        const endX = e.changedTouches[0].clientX;
+        const deltaX = endX - startX;
+
+        if (Math.abs(deltaX) > 50) {
+            if (deltaX < 0) {
+                // Swipe Left -> Next Filter
+                currentFilterIndex = (currentFilterIndex + 1) % FILTER_LIST.length;
+            } else {
+                // Swipe Right -> Prev Filter
+                currentFilterIndex = (currentFilterIndex - 1 + FILTER_LIST.length) % FILTER_LIST.length;
+            }
+            
+            const filter = FILTER_LIST[currentFilterIndex];
+            document.getElementById('hotpost-preview-img').style.filter = filter.css;
+            showFilterToast(filter.name);
+        }
+    }, { passive: true });
+}
+
+function showFilterToast(name) {
+    const toast = document.getElementById('filter-name-toast');
+    toast.textContent = name;
+    toast.classList.remove('hidden');
+    toast.style.animation = 'none';
+    toast.offsetHeight; // trigger reflow
+    toast.style.animation = 'fadeOutUp 1s ease-out forwards';
+}
+
+
+// ==========================================
+// THE "BAKE" COMPILER & UPLOAD
+// ==========================================
 async function submitHotpost() {
     if (!currentPhotoBlob) return;
 
-    const visibility = document.getElementById('hotpost-visibility')?.value || 'everyone';
-    const textOverlay = document.getElementById('hotpost-text-input')?.value.trim();
+    const visibility = document.getElementById('hotpost-send-visibility')?.dataset.val || 'everyone';
     const btn = document.getElementById('submit-hotpost-btn');
+    const originalBtnInner = btn.innerHTML;
     
     btn.disabled = true;
     btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-white">progress_activity</span>`;
 
     try {
-        const getEditedBlob = () => new Promise((resolve) => {
-            if (currentFilter === 'none' && !textOverlay) {
-                resolve(currentPhotoBlob); 
-                return;
+        const getCompiledBlob = () => new Promise((resolve) => {
+            const bakeCanvas = document.createElement('canvas');
+            bakeCanvas.width = baseImageObj.width;
+            bakeCanvas.height = baseImageObj.height;
+            const ctx = bakeCanvas.getContext('2d');
+
+            // 1. Draw Base Image & CSS Filter
+            if (FILTER_LIST[currentFilterIndex].css !== 'none') {
+                ctx.filter = FILTER_LIST[currentFilterIndex].css;
+            }
+            ctx.drawImage(baseImageObj, 0, 0, bakeCanvas.width, bakeCanvas.height);
+            ctx.filter = 'none'; // reset filter for overlays
+
+            // 2. Draw Doodle Canvas (Scaled to image resolution)
+            const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
+            if (doodlePaths.length > 0) {
+                ctx.drawImage(doodleCanvas, 0, 0, bakeCanvas.width, bakeCanvas.height);
             }
 
-            const editCanvas = document.createElement('canvas');
-            const editCtx = editCanvas.getContext('2d');
-            const img = new Image();
+            // 3. Draw Text (Scaled correctly)
+            if (textContent) {
+                const fontSize = Math.floor(bakeCanvas.width * 0.08); 
+                ctx.font = `800 ${fontSize}px Inter, sans-serif`;
+                ctx.fillStyle = "white";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.shadowColor = "rgba(0,0,0,0.85)";
+                ctx.shadowBlur = 18;
+                
+                // Use normalized X/Y coordinates to place perfectly
+                const finalX = bakeCanvas.width * textPosX;
+                const finalY = bakeCanvas.height * textPosY;
+                ctx.fillText(textContent, finalX, finalY);
+            }
 
-            img.onload = () => {
-                editCanvas.width = img.width;
-                editCanvas.height = img.height;
-                if(currentFilter !== 'none') editCtx.filter = currentFilter;
-                editCtx.drawImage(img, 0, 0);
-
-                if (textOverlay) {
-                    const fontSize = Math.floor(editCanvas.width * 0.08); 
-                    editCtx.font = `800 ${fontSize}px Inter, sans-serif`;
-                    editCtx.fillStyle = "white";
-                    editCtx.textAlign = "center";
-                    editCtx.textBaseline = "middle";
-                    editCtx.shadowColor = "rgba(0,0,0,0.9)";
-                    editCtx.shadowBlur = 15;
-                    editCtx.fillText(textOverlay, editCanvas.width / 2, editCanvas.height / 2);
-                }
-                editCanvas.toBlob(resolve, 'image/jpeg', 0.9);
-            };
-            img.src = URL.createObjectURL(currentPhotoBlob);
+            bakeCanvas.toBlob(resolve, 'image/jpeg', 0.9);
         });
 
-        const finalBlob = await getEditedBlob();
+        const finalBlob = await getCompiledBlob();
 
+        // Upload to Cloudinary
         const formData = new FormData();
         formData.append('file', finalBlob, 'hotpost.jpg');
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
@@ -269,6 +482,7 @@ async function submitHotpost() {
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
 
+        // Save to Database
         const { error } = await supabase.from('hotposts').insert({
             user_id: currentUser.id,
             media_url: data.secure_url,
@@ -278,18 +492,41 @@ async function submitHotpost() {
 
         if (error) throw error;
 
-        showToast('Hotpost created successfully!', 'success');
+        showToast('Hotpost published!', 'success');
         closeCameraModal();
         fetchHotposts(); 
 
     } catch (error) {
-        showToast('Failed to create hotpost.', 'error');
+        showToast('Failed to publish hotpost.', 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = `<span class="material-symbols-outlined text-[24px]">send</span>`;
+        btn.innerHTML = originalBtnInner;
     }
 }
 
+// Toggle Visibility Button UI
+window.toggleVisibilitySetting = function() {
+    const btn = document.getElementById('hotpost-send-visibility');
+    const text = document.getElementById('visibility-text');
+    const icon = document.getElementById('visibility-icon');
+    
+    if(btn.dataset.val === 'everyone') {
+        btn.dataset.val = 'connections';
+        text.textContent = 'Connections';
+        icon.textContent = 'stars';
+        btn.classList.replace('bg-black/50', 'bg-green-500/80');
+    } else {
+        btn.dataset.val = 'everyone';
+        text.textContent = 'Everyone';
+        icon.textContent = 'public';
+        btn.classList.replace('bg-green-500/80', 'bg-black/50');
+    }
+}
+
+
+// ==========================================
+// DASHBOARD RENDER & VIEWING ENGINE
+// ==========================================
 async function fetchHotposts() {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -306,9 +543,9 @@ async function fetchHotposts() {
 
     if (error) return;
 
-    // Filter out posts the user has already viewed (Snapchat style)
+    // Filter unviewed
     const unviewedData = data.filter(post => {
-        if (post.user_id === currentUser.id) return true; // Keep own posts until 24h expires
+        if (post.user_id === currentUser.id) return true; // Keep own posts
         const hasViewed = post.hotpost_views.some(v => v.viewer_id === currentUser.id);
         return !hasViewed;
     });
@@ -330,18 +567,29 @@ function renderHotpostCircles() {
     if (!container) return;
     container.innerHTML = ''; 
 
-    // 1. ALWAYS render the Current User's circle first
+    // 1. Persistent "Add Hotpost" Button
+    const addCircle = document.createElement('div');
+    addCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
+    addCircle.innerHTML = `
+        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
+            <div class="w-full h-full rounded-full border-2 border-surface-variant dark:border-neutral-700 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}`}" class="w-full h-full object-cover opacity-60">
+            </div>
+            <div class="absolute bottom-0 right-0 w-6 h-6 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
+                <span class="material-symbols-outlined text-[14px] font-bold">add</span>
+            </div>
+        </div>
+        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Add Story</span>
+    `;
+    addCircle.addEventListener('click', openCameraModal);
+    container.appendChild(addCircle);
+
+    // 2. Render "Your Story" IF you have active posts
     const myData = hotpostsByUser.get(currentUser.id);
-    const hasMyActiveStories = myData && myData.posts.length > 0;
-    
-    const myCircle = document.createElement('div');
-    // Added relative and z-20 to ensure it is clickable on mobile
-    myCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
-    
-    if (hasMyActiveStories) {
-        // Has stories: Show ring, click to view
-        const isViewed = myData.viewed || false;
-        const ringClass = isViewed ? 'from-gray-300 to-gray-400' : 'from-gray-400 to-gray-600';
+    if (myData && myData.posts.length > 0) {
+        const myCircle = document.createElement('div');
+        myCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-10';
+        const ringClass = myData.viewed ? 'from-gray-300 to-gray-400' : 'from-gray-400 to-gray-600';
         myCircle.innerHTML = `
             <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm relative">
                 <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
@@ -351,27 +599,11 @@ function renderHotpostCircles() {
             <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Your Story</span>
         `;
         myCircle.addEventListener('click', () => openHotpostViewer(currentUser.id));
-    } else {
-        // No stories: Show "+" icon, click to open camera
-        myCircle.innerHTML = `
-            <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
-                <div class="w-full h-full rounded-full border-2 border-surface-variant dark:border-neutral-700 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                    <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}`}" class="w-full h-full object-cover opacity-80">
-                </div>
-                <div class="absolute bottom-0 right-0 w-6 h-6 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
-                    <span class="material-symbols-outlined text-[14px] font-bold">add</span>
-                </div>
-            </div>
-            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Add Story</span>
-        `;
-        myCircle.addEventListener('click', () => window.openHotpostCamera());
+        container.appendChild(myCircle);
     }
-    container.appendChild(myCircle);
 
-    // 2. Render all OTHER users' circles
+    // 3. Render all OTHER users' circles
     const otherUserIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
-    
-    // Sort by unviewed first, then viewed
     otherUserIds.sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
 
     otherUserIds.forEach(userId => {
@@ -395,16 +627,82 @@ function renderHotpostCircles() {
     });
 }
 
-let currentViewerState = {
-    userId: null,
-    userOrder: [], 
-    userIndex: -1,
-    postIndex: 0,
-    storyTimer: null,
-    storyDuration: 5000,
-    animationStartTime: 0,
-    remainingDuration: 0,
-};
+
+// ==========================================
+// VIEWER ENGINE & SWIPE PHYSICS
+// ==========================================
+function setupViewerTouchPhysics() {
+    const viewer = document.getElementById('modal-view-hotpost');
+    const activityPanel = document.getElementById('modal-story-details');
+    const activityContent = document.getElementById('modal-story-details-sheet');
+    
+    let startY = 0;
+    let isDraggingPanel = false;
+    
+    // VIEWER TOUCH (Swipe Down to close, Swipe Up to open Activity if owner)
+    viewer?.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    viewer?.addEventListener('touchmove', (e) => {
+        // Prevent default browser refresh/bouncing
+        if(e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    viewer?.addEventListener('touchend', (e) => {
+        const endY = e.changedTouches[0].clientY;
+        const deltaY = endY - startY;
+        
+        if (e.target.closest('button') || e.target.closest('input')) return;
+
+        if (deltaY < -60 && currentViewerState.userId === currentUser.id) {
+            // Swipe Up
+            openActivityPanel();
+        } else if (deltaY > 100) {
+            // Swipe Down
+            closeHotpostViewer();
+        }
+    }, { passive: true });
+
+    // ACTIVITY PANEL TOUCH (Drag down to close)
+    activityContent?.addEventListener('touchstart', (e) => {
+        const scrollArea = e.target.closest('.overflow-y-auto');
+        if (scrollArea && scrollArea.scrollTop > 0) {
+            isDraggingPanel = false; // User is scrolling a list, not dragging sheet
+        } else {
+            startY = e.touches[0].clientY;
+            isDraggingPanel = true;
+            activityContent.style.transition = 'none'; // Disable transition for 1:1 dragging
+        }
+    }, { passive: true });
+
+    activityContent?.addEventListener('touchmove', (e) => {
+        if (!isDraggingPanel) return;
+        const currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        
+        if (deltaY > 0) { // Only allow dragging downwards
+            activityContent.style.transform = `translateY(${deltaY}px)`;
+        }
+        if(e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    activityContent?.addEventListener('touchend', (e) => {
+        if (!isDraggingPanel) return;
+        isDraggingPanel = false;
+        activityContent.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'; // Restore snap animation
+        
+        const endY = e.changedTouches[0].clientY;
+        const deltaY = endY - startY;
+
+        if (deltaY > 120) {
+            closeActivityPanel();
+        } else {
+            // Snap back up
+            activityContent.style.transform = `translateY(0px)`;
+        }
+    }, { passive: true });
+}
 
 function openHotpostViewer(userId) {
     const userData = hotpostsByUser.get(userId);
@@ -414,9 +712,7 @@ function openHotpostViewer(userId) {
         .filter(id => id !== currentUser.id)
         .sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
 
-    if (userId === currentUser.id) {
-        allUserIds.unshift(currentUser.id);
-    }
+    if (userId === currentUser.id) allUserIds.unshift(currentUser.id);
 
     const clickedUserIndex = allUserIds.indexOf(userId);
     currentViewerState.userOrder = [
@@ -429,7 +725,6 @@ function openHotpostViewer(userId) {
 }
 
 function processStoryDisappear() {
-    // Snapchat logic: If user swiped away or story finished, destroy from DOM instantly
     const lastViewedUser = currentViewerState.userId;
     if (lastViewedUser && lastViewedUser !== currentUser.id) {
         hotpostsByUser.delete(lastViewedUser);
@@ -467,12 +762,12 @@ function playUserStories(userIndex, postIndex = 0) {
         </div>
     `).join('');
 
-    // Configure Bottom UI based on ownership
+    // Setup Bottom UI
     const isMyStory = currentViewerState.userId === currentUser.id;
     document.getElementById('hotpost-reply-container').style.display = isMyStory ? 'none' : 'flex';
     document.getElementById('hotpost-activity-btn').style.display = isMyStory ? 'flex' : 'none';
     
-    // Visibility Badge (Globe or Green Star)
+    // Setup Top UI (Visibility Badge)
     const visIcon = document.getElementById('hotpost-viewer-visibility');
     if (post.visibility === 'connections') {
         visIcon.textContent = 'stars';
@@ -484,7 +779,7 @@ function playUserStories(userIndex, postIndex = 0) {
         visIcon.classList.add('text-white/80');
     }
 
-    // Reset Like button state
+    // Reset Like Icon
     const likeBtnIcon = document.querySelector('#hotpost-like-btn span');
     if(likeBtnIcon) {
         likeBtnIcon.style.fontVariationSettings = "'FILL' 0";
@@ -515,7 +810,7 @@ function nextStory() {
     if (currentViewerState.postIndex < currentUserData.posts.length - 1) {
         playUserStories(currentViewerState.userIndex, currentViewerState.postIndex + 1);
     } else {
-        processStoryDisappear(); // Immediately destroy from DOM before moving to next
+        processStoryDisappear();
         playUserStories(currentViewerState.userIndex + 1, 0);
     }
 }
@@ -542,7 +837,7 @@ function pauseStory() {
 
 function resumeStory() {
     if (document.getElementById('modal-view-hotpost').classList.contains('hidden')) return;
-    if (!document.getElementById('modal-story-details').classList.contains('hidden')) return; // Dont resume if activity panel is open
+    if (!document.getElementById('modal-story-details').classList.contains('hidden')) return; 
 
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
     if (activeBar) activeBar.style.animationPlayState = 'running';
@@ -552,6 +847,9 @@ function resumeStory() {
     currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.remainingDuration);
 }
 
+// ==========================================
+// INTERACTIONS & ACTIVITY
+// ==========================================
 async function recordView(hotpostId) {
     if (currentViewerState.userId === currentUser.id) return;
     if (sessionViewedPostIds.has(hotpostId)) return;
@@ -562,9 +860,7 @@ async function recordView(hotpostId) {
 
 async function handleLikeHotpost(event) {
     event.stopPropagation(); 
-    const btn = event.currentTarget;
-    const icon = btn.querySelector('span');
-    
+    const icon = event.currentTarget.querySelector('span');
     icon.style.fontVariationSettings = "'FILL' 1";
     icon.classList.add('text-red-500');
     
@@ -574,7 +870,6 @@ async function handleLikeHotpost(event) {
 
 async function handleReplyToHotpost(event) {
     event.stopPropagation(); 
-
     const input = document.getElementById('hotpost-reply-input');
     const content = input.value.trim();
     if (!content) return;
@@ -582,7 +877,7 @@ async function handleReplyToHotpost(event) {
     const userData = hotpostsByUser.get(currentViewerState.userId);
     const post = userData.posts[currentViewerState.postIndex];
     const replyBtn = document.getElementById('hotpost-reply-btn');
-    const originalBtnContent = replyBtn.innerHTML;
+    const originalHtml = replyBtn.innerHTML;
 
     replyBtn.disabled = true;
     replyBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-white">progress_activity</span>`;
@@ -594,30 +889,32 @@ async function handleReplyToHotpost(event) {
     if (error) {
         showToast('Failed to send reply.', 'error');
         replyBtn.disabled = false;
-        replyBtn.innerHTML = originalBtnContent;
+        replyBtn.innerHTML = originalHtml;
     } else {
         showToast('Reply sent!', 'success');
         input.value = '';
-        replyBtn.classList.add('!bg-green-500', 'transition-colors', 'border-transparent');
+        replyBtn.classList.add('!bg-green-500', 'border-transparent');
         replyBtn.innerHTML = `<span class="material-symbols-outlined text-white">check</span>`;
 
         setTimeout(() => {
             replyBtn.disabled = false;
             replyBtn.classList.remove('!bg-green-500', 'border-transparent');
-            replyBtn.innerHTML = originalBtnContent;
+            replyBtn.innerHTML = originalHtml;
             resumeStory();
         }, 1500);
     }
 }
 
-// =====================================
-// ACTIVITY PANEL (Self View)
-// =====================================
-
-async function openStoryDetailsModal() {
+function openActivityPanel() {
     pauseStory();
     const modal = document.getElementById('modal-story-details');
+    const sheet = document.getElementById('modal-story-details-sheet');
+    
     modal.classList.replace('hidden', 'flex');
+    // Allow slight delay for display block rendering, then slide up
+    setTimeout(() => {
+        sheet.style.transform = `translateY(0px)`;
+    }, 10);
 
     const post = hotpostsByUser.get(currentUser.id).posts[currentViewerState.postIndex];
 
@@ -627,9 +924,16 @@ async function openStoryDetailsModal() {
     fetchStoryReplies(post.id);
 }
 
-function closeStoryDetailsModal() {
-    document.getElementById('modal-story-details').classList.replace('flex', 'hidden');
-    resumeStory();
+function closeActivityPanel() {
+    const modal = document.getElementById('modal-story-details');
+    const sheet = document.getElementById('modal-story-details-sheet');
+    
+    sheet.style.transform = `translateY(100%)`;
+    
+    setTimeout(() => {
+        modal.classList.replace('flex', 'hidden');
+        resumeStory();
+    }, 300); // Wait for CSS transition
 }
 
 function switchDetailsTab(tabName) {
@@ -644,79 +948,46 @@ function switchDetailsTab(tabName) {
     document.getElementById(`details-tab-${tabName}`).classList.remove('text-on-surface-variant', 'dark:text-gray-400');
 }
 
+// Fetchers for Activity Panel (Simplified logic mapping)
 async function fetchStoryViewers(hotpostId) {
     const list = document.getElementById('hotpost-viewers-list');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading...</p>`;
+    list.innerHTML = `<p class="text-sm italic text-center py-8">Loading...</p>`;
     try {
-        const { data, error } = await supabase.from('hotpost_views').select('viewed_at, users!hotpost_views_viewer_id_fkey(full_name, profile_img_url)')
-            .eq('hotpost_id', hotpostId).eq('is_deleted', false).order('viewed_at', { ascending: false });
+        const { data, error } = await supabase.from('hotpost_views').select('viewed_at, users!hotpost_views_viewer_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('viewed_at', { ascending: false });
         if (error) throw error;
-        
         document.getElementById('details-tab-viewers').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">visibility</span> ${data.length}`;
         if (data.length === 0) { list.innerHTML = `<p class="text-sm italic text-center py-8">No views yet.</p>`; return; }
-
-        list.innerHTML = data.map(v => `
-            <div class="flex items-center gap-3 p-3 bg-surface-variant/20 dark:bg-neutral-800/50 rounded-2xl">
-                <img src="${v.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.users.full_name)}`}" class="w-10 h-10 rounded-full object-cover">
-                <div class="flex-1"><p class="text-sm font-bold text-on-surface dark:text-gray-100">${v.users.full_name}</p></div>
-                <p class="text-xs text-on-surface-variant dark:text-gray-500">${timeAgo(v.viewed_at)}</p>
-            </div>
-        `).join('');
+        list.innerHTML = data.map(v => `<div class="flex items-center gap-3 p-3 bg-surface-variant/20 dark:bg-neutral-800/50 rounded-2xl"><img src="${v.users.profile_img_url}" class="w-10 h-10 rounded-full object-cover"><div class="flex-1"><p class="text-sm font-bold text-on-surface dark:text-gray-100">${v.users.full_name}</p></div><p class="text-xs text-on-surface-variant">${timeAgo(v.viewed_at)}</p></div>`).join('');
     } catch (e) { list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed.</p>`; }
 }
 
 async function fetchStoryLikes(hotpostId) {
     const list = document.getElementById('hotpost-likes-list');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading...</p>`;
+    list.innerHTML = `<p class="text-sm italic text-center py-8">Loading...</p>`;
     try {
-        const { data, error } = await supabase.from('hotpost_likes').select('created_at, users!hotpost_likes_user_id_fkey(full_name, profile_img_url)')
-            .eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('hotpost_likes').select('created_at, users!hotpost_likes_user_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
         if (error) throw error;
-        
         document.getElementById('details-tab-likes').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">favorite</span> ${data.length}`;
         if (data.length === 0) { list.innerHTML = `<p class="text-sm italic text-center py-8">No likes yet.</p>`; return; }
-
-        list.innerHTML = data.map(l => `
-            <div class="flex items-center gap-3 p-3 bg-red-500/5 dark:bg-red-500/10 rounded-2xl border border-red-500/10">
-                <img src="${l.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(l.users.full_name)}`}" class="w-10 h-10 rounded-full object-cover">
-                <div class="flex-1"><p class="text-sm font-bold text-on-surface dark:text-gray-100">${l.users.full_name}</p></div>
-                <span class="material-symbols-outlined text-red-500" style="font-variation-settings: 'FILL' 1;">favorite</span>
-            </div>
-        `).join('');
+        list.innerHTML = data.map(l => `<div class="flex items-center gap-3 p-3 bg-red-500/5 dark:bg-red-500/10 rounded-2xl border border-red-500/10"><img src="${l.users.profile_img_url}" class="w-10 h-10 rounded-full object-cover"><div class="flex-1"><p class="text-sm font-bold text-on-surface dark:text-gray-100">${l.users.full_name}</p></div><span class="material-symbols-outlined text-red-500" style="font-variation-settings: 'FILL' 1;">favorite</span></div>`).join('');
     } catch (e) { list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed.</p>`; }
 }
 
 async function fetchStoryReplies(hotpostId) {
     const list = document.getElementById('hotpost-replies-list');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading...</p>`;
+    list.innerHTML = `<p class="text-sm italic text-center py-8">Loading...</p>`;
     try {
-        const { data, error } = await supabase.from('hotpost_replies').select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)')
-            .eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('hotpost_replies').select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
         if (error) throw error;
-        
         document.getElementById('details-tab-replies').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">reply</span> ${data.length}`;
         if (data.length === 0) { list.innerHTML = `<p class="text-sm italic text-center py-8">No replies yet.</p>`; return; }
-
-        list.innerHTML = data.map(r => `
-            <div class="flex items-start gap-3 p-3 bg-surface-variant/20 dark:bg-neutral-800/50 rounded-2xl">
-                <img src="${r.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.users.full_name)}`}" class="w-9 h-9 rounded-full object-cover">
-                <div class="flex-1">
-                    <div class="flex justify-between items-center mb-1">
-                        <p class="text-[13px] font-bold text-on-surface dark:text-gray-100">${r.users.full_name}</p>
-                        <p class="text-[10px] text-on-surface-variant dark:text-gray-500">${timeAgo(r.created_at)}</p>
-                    </div>
-                    <p class="text-[14px] text-on-surface dark:text-gray-300 whitespace-pre-wrap">${r.content}</p>
-                </div>
-            </div>
-        `).join('');
+        list.innerHTML = data.map(r => `<div class="flex items-start gap-3 p-3 bg-surface-variant/20 dark:bg-neutral-800/50 rounded-2xl"><img src="${r.users.profile_img_url}" class="w-9 h-9 rounded-full object-cover"><div class="flex-1"><div class="flex justify-between items-center mb-1"><p class="text-[13px] font-bold text-on-surface dark:text-gray-100">${r.users.full_name}</p><p class="text-[10px] text-on-surface-variant">${timeAgo(r.created_at)}</p></div><p class="text-[14px] text-on-surface dark:text-gray-300 whitespace-pre-wrap">${r.content}</p></div></div>`).join('');
     } catch (e) { list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed.</p>`; }
 }
 
-async function handleDeleteHotpost() {
-    if (!confirm('Are you sure you want to delete this Hotpost?')) return;
-    
+async function executeDeleteHotpost() {
     const post = hotpostsByUser.get(currentUser.id).posts[currentViewerState.postIndex];
-    closeStoryDetailsModal(); 
+    closeActivityPanel(); 
     closeHotpostViewer();
 
     const { error } = await supabase.from('hotposts').update({ is_deleted: true }).eq('id', post.id);
@@ -729,4 +1000,6 @@ async function handleDeleteHotpost() {
     }
 }
 
+// Global Exports
 window.openHotpostCamera = openCameraModal;
+window.openStoryDetailsModal = openActivityPanel;
