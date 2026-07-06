@@ -1236,3 +1236,113 @@ function closeBlockedUsersModal() {
 
 window.openBlockedUsersModal = openBlockedUsersModal;
 window.closeBlockedUsersModal = closeBlockedUsersModal;
+
+// ========================================================
+// SINGLE POST VIEWER ENGINE (Deep Linking from Notifications)
+// ========================================================
+
+window.openSinglePostView = async function(postId) {
+    const modal = document.getElementById('modal-single-post');
+    const container = document.getElementById('single-post-container');
+    
+    // Slide In
+    modal.classList.replace('hidden', 'flex');
+    setTimeout(() => modal.classList.remove('translate-x-full'), 10);
+    
+    container.innerHTML = `<p class="text-sm italic text-center py-10 text-on-surface-variant">Loading post...</p>`;
+    
+    try {
+        const { data: posts, error } = await supabase
+            .from('posts')
+            .select(`
+                *,
+                users ( id, full_name, profile_img_url, role, tick_type ),
+                post_likes ( user_id ),
+                post_comments ( count ),
+                post_poll_votes ( user_id, option_index )
+            `)
+            .eq('id', postId)
+            .eq('is_deleted', false);
+            
+        if (error) throw error;
+        if (!posts || posts.length === 0) {
+            container.innerHTML = `
+                <div class="py-16 flex flex-col items-center justify-center opacity-40 text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[48px] mb-2">delete</span>
+                    <p class="text-sm font-semibold">Post no longer available</p>
+                </div>`;
+            return;
+        }
+        
+        const post = posts[0];
+        const postUser = post.users;
+        const likes = post.post_likes || [];
+        const likeCount = likes.length;
+        const commentCount = post.post_comments[0]?.count || 0;
+        
+        let contentHtml = '';
+
+        // Safely extract tick html
+        const getTickHtmlLocal = (tickType) => {
+            if (!tickType || tickType === 'none') return '';
+            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
+            return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+        };
+        const verifiedBadge = getTickHtmlLocal(postUser.tick_type);
+
+        // Map Content Formats
+        if (post.post_type === 'text') {
+            contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
+        } else if (post.post_type === 'image') {
+            contentHtml = `
+                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
+                <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
+                    <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
+                </div>
+            `;
+        } else if (post.post_type === 'event' || post.post_type === 'poll') {
+            // Provide a graceful fallback link to view interactive formats directly on their profile
+            contentHtml = `
+                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
+                <div class="bg-primary/10 border border-primary/20 rounded-2xl p-5 text-center cursor-pointer hover:bg-primary/20 transition-colors" onclick="closeSinglePostView(); viewUserProfile('${postUser.id}')">
+                    <span class="material-symbols-outlined text-primary text-[32px] mb-2">touch_app</span>
+                    <p class="text-sm font-bold text-primary">View Interactive Post on Profile</p>
+                </div>
+            `;
+        }
+
+        // Render Final Card
+        container.innerHTML = `
+        <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm text-left relative mt-4">
+            <div class="flex items-center gap-3 mb-4">
+                <img src="${postUser.profile_img_url}" class="w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover shrink-0 cursor-pointer" onclick="closeSinglePostView(); viewUserProfile('${postUser.id}')">
+                <div>
+                    <h4 class="font-bold text-[14px] text-on-surface dark:text-gray-100 flex items-center cursor-pointer" onclick="closeSinglePostView(); viewUserProfile('${postUser.id}')">${postUser.full_name} ${verifiedBadge}</h4>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
+                </div>
+            </div>
+            ${contentHtml}
+            
+            <div class="flex items-center justify-between pt-3 border-t border-surface-variant/40 dark:border-neutral-800 mt-2">
+                <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
+                    <span class="material-symbols-outlined text-[18px]">favorite</span>
+                    <span class="text-xs font-bold">${likeCount}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
+                    <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
+                    <span class="text-xs font-bold">${commentCount}</span>
+                </div>
+            </div>
+        </div>`;
+
+    } catch (error) {
+        console.error('Error fetching single post:', error);
+        container.innerHTML = `<p class="text-sm text-center py-10 text-error">Failed to load post.</p>`;
+    }
+}
+
+window.closeSinglePostView = function() {
+    const modal = document.getElementById('modal-single-post');
+    modal.classList.add('translate-x-full');
+    setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+}
