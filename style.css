@@ -112,3 +112,95 @@ body {
 .hotpost-text-overlay-input::placeholder {
     color: rgba(255, 255, 255, 0.6);
 }
+/* =========================================================
+   ULTIMATE HOTPOSTS ENGINE (Native UI & Gestures)
+   ========================================================= */
+
+/* 1. Touch Locks: Prevent browser pull-to-refresh & scrolling during gestures */
+#modal-hotpost-camera,
+#modal-view-hotpost,
+#modal-story-details {
+    touch-action: none; /* Completely disables native browser panning/zooming */
+    overscroll-behavior: none;
+}
+
+/* 2. Free-Floating Draggable Text (Instagram Style) */
+.hotpost-draggable-text {
+    position: absolute;
+    /* Translate -50% ensures the text remains perfectly centered on the X/Y coordinates we track */
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-align: center;
+    /* Heavy double-shadow replaces the need for a background box */
+    text-shadow: 0px 4px 25px rgba(0, 0, 0, 1), 0px 1px 5px rgba(0, 0, 0, 0.8);
+    white-space: pre-wrap;
+    /* Important: We set pointer-events to none so the container underneath catches the drag gestures */
+    pointer-events: none; 
+    z-index: 50;
+    font-family: 'Inter', sans-serif;
+}
+
+/* 3. Doodle Canvas Layer */
+#hotpost-doodle-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Container handles the drawing touches */
+    z-index: 40;
+}
+
+/* 4. Snapchat-Style Filter Toast Animations */
+@keyframes fadeOutUp {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -40%) scale(0.9);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+    70% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -60%) scale(0.9);
+    }
+}
+
+.filter-name-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    text-shadow: 0px 4px 25px rgba(0, 0, 0, 0.9), 0px 0px 15px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    z-index: 60;
+    opacity: 0; /* Hidden by default, animated by JS */
+}
+
+/* 5. Custom Modal Animations */
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-popIn {
+    animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
