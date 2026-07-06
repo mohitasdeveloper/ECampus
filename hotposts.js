@@ -27,16 +27,27 @@ function setupEventListeners() {
     document.getElementById('retake-hotpost-btn')?.addEventListener('click', resetCameraUI);
     document.getElementById('submit-hotpost-btn')?.addEventListener('click', submitHotpost);
 
-    document.getElementById('close-my-hotposts-btn').addEventListener('click', closeMyHotpostsModal);
+    document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () => {
+        const textInput = document.getElementById('hotpost-text-input');
+        textInput.classList.remove('hidden');
+        textInput.focus();
+    });
+
     document.getElementById('close-hotpost-viewer-btn').addEventListener('click', closeHotpostViewer);
     document.getElementById('hotpost-nav-next').addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev').addEventListener('click', prevStory);
-    document.getElementById('close-story-details-btn')?.addEventListener('click', closeStoryDetailsModal);
     
+    // Activity Panel (Self View)
+    document.getElementById('hotpost-activity-btn')?.addEventListener('click', openStoryDetailsModal);
+    document.getElementById('close-story-details-handle')?.addEventListener('click', closeStoryDetailsModal);
+    document.getElementById('delete-hotpost-action-btn')?.addEventListener('click', handleDeleteHotpost);
+
     document.getElementById('hotpost-reply-btn')?.addEventListener('click', (e) => handleReplyToHotpost(e));
     document.getElementById('hotpost-like-btn')?.addEventListener('click', (e) => handleLikeHotpost(e));
 
+    // Tabs
     document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
+    document.getElementById('details-tab-likes')?.addEventListener('click', () => switchDetailsTab('likes'));
     document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
 
     const replyInput = document.getElementById('hotpost-reply-input');
@@ -44,9 +55,7 @@ function setupEventListeners() {
     replyInput?.addEventListener('blur', resumeStory);
 
     document.querySelector('[data-edit="filter"]')?.addEventListener('click', toggleFilterTray);
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', applyFilter);
-    });
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.addEventListener('click', applyFilter));
 
     const navNext = document.getElementById('hotpost-nav-next');
     const navPrev = document.getElementById('hotpost-nav-prev');
@@ -65,9 +74,7 @@ async function openCameraModal() {
     const video = document.getElementById('hotpost-camera-feed');
     modal.classList.replace('hidden', 'flex');
 
-    if (currentCameraStream) {
-        currentCameraStream.getTracks().forEach(track => track.stop());
-    }
+    if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
 
     try {
         currentCameraStream = await navigator.mediaDevices.getUserMedia({
@@ -76,27 +83,15 @@ async function openCameraModal() {
         video.srcObject = currentCameraStream;
         video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'none';
     } catch (err) {
-        console.warn(`Camera with facingMode:${currentFacingMode} not found, trying default.`);
-        try {
-            currentCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = currentCameraStream;
-        } catch (finalErr) {
-            console.error("Camera access error:", finalErr);
-            showToast('Could not access camera. Please check permissions.', 'error');
-            closeCameraModal();
-        }
+        console.warn(`Camera error:`, err);
+        showToast('Could not access camera. Please check permissions.', 'error');
+        closeCameraModal();
     }
 }
 
 function closeCameraModal() {
     const modal = document.getElementById('modal-hotpost-camera');
-    if (currentCameraStream) {
-        currentCameraStream.getTracks().forEach(track => track.stop());
-    }
-    const preview = document.getElementById('hotpost-preview');
-    if (preview && preview.src.startsWith('blob:')) {
-        URL.revokeObjectURL(preview.src);
-    }
+    if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
     resetCameraUI();
     modal.classList.replace('flex', 'hidden');
 }
@@ -110,7 +105,6 @@ function resetCameraUI() {
     document.getElementById('hotpost-camera-feed').classList.remove('hidden');
     document.getElementById('hotpost-preview')?.classList.add('hidden');
     
-    // Clear and hide text input
     const textInput = document.getElementById('hotpost-text-input');
     if(textInput) {
         textInput.classList.add('hidden');
@@ -120,7 +114,9 @@ function resetCameraUI() {
     document.getElementById('capture-ui').classList.remove('hidden');
     document.getElementById('preview-ui').classList.add('hidden');
     document.getElementById('switch-hotpost-camera-btn').classList.remove('hidden');
-    document.getElementById('edit-options-bar').classList.add('hidden');
+    
+    document.getElementById('add-text-hotpost-btn')?.classList.add('hidden');
+    document.getElementById('filter-hotpost-btn')?.classList.add('hidden');
     document.getElementById('filter-tray').classList.add('hidden');
 
     currentFilter = 'none';
@@ -131,12 +127,13 @@ function resetCameraUI() {
 function showPreviewUI() {
     document.getElementById('hotpost-camera-feed').classList.add('hidden');
     document.getElementById('hotpost-preview')?.classList.remove('hidden');
-    document.getElementById('hotpost-text-input')?.classList.remove('hidden');
-
+    
     document.getElementById('capture-ui').classList.add('hidden');
     document.getElementById('preview-ui').classList.remove('hidden');
     document.getElementById('switch-hotpost-camera-btn').classList.add('hidden');
-    document.getElementById('edit-options-bar').classList.remove('hidden');
+    
+    document.getElementById('add-text-hotpost-btn')?.classList.remove('hidden');
+    document.getElementById('filter-hotpost-btn')?.classList.remove('hidden');
 }
 
 function toggleFilterTray() {
@@ -165,27 +162,20 @@ function capturePhoto() {
 
     canvas.toBlob(blob => {
         currentPhotoBlob = blob;
-        const imageUrl = URL.createObjectURL(blob);
-        document.getElementById('hotpost-preview').src = imageUrl;
+        document.getElementById('hotpost-preview').src = URL.createObjectURL(blob);
         showPreviewUI();
-        
-        // Auto-focus text input for quick typing
-        setTimeout(() => document.getElementById('hotpost-text-input')?.focus(), 100);
     }, 'image/jpeg', 0.9);
 }
 
 async function submitHotpost() {
-    if (!currentPhotoBlob) {
-        showToast('No photo to upload.', 'error');
-        return;
-    }
+    if (!currentPhotoBlob) return;
 
     const visibility = document.getElementById('hotpost-visibility')?.value || 'everyone';
     const textOverlay = document.getElementById('hotpost-text-input')?.value.trim();
     const btn = document.getElementById('submit-hotpost-btn');
     
     btn.disabled = true;
-    btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-white">progress_activity</span>`;
 
     try {
         const getEditedBlob = () => new Promise((resolve) => {
@@ -201,14 +191,9 @@ async function submitHotpost() {
             img.onload = () => {
                 editCanvas.width = img.width;
                 editCanvas.height = img.height;
-                
-                if(currentFilter !== 'none') {
-                    editCtx.filter = currentFilter;
-                }
-                
+                if(currentFilter !== 'none') editCtx.filter = currentFilter;
                 editCtx.drawImage(img, 0, 0);
 
-                // Bake text centrally into the image
                 if (textOverlay) {
                     const fontSize = Math.floor(editCanvas.width * 0.08); 
                     editCtx.font = `800 ${fontSize}px Inter, sans-serif`;
@@ -219,7 +204,6 @@ async function submitHotpost() {
                     editCtx.shadowBlur = 15;
                     editCtx.fillText(textOverlay, editCanvas.width / 2, editCanvas.height / 2);
                 }
-
                 editCanvas.toBlob(resolve, 'image/jpeg', 0.9);
             };
             img.src = URL.createObjectURL(currentPhotoBlob);
@@ -227,23 +211,17 @@ async function submitHotpost() {
 
         const finalBlob = await getEditedBlob();
 
-        // 1. Upload to Cloudinary
         const formData = new FormData();
         formData.append('file', finalBlob, 'hotpost.jpg');
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
 
-        const res = await fetch(CLOUDINARY_URL, {
-            method: 'POST',
-            body: formData,
-        });
+        const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
-        const imageUrl = data.secure_url;
 
-        // 2. Save to Supabase (Defaults to is_deleted: false)
         const { error } = await supabase.from('hotposts').insert({
             user_id: currentUser.id,
-            media_url: imageUrl,
+            media_url: data.secure_url,
             media_type: 'image',
             visibility: visibility,
         });
@@ -255,11 +233,10 @@ async function submitHotpost() {
         fetchHotposts(); 
 
     } catch (error) {
-        console.error('Error creating hotpost:', error);
-        showToast('Failed to create hotpost. Please try again.', 'error');
+        showToast('Failed to create hotpost.', 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = `<span class="material-symbols-outlined text-3xl">send</span>`;
+        btn.innerHTML = `<span class="material-symbols-outlined text-[24px]">send</span>`;
     }
 }
 
@@ -269,10 +246,7 @@ async function fetchHotposts() {
     const { data, error } = await supabase
         .from('hotposts')
         .select(`
-            id,
-            created_at,
-            media_url,
-            user_id,
+            id, created_at, media_url, visibility, user_id,
             users ( id, full_name, profile_img_url ),
             hotpost_views ( viewer_id )
         `)
@@ -280,14 +254,11 @@ async function fetchHotposts() {
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching hotposts:', error);
-        return;
-    }
+    if (error) return;
 
-    // SNAPCHAT STYLE FILTER: Exclude posts the user has already viewed
+    // Filter out posts the user has already viewed (Snapchat style)
     const unviewedData = data.filter(post => {
-        if (post.user_id === currentUser.id) return true; // Keep own posts
+        if (post.user_id === currentUser.id) return true; // Keep own posts until 24h expires
         const hasViewed = post.hotpost_views.some(v => v.viewer_id === currentUser.id);
         return !hasViewed;
     });
@@ -296,11 +267,7 @@ async function fetchHotposts() {
     for (const post of unviewedData) {
         const userId = post.users.id;
         if (!hotpostsByUser.has(userId)) {
-            hotpostsByUser.set(userId, {
-                user: post.users,
-                posts: [],
-                viewed: false 
-            });
+            hotpostsByUser.set(userId, { user: post.users, posts: [], viewed: false });
         }
         hotpostsByUser.get(userId).posts.unshift({ ...post, users: undefined }); 
     }
@@ -313,13 +280,10 @@ function renderHotpostCircles() {
     container.innerHTML = ''; 
 
     const allUserIds = Array.from(hotpostsByUser.keys());
-
     allUserIds.sort((a, b) => {
         if (a === currentUser.id) return -1;
         if (b === currentUser.id) return 1;
-        const viewedA = hotpostsByUser.get(a).viewed || false;
-        const viewedB = hotpostsByUser.get(b).viewed || false;
-        return viewedA - viewedB; 
+        return (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false); 
     });
 
     allUserIds.forEach(userId => {
@@ -329,14 +293,7 @@ function renderHotpostCircles() {
         circle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform';
 
         const isSelf = userId === currentUser.id;
-        const isViewed = data.viewed;
-
-        let ringClass;
-        if (isSelf) {
-            ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-blue-500 to-primary';
-        } else {
-            ringClass = isViewed ? 'from-gray-300 to-gray-500' : 'from-yellow-400 via-orange-500 to-red-500';
-        }
+        const ringClass = isSelf ? 'from-gray-300 to-gray-400' : 'from-yellow-400 via-orange-500 to-red-500';
 
         circle.innerHTML = `
             <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
@@ -344,15 +301,10 @@ function renderHotpostCircles() {
                     <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
                 </div>
             </div>
-            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${isSelf ? 'Your Story' : user.full_name.split(' ')[0]}</span>
         `;
 
-        if (isSelf) {
-            circle.addEventListener('click', () => showMyHotposts());
-        } else {
-            circle.addEventListener('click', () => openHotpostViewer(userId));
-        }
-
+        circle.addEventListener('click', () => openHotpostViewer(userId));
         container.appendChild(circle);
     });
 }
@@ -376,7 +328,9 @@ function openHotpostViewer(userId) {
         .filter(id => id !== currentUser.id)
         .sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
 
-    if (userId === currentUser.id) allUserIds.unshift(currentUser.id);
+    if (userId === currentUser.id) {
+        allUserIds.unshift(currentUser.id);
+    }
 
     const clickedUserIndex = allUserIds.indexOf(userId);
     currentViewerState.userOrder = [
@@ -388,11 +342,22 @@ function openHotpostViewer(userId) {
     playUserStories(0); 
 }
 
+function processStoryDisappear() {
+    // Snapchat logic: If user swiped away or story finished, destroy from DOM instantly
+    const lastViewedUser = currentViewerState.userId;
+    if (lastViewedUser && lastViewedUser !== currentUser.id) {
+        hotpostsByUser.delete(lastViewedUser);
+        renderHotpostCircles();
+    }
+}
+
 function closeHotpostViewer() {
     document.getElementById('modal-view-hotpost').classList.replace('flex', 'hidden');
     clearTimeout(currentViewerState.storyTimer);
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
     if (activeBar) activeBar.style.animation = 'none';
+    
+    processStoryDisappear();
 }
 
 function playUserStories(userIndex, postIndex = 0) {
@@ -408,6 +373,7 @@ function playUserStories(userIndex, postIndex = 0) {
     const userData = hotpostsByUser.get(currentViewerState.userId);
     const post = userData.posts[currentViewerState.postIndex];
 
+    // Build progress bars
     const progressContainer = document.getElementById('hotpost-progress-bars');
     progressContainer.innerHTML = userData.posts.map((p, index) => `
         <div class="flex-1 bg-white/30 rounded-full overflow-hidden">
@@ -415,20 +381,32 @@ function playUserStories(userIndex, postIndex = 0) {
         </div>
     `).join('');
 
-    const replyContainer = document.getElementById('hotpost-reply-container');
+    // Configure Bottom UI based on ownership
     const isMyStory = currentViewerState.userId === currentUser.id;
-
-    replyContainer.style.display = isMyStory ? 'none' : 'flex';
+    document.getElementById('hotpost-reply-container').style.display = isMyStory ? 'none' : 'flex';
+    document.getElementById('hotpost-activity-btn').style.display = isMyStory ? 'flex' : 'none';
     
-    // Reset Like button state on load
+    // Visibility Badge (Globe or Green Star)
+    const visIcon = document.getElementById('hotpost-viewer-visibility');
+    if (post.visibility === 'connections') {
+        visIcon.textContent = 'stars';
+        visIcon.classList.add('text-green-400');
+        visIcon.classList.remove('text-white/80');
+    } else {
+        visIcon.textContent = 'public';
+        visIcon.classList.remove('text-green-400');
+        visIcon.classList.add('text-white/80');
+    }
+
+    // Reset Like button state
     const likeBtnIcon = document.querySelector('#hotpost-like-btn span');
     if(likeBtnIcon) {
         likeBtnIcon.style.fontVariationSettings = "'FILL' 0";
         likeBtnIcon.classList.remove('text-red-500');
     }
 
-    document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
-    document.getElementById('hotpost-viewer-name').textContent = userData.user.full_name;
+    document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}`;
+    document.getElementById('hotpost-viewer-name').textContent = isMyStory ? 'Your Story' : userData.user.full_name;
     document.getElementById('hotpost-viewer-time').textContent = timeAgo(post.created_at);
     document.getElementById('hotpost-viewer-image').src = post.media_url;
 
@@ -451,14 +429,7 @@ function nextStory() {
     if (currentViewerState.postIndex < currentUserData.posts.length - 1) {
         playUserStories(currentViewerState.userIndex, currentViewerState.postIndex + 1);
     } else {
-        hotpostsByUser.get(currentViewerState.userId).viewed = true;
-        
-        // Remove viewed users from the active list if they are not the current user
-        if (currentViewerState.userId !== currentUser.id) {
-            hotpostsByUser.delete(currentViewerState.userId);
-        }
-        
-        renderHotpostCircles(); 
+        processStoryDisappear(); // Immediately destroy from DOM before moving to next
         playUserStories(currentViewerState.userIndex + 1, 0);
     }
 }
@@ -485,55 +456,34 @@ function pauseStory() {
 
 function resumeStory() {
     if (document.getElementById('modal-view-hotpost').classList.contains('hidden')) return;
+    if (!document.getElementById('modal-story-details').classList.contains('hidden')) return; // Dont resume if activity panel is open
 
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
-    if (activeBar) {
-        activeBar.style.animationPlayState = 'running';
-    }
+    if (activeBar) activeBar.style.animationPlayState = 'running';
+    
     currentViewerState.animationStartTime = performance.now(); 
     clearTimeout(currentViewerState.storyTimer);
     currentViewerState.storyTimer = setTimeout(nextStory, currentViewerState.remainingDuration);
 }
 
 async function recordView(hotpostId) {
-    const postOwnerId = currentViewerState.userId;
+    if (currentViewerState.userId === currentUser.id) return;
     if (sessionViewedPostIds.has(hotpostId)) return;
-    if (postOwnerId === currentUser.id) return;
 
-    const { error } = await supabase.from('hotpost_views').insert({
-        hotpost_id: hotpostId,
-        viewer_id: currentUser.id
-    });
-
-    if (error && error.code !== '23505') { 
-        console.error('Error recording hotpost view:', error);
-    } else {
-        sessionViewedPostIds.add(hotpostId); 
-    }
+    const { error } = await supabase.from('hotpost_views').insert({ hotpost_id: hotpostId, viewer_id: currentUser.id });
+    if (!error) sessionViewedPostIds.add(hotpostId); 
 }
 
 async function handleLikeHotpost(event) {
     event.stopPropagation(); 
-    
     const btn = event.currentTarget;
     const icon = btn.querySelector('span');
     
-    // Immediate Visual Feedback (Private Like)
     icon.style.fontVariationSettings = "'FILL' 1";
     icon.classList.add('text-red-500');
     
-    const userData = hotpostsByUser.get(currentViewerState.userId);
-    const post = userData.posts[currentViewerState.postIndex];
-    
-    // Silent insert
-    const { error } = await supabase.from('hotpost_likes').insert({
-        hotpost_id: post.id,
-        user_id: currentUser.id
-    });
-    
-    if (error && error.code !== '23505') {
-        console.error('Error recording private like:', error);
-    }
+    const post = hotpostsByUser.get(currentViewerState.userId).posts[currentViewerState.postIndex];
+    await supabase.from('hotpost_likes').insert({ hotpost_id: post.id, user_id: currentUser.id });
 }
 
 async function handleReplyToHotpost(event) {
@@ -549,185 +499,51 @@ async function handleReplyToHotpost(event) {
     const originalBtnContent = replyBtn.innerHTML;
 
     replyBtn.disabled = true;
-    replyBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
+    replyBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-white">progress_activity</span>`;
 
     const { error } = await supabase.from('hotpost_replies').insert({
-        hotpost_id: post.id,
-        replier_id: currentUser.id,
-        author_id: userData.user.id,
-        content: content
+        hotpost_id: post.id, replier_id: currentUser.id, author_id: userData.user.id, content: content
     });
 
     if (error) {
         showToast('Failed to send reply.', 'error');
-        console.error('Error sending hotpost reply:', error);
         replyBtn.disabled = false;
         replyBtn.innerHTML = originalBtnContent;
     } else {
         showToast('Reply sent!', 'success');
         input.value = '';
-
-        replyBtn.classList.add('!bg-green-500', 'transition-colors');
-        replyBtn.innerHTML = `<span class="material-symbols-outlined">check</span>`;
+        replyBtn.classList.add('!bg-green-500', 'transition-colors', 'border-transparent');
+        replyBtn.innerHTML = `<span class="material-symbols-outlined text-white">check</span>`;
 
         setTimeout(() => {
             replyBtn.disabled = false;
-            replyBtn.classList.remove('!bg-green-500');
+            replyBtn.classList.remove('!bg-green-500', 'border-transparent');
             replyBtn.innerHTML = originalBtnContent;
+            resumeStory();
         }, 1500);
     }
 }
 
-function renderMyHotpostsList(posts) {
-    const list = document.getElementById('my-hotposts-list');
-    list.innerHTML = ''; 
+// =====================================
+// ACTIVITY PANEL (Self View)
+// =====================================
 
-    if (!posts || posts.length === 0) {
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You have no active Hotposts.</p>`;
-        return;
-    }
-
-    posts.forEach(post => {
-        const viewCount = post.hotpost_views[0]?.count || 0;
-        const replyCount = post.hotpost_replies[0]?.count || 0;
-        const postEl = document.createElement('div');
-        postEl.className = "flex items-center gap-4 p-3 bg-gray-50 dark:bg-neutral-800/50 rounded-2xl border border-gray-200 dark:border-neutral-800";
-        postEl.innerHTML = `
-            <div class="flex-1 flex items-center gap-4 cursor-pointer">
-                <img src="${post.media_url}" class="w-14 h-20 rounded-xl object-cover">
-                <div class="flex-1">
-                    <p class="text-sm font-bold text-gray-800 dark:text-gray-100">Posted ${timeAgo(post.created_at)}</p>
-                    <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">visibility</span><span>${viewCount} Views</span></div>
-                        <div class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">reply</span><span>${replyCount} Replies</span></div>
-                        </div>
-                    </div>
-                </div>
-            <button class="delete-btn p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors self-center">
-                <span class="material-symbols-outlined text-xl">delete</span>
-            </button>
-        `;
-        postEl.querySelector('.cursor-pointer').addEventListener('click', () => openStoryDetailsModal(post.id));
-        postEl.querySelector('.delete-btn').addEventListener('click', () => handleDeleteHotpost(post.id));
-        list.appendChild(postEl);
-    });
-}
-
-function closeMyHotpostsModal() {
-    document.getElementById('modal-my-hotposts').classList.replace('flex', 'hidden');
-}
-
-async function handleDeleteHotpost(hotpostId) {
-    if (!confirm('Are you sure you want to delete this Hotpost? This cannot be undone.')) {
-        return;
-    }
-
-    closeStoryDetailsModal(); 
-
-    // SOFT DELETE implementation
-    const { error } = await supabase.from('hotposts').update({ is_deleted: true }).eq('id', hotpostId);
-
-    if (error) {
-        showToast('Failed to delete Hotpost.', 'error');
-        console.error('Error deleting hotpost:', error);
-    } else {
-        showToast('Hotpost deleted.', 'success');
-        fetchHotposts(); 
-        if (!document.getElementById('modal-my-hotposts').classList.contains('hidden')) {
-            showMyHotposts();
-        }
-    }
-}
-
-async function openStoryDetailsModal(hotpostId, defaultTab = 'viewers') {
+async function openStoryDetailsModal() {
+    pauseStory();
     const modal = document.getElementById('modal-story-details');
-    if (!modal) return;
-    
     modal.classList.replace('hidden', 'flex');
 
-    const viewersList = document.getElementById('hotpost-viewers-list');
-    const repliesList = document.getElementById('hotpost-replies-list');
+    const post = hotpostsByUser.get(currentUser.id).posts[currentViewerState.postIndex];
 
-    viewersList.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading...</p>`;
-    repliesList.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading...</p>`;
-
-    switchDetailsTab(defaultTab);
-    fetchStoryViewers(hotpostId, viewersList);
-    fetchStoryReplies(hotpostId, repliesList);
-}
-
-async function fetchStoryViewers(hotpostId, list) {
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading viewers...</p>`;
-
-    try {
-        const { data, error } = await supabase
-            .from('hotpost_views')
-            .select('viewed_at, users!hotpost_views_viewer_id_fkey(full_name, profile_img_url)')
-            .eq('hotpost_id', hotpostId)
-            .eq('is_deleted', false) // Check soft delete
-            .order('viewed_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (data.length === 0) {
-            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">No views yet.</p>`;
-            return;
-        }
-
-        list.innerHTML = data.map(view => `
-            <div class="flex items-center gap-3 p-2.5">
-                <img src="${view.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(view.users.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
-                <div class="flex-1">
-                    <p class="text-sm font-bold text-gray-800 dark:text-gray-100">${view.users.full_name}</p>
-                </div>
-                <p class="text-xs text-gray-400 dark:text-gray-500">${timeAgo(view.viewed_at)}</p>
-            </div>
-        `).join('');
-
-    } catch (error) {
-        console.error('Error fetching hotpost viewers:', error);
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load viewers.</p>`;
-    }
-}
-
-async function fetchStoryReplies(hotpostId, list) {
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading replies...</p>`;
-    try {
-        const { data, error } = await supabase
-            .from('hotpost_replies')
-            .select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)')
-            .eq('hotpost_id', hotpostId)
-            .eq('is_deleted', false)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (data.length === 0) {
-            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">No replies yet.</p>`;
-            return;
-        }
-
-        list.innerHTML = data.map(reply => `
-            <div class="flex items-start gap-3 p-2.5">
-                <img src="${reply.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.users.full_name)}&background=e1e3e4`}" class="w-9 h-9 rounded-full object-cover mt-1 border border-gray-200 dark:border-neutral-700">
-                <div class="flex-1 bg-gray-100 dark:bg-neutral-800 rounded-2xl p-3">
-                    <div class="flex justify-between items-center">
-                        <p class="text-xs font-bold text-gray-900 dark:text-gray-100">${reply.users.full_name}</p>
-                        <p class="text-[10px] text-gray-400 dark:text-gray-500">${timeAgo(reply.created_at)}</p>
-                    </div>
-                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">${reply.content}</p>
-                </div>
-            </div>
-        `).join('');
-
-    } catch (error) {
-        console.error('Error fetching hotpost replies:', error);
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load replies.</p>`;
-    }
+    switchDetailsTab('viewers');
+    fetchStoryViewers(post.id);
+    fetchStoryLikes(post.id);
+    fetchStoryReplies(post.id);
 }
 
 function closeStoryDetailsModal() {
     document.getElementById('modal-story-details').classList.replace('flex', 'hidden');
+    resumeStory();
 }
 
 function switchDetailsTab(tabName) {
@@ -736,48 +552,95 @@ function switchDetailsTab(tabName) {
 
     document.querySelectorAll('.details-tab').forEach(el => {
         el.classList.remove('active', 'border-primary', 'text-primary');
-        el.classList.add('border-transparent', 'text-gray-500');
+        el.classList.add('border-transparent', 'text-on-surface-variant', 'dark:text-gray-400');
     });
     document.getElementById(`details-tab-${tabName}`).classList.add('active', 'border-primary', 'text-primary');
+    document.getElementById(`details-tab-${tabName}`).classList.remove('text-on-surface-variant', 'dark:text-gray-400');
 }
 
-export async function showMyHotposts() {
-    const modal = document.getElementById('modal-my-hotposts');
-    const list = document.getElementById('my-hotposts-list');
-
-    modal.classList.replace('hidden', 'flex');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading your posts...</p>`;
-
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
+async function fetchStoryViewers(hotpostId) {
+    const list = document.getElementById('hotpost-viewers-list');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading...</p>`;
     try {
-        const { data: myPosts, error } = await supabase
-            .from('hotposts')
-            .select(`
-                id,
-                created_at,
-                media_url,
-                hotpost_views ( count ),
-                hotpost_replies ( count )
-            `)
-            .eq('user_id', currentUser.id)
-            .eq('is_deleted', false) // Check soft delete
-            .gt('created_at', twentyFourHoursAgo)
-            .order('created_at', { ascending: false });
-
+        const { data, error } = await supabase.from('hotpost_views').select('viewed_at, users!hotpost_views_viewer_id_fkey(full_name, profile_img_url)')
+            .eq('hotpost_id', hotpostId).eq('is_deleted', false).order('viewed_at', { ascending: false });
         if (error) throw error;
+        
+        document.getElementById('details-tab-viewers').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">visibility</span> ${data.length}`;
+        if (data.length === 0) { list.innerHTML = `<p class="text-sm italic text-center py-8">No views yet.</p>`; return; }
 
-        renderMyHotpostsList(myPosts);
+        list.innerHTML = data.map(v => `
+            <div class="flex items-center gap-3 p-3 bg-surface-variant/20 dark:bg-neutral-800/50 rounded-2xl">
+                <img src="${v.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.users.full_name)}`}" class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1"><p class="text-sm font-bold text-on-surface dark:text-gray-100">${v.users.full_name}</p></div>
+                <p class="text-xs text-on-surface-variant dark:text-gray-500">${timeAgo(v.viewed_at)}</p>
+            </div>
+        `).join('');
+    } catch (e) { list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed.</p>`; }
+}
 
-    } catch (error) {
-        console.error("Error fetching my hotposts:", error);
-        showToast("Could not load your posts.", "error");
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load posts.</p>`;
+async function fetchStoryLikes(hotpostId) {
+    const list = document.getElementById('hotpost-likes-list');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading...</p>`;
+    try {
+        const { data, error } = await supabase.from('hotpost_likes').select('created_at, users!hotpost_likes_user_id_fkey(full_name, profile_img_url)')
+            .eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
+        if (error) throw error;
+        
+        document.getElementById('details-tab-likes').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">favorite</span> ${data.length}`;
+        if (data.length === 0) { list.innerHTML = `<p class="text-sm italic text-center py-8">No likes yet.</p>`; return; }
+
+        list.innerHTML = data.map(l => `
+            <div class="flex items-center gap-3 p-3 bg-red-500/5 dark:bg-red-500/10 rounded-2xl border border-red-500/10">
+                <img src="${l.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(l.users.full_name)}`}" class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1"><p class="text-sm font-bold text-on-surface dark:text-gray-100">${l.users.full_name}</p></div>
+                <span class="material-symbols-outlined text-red-500" style="font-variation-settings: 'FILL' 1;">favorite</span>
+            </div>
+        `).join('');
+    } catch (e) { list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed.</p>`; }
+}
+
+async function fetchStoryReplies(hotpostId) {
+    const list = document.getElementById('hotpost-replies-list');
+    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading...</p>`;
+    try {
+        const { data, error } = await supabase.from('hotpost_replies').select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)')
+            .eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
+        if (error) throw error;
+        
+        document.getElementById('details-tab-replies').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">reply</span> ${data.length}`;
+        if (data.length === 0) { list.innerHTML = `<p class="text-sm italic text-center py-8">No replies yet.</p>`; return; }
+
+        list.innerHTML = data.map(r => `
+            <div class="flex items-start gap-3 p-3 bg-surface-variant/20 dark:bg-neutral-800/50 rounded-2xl">
+                <img src="${r.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.users.full_name)}`}" class="w-9 h-9 rounded-full object-cover">
+                <div class="flex-1">
+                    <div class="flex justify-between items-center mb-1">
+                        <p class="text-[13px] font-bold text-on-surface dark:text-gray-100">${r.users.full_name}</p>
+                        <p class="text-[10px] text-on-surface-variant dark:text-gray-500">${timeAgo(r.created_at)}</p>
+                    </div>
+                    <p class="text-[14px] text-on-surface dark:text-gray-300 whitespace-pre-wrap">${r.content}</p>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) { list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed.</p>`; }
+}
+
+async function handleDeleteHotpost() {
+    if (!confirm('Are you sure you want to delete this Hotpost?')) return;
+    
+    const post = hotpostsByUser.get(currentUser.id).posts[currentViewerState.postIndex];
+    closeStoryDetailsModal(); 
+    closeHotpostViewer();
+
+    const { error } = await supabase.from('hotposts').update({ is_deleted: true }).eq('id', post.id);
+
+    if (error) {
+        showToast('Failed to delete Hotpost.', 'error');
+    } else {
+        showToast('Hotpost deleted.', 'success');
+        fetchHotposts(); 
     }
 }
 
-window.handleDeleteHotpost = handleDeleteHotpost;
-window.openStoryDetailsModal = openStoryDetailsModal;
-window.showMyHotposts = showMyHotposts;
 window.openHotpostCamera = openCameraModal;
-window.handleLikeHotpost = handleLikeHotpost;
