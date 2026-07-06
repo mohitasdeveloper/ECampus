@@ -126,20 +126,22 @@
     </header>
 
     <!-- NOTIFICATIONS PANEL -->
-    <div id="full-notif-panel"
-        class="fixed inset-0 z-[100] bg-surface dark:bg-[#121212] transition-transform duration-300 translate-x-full flex flex-col">
-        <div
-            class="h-16 border-b border-surface-variant/50 dark:border-neutral-800 flex items-center px-4 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
-            <button id="close-notif-btn"
-                class="p-2 mr-2 rounded-full hover:bg-surface-variant active:scale-95 transition-transform text-on-surface dark:text-gray-100">
-                <span class="material-symbols-outlined">arrow_back</span>
-            </button>
-            <h2 class="text-lg font-bold text-on-surface dark:text-gray-100 flex-1">Notifications</h2>
+   <div id="full-notif-panel"
+            class="fixed inset-y-0 right-0 w-full max-w-sm bg-surface dark:bg-[#121212] z-[100] transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col border-l border-surface-variant/40 dark:border-neutral-800">
+            <div class="h-16 flex items-center justify-between px-4 border-b border-surface-variant/40 dark:border-neutral-800 shrink-0 pt-4">
+                <div class="flex items-center gap-3">
+                    <button id="close-notif-btn" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors">
+                        <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
+                    </button>
+                    <h2 class="text-lg font-bold text-on-surface dark:text-gray-100">Notifications</h2>
+                </div>
+                <button id="mark-read-btn" class="text-[12px] font-bold text-primary px-3 py-1.5 hover:bg-primary/10 rounded-lg transition-colors cursor-pointer">
+                    Mark Read
+                </button>
+            </div>
+            <div id="notifications-container" class="flex-1 overflow-y-auto hide-scrollbar pb-6 space-y-[1px] bg-surface-variant/20 dark:bg-neutral-900">
+                </div>
         </div>
-        <div id="notifications-container" class="flex-1 overflow-y-auto">
-            <p class="text-sm italic text-center py-10 text-on-surface-variant dark:text-gray-400">Loading alerts...</p>
-        </div>
-    </div>
 
     <!-- MAIN CONTENT -->
 <main id="main-content" class="px-5 max-w-screen-md mx-auto relative z-10 pb-6">
