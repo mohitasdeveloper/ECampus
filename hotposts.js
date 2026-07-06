@@ -66,6 +66,56 @@ function setupEventListeners() {
             navEl.addEventListener('pointerup', resumeStory);
             navEl.addEventListener('pointerleave', resumeStory);
         }
+
+    // --- NATIVE SWIPE GESTURES ---
+    let startY = 0;
+    
+    // 1. Viewer Gestures (Swipe Up for Activity, Swipe Down to Close)
+    const viewer = document.getElementById('modal-view-hotpost');
+    if (viewer) {
+        viewer.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+        
+        viewer.addEventListener('touchend', (e) => {
+            const endY = e.changedTouches[0].clientY;
+            const deltaY = endY - startY;
+            
+            // Ignore if swiping on the reply input or buttons
+            if (e.target.closest('button') || e.target.closest('input')) return;
+
+            if (deltaY < -50 && currentViewerState.userId === currentUser.id) {
+                // Swipe Up on Own Story -> Open Activity Panel
+                openStoryDetailsModal();
+            } else if (deltaY > 100) {
+                // Swipe Down -> Close Viewer
+                closeHotpostViewer();
+            }
+        }, { passive: true });
+    }
+
+    // 2. Activity Panel Gestures (Swipe Down to Close Activity)
+    const activityPanel = document.getElementById('modal-story-details');
+    if (activityPanel) {
+        activityPanel.addEventListener('touchstart', (e) => {
+            // Only track swipe if we aren't currently scrolling down inside the lists
+            const scrollArea = e.target.closest('.overflow-y-auto');
+            if (scrollArea && scrollArea.scrollTop > 0) {
+                startY = -1; // disable swipe close if scrolled down
+            } else {
+                startY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        activityPanel.addEventListener('touchend', (e) => {
+            if (startY === -1) return;
+            const endY = e.changedTouches[0].clientY;
+            if (endY - startY > 80) {
+                // Swipe Down -> Close Activity Panel and resume story
+                closeStoryDetailsModal();
+            }
+        }, { passive: true });
+    }
     });
 }
 
