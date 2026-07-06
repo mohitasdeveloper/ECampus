@@ -147,15 +147,24 @@ function renderSocialLinks(links, container = null) {
 function populateProfileUI(profile) {
     if (!profile) return;
     
-    // Header
-    document.getElementById('my-profile-header-id').textContent = profile.student_id;
+    // Header Name & Verified Tick Injection
+    document.getElementById('my-profile-header-name').textContent = profile.full_name;
+    
+    const tickEl = document.getElementById('my-profile-header-tick');
+    if (profile.tick_type && profile.tick_type !== 'none') {
+        const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
+        tickEl.className = `material-symbols-outlined text-[18px] ${colors[profile.tick_type.toLowerCase()] || colors.blue}`;
+        tickEl.style.fontVariationSettings = "'FILL' 1";
+        tickEl.classList.remove('hidden');
+    } else {
+        tickEl.classList.add('hidden');
+    }
     
     // Stats Row
     document.getElementById('my-profile-avatar').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     document.getElementById('my-profile-connection-count').textContent = profile.connection_count || 0;
     
     // Bio Section
-    document.getElementById('my-profile-name').textContent = profile.full_name;
     document.getElementById('my-profile-course').textContent = profile.course || 'Student';
     document.getElementById('my-profile-bio').textContent = profile.bio || 'No bio yet. Click "Edit Profile" to add one!';
     
@@ -168,7 +177,7 @@ function populateProfileUI(profile) {
     const privacyToggle = document.getElementById('privacy-toggle-switch');
     if (privacyToggle) privacyToggle.checked = profile.is_private || false;
 
-    // Fetch this user's personal feed
+    // Fetch this user's personal full feed
     fetchMyProfileFeed(profile.id);
 }
 
@@ -178,12 +187,19 @@ async function fetchMyProfileFeed(userId) {
     const feedContainer = document.getElementById('my-profile-feed');
     if(!feedContainer) return;
 
-    feedContainer.innerHTML = `<p class="text-xs italic text-center py-6 text-on-surface-variant dark:text-gray-400">Loading posts...</p>`;
+    feedContainer.innerHTML = `<p class="text-sm italic text-center py-6 text-on-surface-variant dark:text-gray-400">Loading your posts...</p>`;
     
     try {
+        // Fetch posts exactly like the main dashboard feed
         const { data: posts, error } = await supabase
             .from('posts')
-            .select('*')
+            .select(`
+                *,
+                users ( id, full_name, profile_img_url, role, tick_type ),
+                post_likes ( user_id ),
+                post_comments ( count ),
+                post_poll_votes ( user_id, option_index )
+            `)
             .eq('user_id', userId)
             .eq('is_deleted', false)
             .order('created_at', { ascending: false });
@@ -196,40 +212,121 @@ async function fetchMyProfileFeed(userId) {
         if (posts.length === 0) {
             feedContainer.innerHTML = `
                 <div class="py-12 flex flex-col items-center justify-center opacity-40">
-                    <span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span>
-                    <p class="text-sm font-medium">No posts yet</p>
+                    <span class="material-symbols-outlined text-[42px] mb-2">menu_book</span>
+                    <p class="text-sm font-medium text-on-surface-variant">No posts yet</p>
                 </div>`;
             return;
         }
 
-        // Native Instagram style grid
-        const gridHtml = posts.map(post => {
-            if (post.post_type === 'image' && post.media_url) {
-                return `<div class="aspect-square bg-surface-variant dark:bg-neutral-800 overflow-hidden relative border-[0.5px] border-surface dark:border-[#121212]">
-                            <img src="${post.media_url}" class="w-full h-full object-cover">
-                        </div>`;
-            } else if (post.post_type === 'text') {
-                return `<div class="aspect-square bg-surface-variant/40 dark:bg-neutral-800/60 overflow-hidden relative p-3 flex items-center justify-center text-center border-[0.5px] border-surface dark:border-[#121212]">
-                            <p class="text-[10px] sm:text-xs text-on-surface dark:text-gray-200 line-clamp-4 leading-tight">${post.content}</p>
-                        </div>`;
+        // Render full interactive cards
+        feedContainer.innerHTML = posts.map(post => {
+            const postUser = post.users;
+            const likes = post.post_likes || [];
+            const likeCount = likes.length;
+            const commentCount = post.post_comments[0]?.count || 0;
+            
+            let contentHtml = '';
+
+            // Handle Post Types
+            if (post.post_type === 'text') {
+                contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
+            } else if (post.post_type === 'image') {
+                contentHtml = `
+                    <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
+                    <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
+                        <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
+                    </div>
+                `;
             } else if (post.post_type === 'event') {
-                return `<div class="aspect-square bg-secondary/10 text-secondary overflow-hidden relative flex flex-col items-center justify-center border-[0.5px] border-surface dark:border-[#121212]">
-                            <span class="material-symbols-outlined mb-1 text-[24px]">event</span>
-                            <span class="text-[9px] font-bold uppercase tracking-widest">Event</span>
-                        </div>`;
-            } else {
-                return `<div class="aspect-square bg-primary/10 text-primary overflow-hidden relative flex flex-col items-center justify-center border-[0.5px] border-surface dark:border-[#121212]">
-                            <span class="material-symbols-outlined mb-1 text-[24px]">poll</span>
-                            <span class="text-[9px] font-bold uppercase tracking-widest">Poll</span>
-                        </div>`;
+                const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
+                const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
+                contentHtml = `
+                    <div class="bg-secondary/5 border border-secondary/20 rounded-2xl mb-4 flex flex-col overflow-hidden">
+                        ${eventImgHtml}
+                        <div class="p-5">
+                            <div class="bg-secondary/10 text-secondary w-max px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-3">Upcoming Event</div>
+                            <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 leading-relaxed mb-4 whitespace-pre-wrap">${post.content}</p>
+                            <p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium mb-1"><span class="material-symbols-outlined text-[18px]">calendar_today</span> ${dateStr}</p>
+                        </div>
+                    </div>
+                `;
+            } else if (post.post_type === 'poll') {
+                contentHtml = `
+                    <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
+                    <div class="bg-primary/5 border border-primary/20 rounded-2xl p-4 text-center">
+                        <span class="material-symbols-outlined text-primary text-[32px] mb-2">poll</span>
+                        <p class="text-sm font-bold text-primary">Poll Active</p>
+                    </div>
+                `;
             }
+
+            // Notice the new Delete Button injected at the top right of the card
+            return `
+            <div id="my-feed-post-${post.id}" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm text-left relative">
+                
+                <button onclick="deleteMyPost('${post.id}')" class="absolute top-4 right-4 bg-error/10 text-error p-2 rounded-full active:scale-90 transition-transform hover:bg-error/20">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+
+                <div class="flex items-center gap-3 mb-4 pr-10">
+                    <img src="${postUser.profile_img_url}" class="w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover shrink-0">
+                    <div>
+                        <h4 class="font-bold text-[14px] text-on-surface dark:text-gray-100">${postUser.full_name}</h4>
+                        <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
+                    </div>
+                </div>
+                ${contentHtml}
+                
+                <div class="flex items-center justify-between pt-3 border-t border-surface-variant/40 dark:border-neutral-800 mt-2">
+                    <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
+                        <span class="material-symbols-outlined text-[18px]">favorite</span>
+                        <span class="text-xs font-bold">${likeCount}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
+                        <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
+                        <span class="text-xs font-bold">${commentCount}</span>
+                    </div>
+                </div>
+            </div>`;
         }).join('');
-        
-        feedContainer.innerHTML = `<div class="grid grid-cols-3">${gridHtml}</div>`;
 
     } catch (err) {
         console.error("Error fetching my feed:", err);
         feedContainer.innerHTML = `<p class="text-xs text-center py-4 text-error">Failed to load posts.</p>`;
+    }
+}
+
+// Logic to seamlessly delete the post from database and remove it from UI
+window.deleteMyPost = async function(postId) {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+        const { error } = await supabase
+            .from('posts')
+            .update({ is_deleted: true })
+            .eq('id', postId)
+            .eq('user_id', currentUserProfile.id);
+
+        if (error) throw error;
+
+        // Animate the card out of the DOM smoothly
+        const postElement = document.getElementById(`my-feed-post-${postId}`);
+        if (postElement) {
+            postElement.style.opacity = '0';
+            postElement.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                postElement.remove();
+                
+                // Update the counter
+                const countEl = document.getElementById('my-profile-posts-count');
+                countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+            }, 300);
+        }
+        showToast('Post deleted successfully', 'success');
+
+    } catch (err) {
+        console.error("Error deleting post:", err);
+        showToast('Failed to delete post.', 'error');
     }
 }
 
