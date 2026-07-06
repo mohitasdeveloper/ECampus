@@ -207,21 +207,21 @@
         </div>
 
 <div id="view-profile" class="tab-content hidden h-screen flex flex-col">
-    <div class="h-16 flex items-center justify-between px-4 shrink-0 mb-1 pt-4">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[18px] text-on-surface dark:text-gray-100">lock</span>
-                    <h2 id="my-profile-header-id" class="text-[18px] font-extrabold text-on-surface dark:text-gray-100 tracking-tight">---</h2>
+            <div class="h-16 flex items-center justify-between px-4 shrink-0 pt-4">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <h2 id="my-profile-header-name" class="text-[20px] font-extrabold text-on-surface dark:text-gray-100 tracking-tight truncate">---</h2>
+                    <span id="my-profile-header-tick" class="hidden material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span>
                 </div>
                 <button onclick="openSettingsSidebar()" class="p-2 -mr-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors">
                     <span class="material-symbols-outlined text-[28px]">menu</span>
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto hide-scrollbar pb-20">
-                <div class="flex items-center px-5 mb-4">
+            <div class="flex-1 overflow-y-auto hide-scrollbar pb-24">
+                <div class="flex items-center px-5 mb-4 mt-2">
                     <div class="relative shrink-0 mr-6">
                         <div class="w-20 h-20 rounded-full p-[2.5px] bg-gradient-to-tr from-primary to-blue-500">
-                            <div class="w-full h-full rounded-full border-2 border-surface dark:border-[#121212] overflow-hidden bg-surface-variant">
+                            <div class="w-full h-full rounded-full border-[2.5px] border-surface dark:border-[#121212] overflow-hidden bg-surface-variant">
                                 <img id="my-profile-avatar" src="" class="w-full h-full object-cover">
                             </div>
                         </div>
@@ -233,89 +233,86 @@
 
                     <div class="flex-1 flex justify-around items-center">
                         <div class="flex flex-col items-center">
-                            <span id="my-profile-posts-count" class="text-[17px] font-extrabold text-on-surface dark:text-gray-100">0</span>
-                            <span class="text-[12px] text-on-surface-variant dark:text-gray-400">Posts</span>
+                            <span id="my-profile-posts-count" class="text-[18px] font-extrabold text-on-surface dark:text-gray-100">0</span>
+                            <span class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400">Posts</span>
                         </div>
                         <div onclick="openConnectionsModal()" class="flex flex-col items-center cursor-pointer">
-                            <span id="my-profile-connection-count" class="text-[17px] font-extrabold text-on-surface dark:text-gray-100">0</span>
-                            <span class="text-[12px] text-on-surface-variant dark:text-gray-400">Connections</span>
+                            <span id="my-profile-connection-count" class="text-[18px] font-extrabold text-on-surface dark:text-gray-100">0</span>
+                            <span class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400">Connections</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="px-5 mb-5">
-                    <h3 id="my-profile-name" class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-0.5">---</h3>
-                    <p id="my-profile-course" class="text-[13px] text-on-surface-variant dark:text-gray-400 mb-1">Student</p>
-                    <p id="my-profile-bio" class="text-[13px] text-on-surface dark:text-gray-200 leading-snug whitespace-pre-wrap mb-3">---</p>
-                    <div id="my-profile-social-links" class="flex flex-wrap gap-2"></div>
+                    <p id="my-profile-course" class="text-[14px] font-bold text-on-surface dark:text-gray-200 mb-1">Student</p>
+                    <p id="my-profile-bio" class="text-[14px] text-on-surface dark:text-gray-300 leading-snug whitespace-pre-wrap mb-4">---</p>
+                    
+                    <div id="my-profile-social-links" class="flex gap-3 overflow-x-auto hide-scrollbar pb-1"></div>
                 </div>
 
-                <div class="flex gap-2 px-5 mb-6">
-                    <button onclick="openEditProfileModal()" class="flex-1 bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-1.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform">Edit Profile</button>
-                    <button onclick="shareMyProfile()" class="flex-1 bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-1.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform">Share Profile</button>
+                <div class="px-5 mb-6">
+                    <button onclick="openEditProfileModal()" class="w-full bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-2 rounded-xl text-[14px] font-bold active:scale-95 transition-transform">Edit Profile</button>
                 </div>
 
-                <div class="w-full border-t border-surface-variant/40 dark:border-neutral-800 pt-3">
-                    <div class="flex justify-center mb-3">
-                        <span class="material-symbols-outlined text-[24px] text-on-surface dark:text-gray-100">grid_on</span>
+                <div class="w-full border-t border-surface-variant/40 dark:border-neutral-800 bg-surface-container-lowest dark:bg-[#121212] pt-4">
+                    <div class="flex justify-center mb-4 text-on-surface-variant">
+                        <span class="material-symbols-outlined">menu_book</span>
                     </div>
-                    <div id="my-profile-feed" class="w-full"></div>
+                    <div id="my-profile-feed" class="w-full px-4 space-y-4"></div>
                 </div>
             </div>
         </div>
 
-        <div id="settings-sidebar" class="fixed inset-0 z-[160] hidden justify-end transition-opacity bg-black/40 backdrop-blur-sm opacity-0">
-            <div id="settings-sidebar-content" class="w-[75%] max-w-sm bg-surface dark:bg-[#121212] h-full flex flex-col transition-transform duration-300 translate-x-full shadow-2xl border-l border-surface-variant/20 dark:border-neutral-800">
-                <div class="h-16 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-4 shrink-0">
+        <div id="settings-sidebar" class="fixed inset-0 z-[160] hidden justify-end transition-opacity opacity-0">
+            <div id="settings-sidebar-content" class="w-full max-w-screen-md h-full flex flex-col transition-transform duration-300 translate-x-full shadow-2xl bg-surface dark:bg-[#121212]">
+                
+                <div class="h-16 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-4 shrink-0 pt-4">
                     <button onclick="closeSettingsSidebar()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors">
-                        <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
+                        <span class="material-symbols-outlined text-[28px]">arrow_back</span>
                     </button>
-                    <h2 class="text-lg font-bold ml-2 text-on-surface dark:text-gray-100">Settings</h2>
+                    <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Settings</h2>
                 </div>
                 
-                <div class="flex-1 overflow-y-auto p-2 space-y-1 mt-2">
-                    <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/30 dark:hover:bg-neutral-900 transition-colors">
+                <div class="flex-1 overflow-y-auto p-4 space-y-2 mt-2">
+                    <div class="flex items-center justify-between p-4 bg-surface-variant/20 dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800">
                         <div class="flex items-center gap-3 text-on-surface dark:text-gray-200">
-                            <span class="material-symbols-outlined text-[20px]">lock</span>
-                            <span class="text-[14px] font-medium">Private Account</span>
+                            <span class="material-symbols-outlined text-[24px]">lock</span>
+                            <span class="text-[15px] font-bold">Private Account</span>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="privacy-toggle-switch" class="sr-only peer" onchange="togglePrivacy(this.checked)">
-                            <div class="w-9 h-5 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                            <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                     </div>
 
-                    <button onclick="openConnectionsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/30 dark:hover:bg-neutral-900 text-on-surface dark:text-gray-200 transition-colors text-left">
-                        <span class="material-symbols-outlined text-[20px]">group</span>
-                        <span class="text-[14px] font-medium">Connections</span>
+                    <button onclick="openConnectionsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
+                        <span class="material-symbols-outlined text-[24px]">group</span> Connections
                     </button>
                     
-                    <button onclick="openEditSocialsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/30 dark:hover:bg-neutral-900 text-on-surface dark:text-gray-200 transition-colors text-left">
-                        <span class="material-symbols-outlined text-[20px]">link</span>
-                        <span class="text-[14px] font-medium">Manage Socials</span>
+                    <button onclick="openEditSocialsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
+                        <span class="material-symbols-outlined text-[24px]">link</span> Manage Socials
                     </button>
                     
-                    <button onclick="openBlockedUsersModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/30 dark:hover:bg-neutral-900 text-on-surface dark:text-gray-200 transition-colors text-left">
-                        <span class="material-symbols-outlined text-[20px]">block</span>
-                        <span class="text-[14px] font-medium">Blocked Users</span>
+                    <button onclick="openBlockedUsersModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
+                        <span class="material-symbols-outlined text-[24px]">block</span> Blocked Users
                     </button>
 
-                    <div class="my-3 border-t border-surface-variant/40 dark:border-neutral-800"></div>
+                    <div class="my-4 border-t border-surface-variant/40 dark:border-neutral-800"></div>
 
-                    <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/30 dark:hover:bg-neutral-900 transition-colors">
+                    <div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl transition-colors">
                         <div class="flex items-center gap-3 text-on-surface dark:text-gray-200">
-                            <span class="material-symbols-outlined text-[20px]">dark_mode</span>
-                            <span class="text-[14px] font-medium">Dark Theme</span>
+                            <span class="material-symbols-outlined text-[24px]">dark_mode</span>
+                            <span class="text-[15px] font-bold">Dark Theme</span>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="theme-toggle-switch" class="sr-only peer">
-                            <div class="w-9 h-5 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                            <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                     </div>
 
-                    <button id="sign-out-btn" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-error/10 text-error transition-colors text-left mt-4">
-                        <span class="material-symbols-outlined text-[20px]">logout</span>
-                        <span class="text-[14px] font-bold">Sign Out</span>
+                    <button id="sign-out-btn" class="w-full flex items-center gap-3 p-4 rounded-2xl bg-error/10 text-error transition-colors text-left mt-6 shadow-sm">
+                        <span class="material-symbols-outlined text-[24px]">logout</span>
+                        <span class="text-[15px] font-extrabold">Sign Out</span>
                     </button>
                 </div>
             </div>
