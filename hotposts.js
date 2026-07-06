@@ -327,33 +327,69 @@ async function fetchHotposts() {
 
 function renderHotpostCircles() {
     const container = document.querySelector('#view-dashboard .flex.gap-4.overflow-x-auto');
+    if (!container) return;
     container.innerHTML = ''; 
 
-    const allUserIds = Array.from(hotpostsByUser.keys());
-    allUserIds.sort((a, b) => {
-        if (a === currentUser.id) return -1;
-        if (b === currentUser.id) return 1;
-        return (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false); 
-    });
+    // 1. ALWAYS render the Current User's circle first
+    const myData = hotpostsByUser.get(currentUser.id);
+    const hasMyActiveStories = myData && myData.posts.length > 0;
+    
+    const myCircle = document.createElement('div');
+    // Added relative and z-20 to ensure it is clickable on mobile
+    myCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
+    
+    if (hasMyActiveStories) {
+        // Has stories: Show ring, click to view
+        const isViewed = myData.viewed || false;
+        const ringClass = isViewed ? 'from-gray-300 to-gray-400' : 'from-gray-400 to-gray-600';
+        myCircle.innerHTML = `
+            <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm relative">
+                <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                    <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}`}" class="w-full h-full object-cover">
+                </div>
+            </div>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Your Story</span>
+        `;
+        myCircle.addEventListener('click', () => openHotpostViewer(currentUser.id));
+    } else {
+        // No stories: Show "+" icon, click to open camera
+        myCircle.innerHTML = `
+            <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
+                <div class="w-full h-full rounded-full border-2 border-surface-variant dark:border-neutral-700 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                    <img src="${currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}`}" class="w-full h-full object-cover opacity-80">
+                </div>
+                <div class="absolute bottom-0 right-0 w-6 h-6 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
+                    <span class="material-symbols-outlined text-[14px] font-bold">add</span>
+                </div>
+            </div>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Add Story</span>
+        `;
+        myCircle.addEventListener('click', () => window.openHotpostCamera());
+    }
+    container.appendChild(myCircle);
 
-    allUserIds.forEach(userId => {
+    // 2. Render all OTHER users' circles
+    const otherUserIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
+    
+    // Sort by unviewed first, then viewed
+    otherUserIds.sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
+
+    otherUserIds.forEach(userId => {
         const data = hotpostsByUser.get(userId);
         const user = data.user;
         const circle = document.createElement('div');
-        circle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform';
+        circle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-10';
 
-        const isSelf = userId === currentUser.id;
-        const ringClass = isSelf ? 'from-gray-300 to-gray-400' : 'from-yellow-400 via-orange-500 to-red-500';
+        const ringClass = data.viewed ? 'from-gray-300 to-gray-400' : 'from-yellow-400 via-orange-500 to-red-500';
 
         circle.innerHTML = `
             <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
                 <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                    <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
+                    <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}`}" class="w-full h-full object-cover">
                 </div>
             </div>
-            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${isSelf ? 'Your Story' : user.full_name.split(' ')[0]}</span>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">${user.full_name.split(' ')[0]}</span>
         `;
-
         circle.addEventListener('click', () => openHotpostViewer(userId));
         container.appendChild(circle);
     });
