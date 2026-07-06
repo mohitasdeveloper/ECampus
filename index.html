@@ -798,46 +798,68 @@
         </div>
     </div>
 
-    <!-- HOTPOST MODALS -->
-  <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
-        <input type="text" id="hotpost-text-input" class="hotpost-text-overlay-input hidden" placeholder="Type something..." autocomplete="off">
+   <!-- HOTPOST CAMERA & EDITOR MODAL (Ultimate Native Engine) -->
+    <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
+        <!-- Live Camera Feed -->
         <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
-        <img id="hotpost-preview" class="absolute w-full h-full object-cover hidden" />
-        <canvas id="hotpost-camera-canvas" class="hidden"></canvas>
         
-        <div class="absolute top-5 right-4 z-30 flex flex-col gap-4 items-center">
-            <button id="close-hotpost-camera-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[20px]">close</span></button>
-            <button id="switch-hotpost-camera-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[20px]">cameraswitch</span></button>
-            <button id="add-text-hotpost-btn" class="hidden text-white font-extrabold text-[18px] p-2.5 bg-black/40 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center active:scale-95 transition-transform">Aa</button>
-            <button id="filter-hotpost-btn" class="hidden text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform" data-edit="filter"><span class="material-symbols-outlined text-[20px]">auto_fix</span></button>
+        <!-- Editor Container (Shows after capturing) -->
+        <div id="hotpost-preview-container" class="absolute w-full h-full hidden overflow-hidden bg-black">
+            <!-- Base Image -->
+            <img id="hotpost-preview-img" class="absolute w-full h-full object-cover" />
+            <!-- Doodle Layer -->
+            <canvas id="hotpost-doodle-canvas"></canvas>
+            <!-- Free-Floating Draggable Text -->
+            <div id="hotpost-draggable-text" class="hotpost-draggable-text hidden"></div>
+            <!-- Swipe Filter Toast -->
+            <div id="filter-name-toast" class="filter-name-toast hidden"></div>
+        </div>
+        
+        <!-- Editor Tools (Top Right) -->
+        <div id="editor-tools-container" class="absolute top-5 right-4 z-50 hidden flex-col gap-4 items-center">
+            <button id="add-text-hotpost-btn" class="text-white font-extrabold text-[18px] p-2.5 bg-black/40 backdrop-blur-md rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all shadow-md">Aa</button>
+            <button id="doodle-hotpost-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all shadow-md">
+                <span class="material-symbols-outlined text-[22px]">draw</span>
+            </button>
+            <button id="undo-doodle-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all shadow-md">
+                <span class="material-symbols-outlined text-[22px]">undo</span>
+            </button>
         </div>
 
-        <div id="filter-tray" class="absolute bottom-32 left-0 w-full z-20 hidden justify-center p-4 overflow-x-auto hide-scrollbar">
-            <div class="flex gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
-                <button class="filter-btn text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform" data-filter="none">None</button>
-                <button class="filter-btn text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform" data-filter="saturate(1.5)">Vivid</button>
-                <button class="filter-btn text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform" data-filter="grayscale(1)">B&W</button>
-            </div>
+        <!-- Camera Controls (Top Left & Top Right) -->
+        <div class="absolute top-5 left-4 z-50 flex gap-4">
+            <button id="close-hotpost-camera-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">close</span></button>
+        </div>
+        <button id="switch-hotpost-camera-btn" class="absolute top-5 right-4 z-50 text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">cameraswitch</span></button>
+
+        <!-- Doodle Color Picker Dropdown -->
+        <div id="doodle-color-picker" class="absolute top-20 left-1/2 -translate-x-1/2 z-50 hidden gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-lg">
+            <button class="doodle-color-btn w-6 h-6 rounded-full bg-white border-2 border-transparent active:scale-90 transition-transform" data-color="#FFFFFF"></button>
+            <button class="doodle-color-btn w-6 h-6 rounded-full bg-black border-2 border-white/50 active:scale-90 transition-transform" data-color="#000000"></button>
+            <button class="doodle-color-btn w-6 h-6 rounded-full bg-[#FF3B30] border-2 border-transparent active:scale-90 transition-transform" data-color="#FF3B30"></button>
+            <button class="doodle-color-btn w-6 h-6 rounded-full bg-[#34C759] border-2 border-transparent active:scale-90 transition-transform" data-color="#34C759"></button>
+            <button class="doodle-color-btn w-6 h-6 rounded-full bg-[#007AFF] border-2 border-transparent active:scale-90 transition-transform" data-color="#007AFF"></button>
         </div>
 
-        <div class="absolute bottom-10 z-20 w-full px-8">
-            <div id="capture-ui" class="flex justify-center">
-                <button id="capture-hotpost-btn" class="w-[76px] h-[76px] rounded-full bg-white/20 border-[4px] border-white/80 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-all shadow-[0_0_20px_rgba(0,0,0,0.3)]">
-                    <div class="w-14 h-14 bg-white rounded-full transition-transform"></div>
+        <!-- Bottom UI Actions -->
+        <div class="absolute bottom-10 z-50 w-full px-8 pointer-events-none">
+            <!-- Capture State -->
+            <div id="capture-ui" class="flex justify-center pointer-events-auto">
+                <button id="capture-hotpost-btn" class="w-[84px] h-[84px] rounded-full bg-transparent border-[4px] border-white backdrop-blur-sm flex items-center justify-center active:scale-95 transition-all shadow-[0_0_20px_rgba(0,0,0,0.3)]">
+                    <div class="w-[68px] h-[68px] bg-white rounded-full transition-transform"></div>
                 </button>
             </div>
             
-            <div id="preview-ui" class="hidden flex justify-between items-center w-full">
-                <button id="retake-hotpost-btn" class="text-white font-bold p-3 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[22px]">refresh</span></button>
+            <!-- Send/Publish State -->
+            <div id="preview-ui" class="hidden justify-between items-center w-full pointer-events-auto">
+                <button id="retake-hotpost-btn" class="text-white font-bold p-3.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px]">delete</span></button>
                 
                 <div class="flex items-center gap-3">
-                    <select id="hotpost-visibility" class="appearance-none bg-black/50 backdrop-blur-md text-white text-[13px] font-bold border border-white/20 rounded-full pl-5 pr-9 py-2.5 outline-none cursor-pointer shadow-lg">
-                        <option value="everyone">🌎 Everyone</option>
-                        <option value="connections">🌟 Connections</option>
-                    </select>
-                    <span class="material-symbols-outlined text-white text-[16px] absolute right-20 pointer-events-none">expand_more</span>
-
-                    <button id="submit-hotpost-btn" class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-black shadow-lg active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px]">send</span></button>
+                    <button id="hotpost-send-visibility" data-val="everyone" onclick="toggleVisibilitySetting()" class="flex items-center gap-2 bg-black/50 backdrop-blur-md text-white text-[14px] font-bold border border-white/20 rounded-full px-5 py-3 outline-none shadow-lg active:scale-95 transition-colors">
+                        <span id="visibility-icon" class="material-symbols-outlined text-[18px]">public</span>
+                        <span id="visibility-text">Everyone</span>
+                    </button>
+                    <button id="submit-hotpost-btn" class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-black shadow-lg active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px] ml-1">send</span></button>
                 </div>
             </div>
         </div>
@@ -888,10 +910,11 @@
         </div>
     </div>
 
-    <div id="modal-story-details" class="fixed inset-0 z-[250] bg-black/60 backdrop-blur-sm hidden flex-col justify-end transition-opacity duration-300">
-        <div class="bg-surface dark:bg-[#121212] w-full h-[90vh] rounded-t-[32px] p-6 pb-8 relative max-w-screen-md mx-auto flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] animate-slideUp">
+  <!-- FULL SCREEN ACTIVITY DETAILS MODAL (Self View Physics Sheet) -->
+    <div id="modal-story-details" class="fixed inset-0 z-[250] bg-black/60 hidden flex-col justify-end">
+        <div id="modal-story-details-sheet" class="bg-surface dark:bg-[#121212] w-full h-[90vh] rounded-t-[32px] p-6 pb-8 relative max-w-screen-md mx-auto flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 translate-y-full">
             
-            <div id="close-story-details-handle" class="w-12 h-1.5 bg-surface-variant dark:bg-neutral-700 rounded-full mx-auto mb-6 cursor-pointer hover:bg-neutral-600 transition-colors"></div>
+            <div class="w-12 h-1.5 bg-surface-variant dark:bg-neutral-700 rounded-full mx-auto mb-6 cursor-pointer hover:bg-neutral-600 transition-colors"></div>
 
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-[22px] font-extrabold text-on-surface dark:text-gray-100 tracking-tight">Post Activity</h3>
@@ -920,7 +943,20 @@
         </div>
     </div>
 
-   
+   <!-- NATIVE CONFIRMATION MODAL -->
+    <div id="modal-confirm-action" class="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md hidden items-center justify-center p-4 transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] rounded-[28px] p-6 w-full max-w-[320px] shadow-2xl animate-popIn flex flex-col items-center text-center">
+            <div class="w-14 h-14 bg-error/10 text-error rounded-full flex items-center justify-center mb-4">
+                <span class="material-symbols-outlined text-[28px]">warning</span>
+            </div>
+            <h3 id="confirm-action-title" class="text-xl font-extrabold text-on-surface dark:text-gray-100 mb-2">Are you sure?</h3>
+            <p id="confirm-action-message" class="text-sm text-on-surface-variant dark:text-gray-400 mb-6">This action cannot be undone.</p>
+            <div class="flex gap-3 w-full">
+                <button id="confirm-action-no" class="flex-1 bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-3.5 rounded-xl font-bold active:scale-95 transition-transform">Cancel</button>
+                <button id="confirm-action-yes" class="flex-1 bg-error text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform shadow-md shadow-error/20">Delete</button>
+            </div>
+        </div>
+    </div>
 
     <!-- BOTTOM NAV -->
     <nav
