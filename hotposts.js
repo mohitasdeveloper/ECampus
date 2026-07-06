@@ -690,52 +690,72 @@ function setupViewerTouchPhysics() {
     let startY = 0;
     let isDraggingPanel = false;
     
-    // Viewer Swipe Down
+    // 1. VIEWER TOUCH (Swipe ANYWHERE to Close or Open Activity)
     viewer?.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
     }, { passive: true });
 
-    viewer?.addEventListener('touchmove', (e) => {
-        if(e.cancelable) e.preventDefault(); // Lock screen
-    }, { passive: false });
-
     viewer?.addEventListener('touchend', (e) => {
         const deltaY = e.changedTouches[0].clientY - startY;
+        
+        // Ignore if clicking inputs or buttons
         if (e.target.closest('button') || e.target.closest('input')) return;
 
         if (deltaY < -60 && currentViewerState.userId === currentUser.id) {
+            // Swipe UP anywhere -> Open Activity
             openActivityPanel();
         } else if (deltaY > 100) {
+            // Swipe DOWN anywhere -> Close Viewer
             closeHotpostViewer();
         }
     }, { passive: true });
 
-    // Activity Panel Physics
+    // 2. ACTIVITY PANEL PHYSICS
     activityContent?.addEventListener('touchstart', (e) => {
         const scrollArea = e.target.closest('.overflow-y-auto');
+        
+        // If the user is scrolling down a list, do NOT drag the panel
         if (scrollArea && scrollArea.scrollTop > 0) {
             isDraggingPanel = false; 
         } else {
             startY = e.touches[0].clientY;
             isDraggingPanel = true;
-            activityContent.style.transition = 'none'; 
+            activityContent.style.transition = 'none'; // Lock 1:1 to finger
         }
     }, { passive: true });
 
     activityContent?.addEventListener('touchmove', (e) => {
         if (!isDraggingPanel) return;
         const deltaY = e.touches[0].clientY - startY;
-        if (deltaY > 0) activityContent.style.transform = `translateY(${deltaY}px)`;
-        if(e.cancelable) e.preventDefault();
-    }, { passive: false });
+        
+        // Only allow dragging downwards
+        if (deltaY > 0) {
+            activityContent.style.transform = `translateY(${deltaY}px)`;
+            
+            // OPTIONAL: Slightly scale the background back up as you drag down
+            const progress = deltaY / window.innerHeight;
+            const viewerContent = document.getElementById('hotpost-viewer-content');
+            if(viewerContent) {
+                viewerContent.style.transform = `scale(${0.92 + (0.08 * progress)}) translateY(${2 - (2 * progress)}vh)`;
+                viewerContent.style.opacity = 0.4 + (0.6 * progress);
+            }
+        }
+    }, { passive: true });
 
     activityContent?.addEventListener('touchend', (e) => {
         if (!isDraggingPanel) return;
         isDraggingPanel = false;
-        activityContent.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'; 
         
-        if (e.changedTouches[0].clientY - startY > 120) closeActivityPanel();
-        else activityContent.style.transform = `translateY(0px)`;
+        activityContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; 
+        const viewerContent = document.getElementById('hotpost-viewer-content');
+        if(viewerContent) viewerContent.style.cssText = ''; // Clear inline dragging styles
+        
+        if (e.changedTouches[0].clientY - startY > 120) {
+            closeActivityPanel(); // Snap closed
+        } else {
+            activityContent.style.transform = `translateY(0px)`; // Snap back up
+            if (viewerContent) viewerContent.classList.add('viewer-pushed-back'); // Reset 3D
+        }
     }, { passive: true });
 }
 
