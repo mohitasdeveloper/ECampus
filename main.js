@@ -147,26 +147,35 @@ function renderSocialLinks(links, container = null) {
 function populateProfileUI(profile) {
     if (!profile) return;
     
-    // Header Name & Verified Tick Injection
-    document.getElementById('my-profile-header-name').textContent = profile.full_name;
+    // 1. Header Name & Verified Tick Injection
+    const headerNameEl = document.getElementById('my-profile-header-name');
+    if (headerNameEl) headerNameEl.textContent = profile.full_name;
     
     const tickEl = document.getElementById('my-profile-header-tick');
-    if (profile.tick_type && profile.tick_type !== 'none') {
-        const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-        tickEl.className = `material-symbols-outlined text-[18px] ${colors[profile.tick_type.toLowerCase()] || colors.blue}`;
-        tickEl.style.fontVariationSettings = "'FILL' 1";
-        tickEl.classList.remove('hidden');
-    } else {
-        tickEl.classList.add('hidden');
+    if (tickEl) {
+        if (profile.tick_type && profile.tick_type !== 'none') {
+            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
+            tickEl.className = `material-symbols-outlined text-[18px] ${colors[profile.tick_type.toLowerCase()] || colors.blue}`;
+            tickEl.style.fontVariationSettings = "'FILL' 1";
+            tickEl.classList.remove('hidden');
+        } else {
+            tickEl.classList.add('hidden');
+        }
     }
     
-    // Stats Row
-    document.getElementById('my-profile-avatar').src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
-    document.getElementById('my-profile-connection-count').textContent = profile.connection_count || 0;
+    // 2. Stats Row
+    const avatarEl = document.getElementById('my-profile-avatar');
+    if (avatarEl) avatarEl.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     
-    // Bio Section
-    document.getElementById('my-profile-course').textContent = profile.course || 'Student';
-    document.getElementById('my-profile-bio').textContent = profile.bio || 'No bio yet. Click "Edit Profile" to add one!';
+    const connCountEl = document.getElementById('my-profile-connection-count');
+    if (connCountEl) connCountEl.textContent = profile.connection_count || 0;
+    
+    // 3. Bio Section
+    const courseEl = document.getElementById('my-profile-course');
+    if (courseEl) courseEl.textContent = profile.course || 'Student';
+    
+    const bioEl = document.getElementById('my-profile-bio');
+    if (bioEl) bioEl.textContent = profile.bio || 'No bio yet. Click "Edit Profile" to add one!';
     
     // Feed avatar & Top Navigation avatar updates
     const feedInputAvatar = document.getElementById('feed-input-avatar');
@@ -178,9 +187,10 @@ function populateProfileUI(profile) {
     if (privacyToggle) privacyToggle.checked = profile.is_private || false;
 
     // Fetch this user's personal full feed
-    fetchMyProfileFeed(profile.id);
+    if (typeof fetchMyProfileFeed === 'function') {
+        fetchMyProfileFeed(profile.id);
+    }
 }
-
 // --- 2. Add these NEW functions anywhere in main.js ---
 
 async function fetchMyProfileFeed(userId) {
@@ -333,8 +343,13 @@ window.deleteMyPost = async function(postId) {
 function openSettingsSidebar() {
     const sidebar = document.getElementById('settings-sidebar');
     const content = document.getElementById('settings-sidebar-content');
+    const bottomNav = document.querySelector('nav'); // Select the bottom navigation bar
+    
     sidebar.classList.remove('hidden');
     sidebar.classList.add('flex');
+    
+    // Hide the bottom navigation
+    if (bottomNav) bottomNav.classList.add('hidden');
     
     // Force DOM reflow to allow transition animation
     void sidebar.offsetWidth;
@@ -346,6 +361,7 @@ function openSettingsSidebar() {
 function closeSettingsSidebar() {
     const sidebar = document.getElementById('settings-sidebar');
     const content = document.getElementById('settings-sidebar-content');
+    const bottomNav = document.querySelector('nav');
     
     sidebar.classList.add('opacity-0');
     content.classList.add('translate-x-full');
@@ -353,6 +369,9 @@ function closeSettingsSidebar() {
     setTimeout(() => {
         sidebar.classList.remove('flex');
         sidebar.classList.add('hidden');
+        
+        // Bring back the bottom navigation after the sidebar is completely closed
+        if (bottomNav) bottomNav.classList.remove('hidden');
     }, 300);
 }
 
