@@ -116,30 +116,32 @@ body {
    ULTIMATE HOTPOSTS ENGINE (Native UI & Gestures)
    ========================================================= */
 
-/* 1. Touch Locks: Prevent browser pull-to-refresh & scrolling during gestures */
+/* 1. Bulletproof Touch Locks */
 #modal-hotpost-camera,
 #modal-view-hotpost,
 #modal-story-details {
-    touch-action: none; /* Completely disables native browser panning/zooming */
-    overscroll-behavior: none;
+    touch-action: none !important;
+    overscroll-behavior: none !important;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
-/* 2. Free-Floating Draggable Text (Instagram Style) */
+/* 2. Draggable & Zoomable Text */
 .hotpost-draggable-text {
     position: absolute;
-    /* Translate -50% ensures the text remains perfectly centered on the X/Y coordinates we track */
-    transform: translate(-50%, -50%);
+    /* Translate anchors it to center, Scale handles pinch-to-zoom */
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
     color: white;
     font-size: 2.5rem;
     font-weight: 800;
     text-align: center;
-    /* Heavy double-shadow replaces the need for a background box */
     text-shadow: 0px 4px 25px rgba(0, 0, 0, 1), 0px 1px 5px rgba(0, 0, 0, 0.8);
     white-space: pre-wrap;
-    /* Important: We set pointer-events to none so the container underneath catches the drag gestures */
-    pointer-events: none; 
-    z-index: 50;
+    z-index: 60;
     font-family: 'Inter', sans-serif;
+    /* Must be auto to drag it directly */
+    pointer-events: auto; 
 }
 
 /* 3. Doodle Canvas Layer */
