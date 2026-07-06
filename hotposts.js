@@ -687,52 +687,52 @@ function setupViewerTouchPhysics() {
     const viewer = document.getElementById('modal-view-hotpost');
     const activityContent = document.getElementById('modal-story-details-sheet');
     
-    let startY = 0;
+    // Separated variables so Swipe Up and Drag Down don't conflict
+    let viewerStartY = 0;
+    let panelStartY = 0;
     let isDraggingPanel = false;
     
-    // 1. VIEWER TOUCH (Swipe ANYWHERE to Close or Open Activity)
+    // VIEWER TOUCH (Swipe Up/Down on Story)
     viewer?.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
+        viewerStartY = e.touches[0].clientY;
     }, { passive: true });
 
     viewer?.addEventListener('touchend', (e) => {
-        const deltaY = e.changedTouches[0].clientY - startY;
-        
-        // Ignore if clicking inputs or buttons
+        // Stop viewer swipe if the activity panel is already open
+        if (!document.getElementById('modal-story-details').classList.contains('hidden')) return;
+
+        const deltaY = e.changedTouches[0].clientY - viewerStartY;
         if (e.target.closest('button') || e.target.closest('input')) return;
 
-        if (deltaY < -60 && currentViewerState.userId === currentUser.id) {
-            // Swipe UP anywhere -> Open Activity
+        // Increased sensitivity: -40px for a quick swipe up, 80px for swipe down
+        if (deltaY < -40 && currentViewerState.userId === currentUser.id) {
             openActivityPanel();
-        } else if (deltaY > 100) {
-            // Swipe DOWN anywhere -> Close Viewer
+        } else if (deltaY > 80) {
             closeHotpostViewer();
         }
     }, { passive: true });
 
-    // 2. ACTIVITY PANEL PHYSICS
+    // ACTIVITY PANEL PHYSICS (Drag Sheet Down)
     activityContent?.addEventListener('touchstart', (e) => {
         const scrollArea = e.target.closest('.overflow-y-auto');
-        
-        // If the user is scrolling down a list, do NOT drag the panel
         if (scrollArea && scrollArea.scrollTop > 0) {
             isDraggingPanel = false; 
         } else {
-            startY = e.touches[0].clientY;
+            panelStartY = e.touches[0].clientY;
             isDraggingPanel = true;
-            activityContent.style.transition = 'none'; // Lock 1:1 to finger
+            activityContent.style.transition = 'none'; 
+            
+            const viewerContent = document.getElementById('hotpost-viewer-content');
+            if(viewerContent) viewerContent.style.transition = 'none';
         }
     }, { passive: true });
 
     activityContent?.addEventListener('touchmove', (e) => {
         if (!isDraggingPanel) return;
-        const deltaY = e.touches[0].clientY - startY;
+        const deltaY = e.touches[0].clientY - panelStartY;
         
-        // Only allow dragging downwards
         if (deltaY > 0) {
             activityContent.style.transform = `translateY(${deltaY}px)`;
-            
-            // OPTIONAL: Slightly scale the background back up as you drag down
             const progress = deltaY / window.innerHeight;
             const viewerContent = document.getElementById('hotpost-viewer-content');
             if(viewerContent) {
@@ -740,7 +740,8 @@ function setupViewerTouchPhysics() {
                 viewerContent.style.opacity = 0.4 + (0.6 * progress);
             }
         }
-    }, { passive: true });
+        if(e.cancelable) e.preventDefault();
+    }, { passive: false });
 
     activityContent?.addEventListener('touchend', (e) => {
         if (!isDraggingPanel) return;
@@ -748,13 +749,23 @@ function setupViewerTouchPhysics() {
         
         activityContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; 
         const viewerContent = document.getElementById('hotpost-viewer-content');
-        if(viewerContent) viewerContent.style.cssText = ''; // Clear inline dragging styles
         
-        if (e.changedTouches[0].clientY - startY > 120) {
-            closeActivityPanel(); // Snap closed
+        if(viewerContent) {
+            viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
+        }
+        
+        const deltaY = e.changedTouches[0].clientY - panelStartY;
+        
+        if (deltaY > 100) {
+            closeActivityPanel();
         } else {
-            activityContent.style.transform = `translateY(0px)`; // Snap back up
-            if (viewerContent) viewerContent.classList.add('viewer-pushed-back'); // Reset 3D
+            // Snap back to top and re-apply pushed-back CSS state
+            activityContent.style.transform = `translateY(0px)`;
+            if (viewerContent) {
+                viewerContent.style.transform = '';
+                viewerContent.style.opacity = '';
+                viewerContent.classList.add('viewer-pushed-back');
+            }
         }
     }, { passive: true });
 }
@@ -792,6 +803,16 @@ function closeHotpostViewer() {
     clearTimeout(currentViewerState.storyTimer);
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
     if (activeBar) activeBar.style.animation = 'none';
+    
+    // FAILSAFE: Wipe all 3D scaling and inline styles when closing the viewer completely
+    const viewerContent = document.getElementById('hotpost-viewer-content');
+    if (viewerContent) {
+        viewerContent.style.transform = '';
+        viewerContent.style.opacity = '';
+        viewerContent.style.transition = '';
+        viewerContent.classList.remove('viewer-pushed-back');
+    }
+    
     processStoryDisappear();
 }
 
@@ -957,7 +978,16 @@ function openActivityPanel() {
     pauseStory();
     const modal = document.getElementById('modal-story-details');
     const sheet = document.getElementById('modal-story-details-sheet');
+    const viewerContent = document.getElementById('hotpost-viewer-content');
     
+    // Ensure perfectly clean state before pushing back
+    if (viewerContent) {
+        viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
+        viewerContent.style.transform = '';
+        viewerContent.style.opacity = '';
+        viewerContent.classList.add('viewer-pushed-back');
+    }
+
     modal.classList.replace('hidden', 'flex');
     setTimeout(() => sheet.style.transform = `translateY(0px)`, 10);
 
@@ -971,12 +1001,22 @@ function openActivityPanel() {
 function closeActivityPanel() {
     const modal = document.getElementById('modal-story-details');
     const sheet = document.getElementById('modal-story-details-sheet');
+    const viewerContent = document.getElementById('hotpost-viewer-content');
     
     sheet.style.transform = `translateY(100%)`;
+    
+    if (viewerContent) {
+        // Restore smooth transition and WIPE inline dragging styles
+        viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
+        viewerContent.style.transform = '';
+        viewerContent.style.opacity = '';
+        viewerContent.classList.remove('viewer-pushed-back');
+    }
+
     setTimeout(() => {
         modal.classList.replace('flex', 'hidden');
         resumeStory();
-    }, 300); 
+    }, 400); 
 }
 
 function switchDetailsTab(tabName) {
