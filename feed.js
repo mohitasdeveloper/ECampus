@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { showToast } from './ui.js';
+import { timeAgo, compressImage } from './utils.js'; // <-- Add compressImage here
 import { timeAgo } from './utils.js';
 import { CLOUDINARY_CLOUD_NAME } from './config.js';
 
@@ -136,9 +137,14 @@ function setupImagePreviews() {
 }
 
 async function uploadToCloudinary(file) {
+    showToast('Compressing image...', 'info'); 
+    
+    // Compress down to 1080px width at 70% quality (Massive size reduction!)
+    const compressedFile = await compressImage(file, 1080, 0.7);
+
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_CLOUD_NAME ? 'ecampus_posts' : 'ecampus_posts'); 
+    formData.append('file', compressedFile);
+    formData.append('upload_preset', 'ecampus_posts');
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
         method: 'POST',
