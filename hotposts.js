@@ -596,17 +596,17 @@ async function fetchHotposts() {
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase
+   const { data, error } = await supabase
         .from('hotposts')
         .select(`
             id, created_at, media_url, visibility, user_id,
-            users ( id, full_name, profile_img_url ),
+            users ( id, full_name, profile_img_url, tick_type ),
             hotpost_views ( viewer_id )
         `)
         .gt('created_at', twentyFourHoursAgo)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
-
+    
     if (error) return;
 
     const unviewedData = data.filter(post => {
@@ -799,7 +799,27 @@ function openHotpostViewer(userId) {
     ];
 
     document.getElementById('modal-view-hotpost').classList.replace('hidden', 'flex');
+    toggleCameraStatusBar(true); // <-- Turn Status Bar Black
     playUserStories(0); 
+}
+
+function closeHotpostViewer() {
+    document.getElementById('modal-view-hotpost').classList.replace('flex', 'hidden');
+    clearTimeout(currentViewerState.storyTimer);
+    const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
+    if (activeBar) activeBar.style.animation = 'none';
+    
+    // FAILSAFE: Wipe all 3D scaling and inline styles when closing the viewer completely
+    const viewerContent = document.getElementById('hotpost-viewer-content');
+    if (viewerContent) {
+        viewerContent.style.transform = '';
+        viewerContent.style.opacity = '';
+        viewerContent.style.transition = '';
+        viewerContent.classList.remove('viewer-pushed-back');
+    }
+    
+    processStoryDisappear();
+    toggleCameraStatusBar(false); // <-- Revert Status Bar to standard Theme
 }
 
 function processStoryDisappear() {
@@ -829,11 +849,13 @@ function closeHotpostViewer() {
 }
 
 function playUserStories(userIndex, postIndex = 0) {
+    // 1. Check if we reached the end of the stories
     if (userIndex >= currentViewerState.userOrder.length) {
         closeHotpostViewer();
         return;
     }
 
+    // 2. Update current state
     currentViewerState.userIndex = userIndex;
     currentViewerState.postIndex = postIndex;
     currentViewerState.userId = currentViewerState.userOrder[userIndex];
@@ -841,6 +863,7 @@ function playUserStories(userIndex, postIndex = 0) {
     const userData = hotpostsByUser.get(currentViewerState.userId);
     const post = userData.posts[currentViewerState.postIndex];
 
+    // 3. Render Progress Bars
     const progressContainer = document.getElementById('hotpost-progress-bars');
     progressContainer.innerHTML = userData.posts.map((p, index) => `
         <div class="flex-1 bg-white/30 rounded-full overflow-hidden">
@@ -849,9 +872,12 @@ function playUserStories(userIndex, postIndex = 0) {
     `).join('');
 
     const isMyStory = currentViewerState.userId === currentUser.id;
+    
+    // 4. Toggle Bottom UI (Reply vs Activity)
     document.getElementById('hotpost-reply-container').style.display = isMyStory ? 'none' : 'flex';
     document.getElementById('hotpost-activity-btn').style.display = isMyStory ? 'flex' : 'none';
     
+    // 5. Update Visibility Icon
     const visIcon = document.getElementById('hotpost-viewer-visibility');
     if (post.visibility === 'connections') {
         visIcon.textContent = 'stars';
@@ -863,25 +889,44 @@ function playUserStories(userIndex, postIndex = 0) {
         visIcon.classList.add('text-white/80');
     }
 
+    // 6. Reset Like Button Visuals
     const likeBtnIcon = document.querySelector('#hotpost-like-btn span');
     if(likeBtnIcon) {
         likeBtnIcon.style.fontVariationSettings = "'FILL' 0";
         likeBtnIcon.classList.remove('text-red-500');
     }
 
-    document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url;
-    document.getElementById('hotpost-viewer-name').textContent = isMyStory ? 'Your Story' : userData.user.full_name;
+    // 7. Verified Tick Helper
+    const getTickHtmlLocal = (tickType) => {
+        if (!tickType || tickType === 'none') return '';
+        const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-white/80' };
+        return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+    };
+
+    // 8. Inject Header Info (Avatar, Name, Tick, Time)
+    document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
+    
+    const nameContainer = document.getElementById('hotpost-viewer-name');
+    if (isMyStory) {
+        nameContainer.innerHTML = `Your Story`;
+    } else {
+        nameContainer.innerHTML = `${userData.user.full_name} ${getTickHtmlLocal(userData.user.tick_type)}`;
+    }
+    
     document.getElementById('hotpost-viewer-time').textContent = timeAgo(post.created_at);
     document.getElementById('hotpost-viewer-image').src = post.media_url;
 
+    // 9. Record Database View
     recordView(post.id);
 
+    // 10. Start Progress Bar Animation
     const activeBar = progressContainer.querySelector(`.progress-bar-inner[data-index="${postIndex}"]`);
     if (activeBar) {
         activeBar.style.animation = `fill-progress ${currentViewerState.storyDuration}ms linear forwards`;
         activeBar.classList.add('active');
     }
 
+    // 11. Physics / Timing Engine Reset
     clearTimeout(currentViewerState.storyTimer);
     currentViewerState.remainingDuration = currentViewerState.storyDuration; 
     currentViewerState.animationStartTime = performance.now();
@@ -989,14 +1034,16 @@ async function handleReplyToHotpost(event) {
 async function toggleCameraStatusBar(isCameraOpen) {
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         try {
-            const { StatusBar, Style } = await import('@capacitor/status-bar');
+            const StatusBar = window.Capacitor.Plugins.StatusBar;
+            if (!StatusBar) return;
+            
             if (isCameraOpen) {
                 await StatusBar.setBackgroundColor({ color: '#000000' });
-                await StatusBar.setStyle({ style: Style.Dark });
+                await StatusBar.setStyle({ style: 'DARK' });
             } else {
                 const isDark = document.documentElement.classList.contains('dark');
                 await StatusBar.setBackgroundColor({ color: isDark ? '#121212' : '#f8f9fa' });
-                await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+                await StatusBar.setStyle({ style: isDark ? 'DARK' : 'LIGHT' });
             }
         } catch (e) { console.log('Status bar override bypassed.'); }
     }
