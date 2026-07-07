@@ -2,8 +2,8 @@ import { supabase } from './supabase.js';
 import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { handleConnectionAction } from './main.js';
-import { PushNotifications } from '@capacitor/push-notifications'; 
-import { Capacitor } from '@capacitor/core'; 
+
+// Notice: We removed the static @capacitor imports from here!
 
 let currentUser = null;
 let allNotifications = [];
@@ -65,9 +65,22 @@ function setupEventListeners() {
 }
 
 // -----------------------------------
-// PUSH NOTIFICATIONS (Capacitor Safe)
+// PUSH NOTIFICATIONS (Cross-Browser Safe)
 // -----------------------------------
 async function setupPushNotifications() {
+    let Capacitor, PushNotifications;
+    
+    try {
+        // Dynamic Import: If the browser can't find these, it will jump to the catch block safely.
+        const core = await import('@capacitor/core');
+        const push = await import('@capacitor/push-notifications');
+        Capacitor = core.Capacitor;
+        PushNotifications = push.PushNotifications;
+    } catch (err) {
+        console.log('Running in standard Web Browser. Push notifications bypassed safely.');
+        return; 
+    }
+
     if (!Capacitor.isNativePlatform()) {
         console.log('Push notifications bypassed: Running in Web Browser.');
         return; 
@@ -113,10 +126,10 @@ async function saveTokenToSupabase(token) {
 // -----------------------------------
 export function openNotifications() {
     const modal = document.getElementById('modal-notifications');
-    const bottomNav = document.querySelector('nav'); // Grab bottom nav
+    const bottomNav = document.querySelector('nav'); 
     
     modal.classList.replace('hidden', 'flex');
-    if (bottomNav) bottomNav.classList.add('hidden'); // Hide bottom nav
+    if (bottomNav) bottomNav.classList.add('hidden'); 
     
     setTimeout(() => modal.classList.remove('translate-x-full'), 10);
     
@@ -125,7 +138,7 @@ export function openNotifications() {
     // INSTAGRAM LOGIC: Automatically clear the red badge upon opening
     const badge = document.getElementById('notif-badge');
     if (badge) badge.classList.add('hidden');
-    markAllAsReadSilent(); // Marks DB as read in background without removing the blue unread highlights on the cards immediately
+    markAllAsReadSilent(); 
 }
 
 export function closeNotifications() {
@@ -135,7 +148,7 @@ export function closeNotifications() {
     modal.classList.add('translate-x-full');
     setTimeout(() => {
         modal.classList.replace('flex', 'hidden');
-        if (bottomNav) bottomNav.classList.remove('hidden'); // Show bottom nav
+        if (bottomNav) bottomNav.classList.remove('hidden'); 
     }, 300);
 }
 
@@ -250,22 +263,19 @@ function renderNotificationItem(notif) {
 // ROUTING & ACTIONS
 // -----------------------------------
 async function handleNotificationClick(notif, element) {
-    // 1. Remove highlight visually on click
     element.classList.remove('bg-primary/5', 'dark:bg-primary/10');
     element.classList.add('bg-surface', 'dark:bg-[#121212]');
 
-    // 2. Route Click
     if (notif.type.startsWith('post_')) {
         window.openSinglePostView(notif.target_id);
     } 
     else if (notif.type.startsWith('hotpost_')) {
-        // Query database to see if THIS user has any active Hotposts
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { data } = await supabase.from('hotposts').select('id')
             .eq('user_id', currentUser.id).eq('is_deleted', false).gt('created_at', twentyFourHoursAgo).limit(1);
         
         if (data && data.length > 0) {
-            window.showMyHotposts(); // Opens your Active Hotposts manager from hotposts.js
+            window.showMyHotposts(); 
         } else {
             showToast('This Hotpost has expired.', 'info');
         }
@@ -286,7 +296,6 @@ async function handleDeclineRequest(userId, btn) {
     fetchNotifications(); 
 }
 
-// Background function: Called automatically when the modal is opened.
 async function markAllAsReadSilent() {
     try {
         await supabase.from('notifications').update({ is_read: true })
