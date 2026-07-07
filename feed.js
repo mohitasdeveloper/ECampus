@@ -601,7 +601,14 @@ window.deletePost = async (postId) => {
     if (postElement) postElement.style.display = 'none';
     
     // SOFT DELETE
-    const { error } = await supabase.from('posts').update({ is_deleted: true }).eq('id', postId);
+const { data, error } = await supabase
+    .from('posts')
+    .update({ is_deleted: true })
+    .eq('id', postId)
+    .select();
+
+console.log("Delete Result:", data);
+console.log("Delete Error:", error);
     
     if (error) {
         if (postElement) postElement.style.display = 'block'; // Revert if failed
