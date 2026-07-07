@@ -220,3 +220,21 @@ body {
     border-radius: 24px !important;
     overflow: hidden;
 }
+/* =========================================================
+   NATIVE SAFE AREA (NOTCH & HOME BAR) SUPPORT
+   ========================================================= */
+.safe-pt {
+    /* Pushes content down exactly the height of the phone's status bar/notch */
+    padding-top: env(safe-area-inset-top, 0px) !important;
+}
+
+.safe-pb {
+    /* 1.5rem (24px) is your default Tailwind pb-6. This ensures it never shrinks smaller than that, but expands if the phone has a tall Home Bar */
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.modal-header-safe {
+    /* For full-screen modals to avoid the notch */
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    min-height: calc(4rem + env(safe-area-inset-top, 0px));
+}
