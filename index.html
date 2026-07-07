@@ -152,7 +152,7 @@
         </div>
 
 <!-- SEARCH VIEW -->
-<div id="view-search" class="tab-content hidden">
+<div id="view-search" class="tab-content hidden safe-pt px-4">
     <div class="relative mb-6 mt-2">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-on-surface-variant">
                     <span class="material-symbols-outlined text-[20px]">search</span>
@@ -174,7 +174,7 @@
         </div>
 
         <!-- UPDATES VIEW -->
-<div id="view-updates" class="tab-content hidden pt-4">
+<div id="view-updates" class="tab-content hidden pt-4 safe-pt px-4">
     <h2 class="text-2xl font-extrabold text-on-surface dark:text-gray-100 mb-6">
         Campus Updates
     </h2>
@@ -185,7 +185,7 @@
 </div>
 
 <div id="view-profile" class="tab-content hidden h-screen flex flex-col">
-            <div class="h-16 flex items-center justify-between px-4 shrink-0 pt-4">
+    <div class="h-16 flex items-center justify-between px-4 shrink-0 pt-4 safe-pt">
                 <div class="flex items-center gap-1.5 min-w-0">
                     <h2 id="my-profile-header-name" class="text-[20px] font-extrabold text-on-surface dark:text-gray-100 tracking-tight truncate">---</h2>
                     <span id="my-profile-header-tick" class="hidden material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span>
@@ -986,31 +986,26 @@
     </div>
 
     <!-- BOTTOM NAV -->
-    <nav
-   <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pt-3 bg-surface/80 dark:bg-[#121212]/90 backdrop-blur-2xl rounded-t-[32px] border-t border-surface-variant/40 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.2)] z-[40] safe-pb">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard"
-            class="nav-item active flex flex-col items-center justify-center bg-primary dark:bg-primary text-white rounded-2xl px-5 py-2 transition-all active:scale-95">
-            <span class="material-symbols-outlined text-[24px]"
-                style="font-variation-settings: 'FILL' 1;">dashboard</span>
-            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Feed</span>
+ <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pt-3 bg-surface/80 dark:bg-[#121212]/90 backdrop-blur-2xl rounded-t-[32px] border-t border-surface-variant/40 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.2)] z-[40] safe-pb">
+        
+        <button id="nav-dashboard" onclick="switchTab('dashboard')" class="nav-item flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 w-16 bg-primary text-white">
+            <span class="material-symbols-outlined text-[26px] transition-transform" style="font-variation-settings: 'FILL' 1;">home</span>
         </button>
-        <button onclick="switchTab('search')" id="nav-search"
-            class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 px-5 py-2 hover:bg-surface-variant/40 dark:hover:bg-neutral-800 rounded-2xl active:scale-95 transition-all">
-            <span class="material-symbols-outlined text-[24px]">search</span>
-            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Search</span>
+        
+        <button id="nav-search" onclick="switchTab('search')" class="nav-item flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 w-16 text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-gray-200">
+            <span class="material-symbols-outlined text-[26px] transition-transform" style="font-variation-settings: 'FILL' 0;">search</span>
         </button>
-        <button onclick="switchTab('updates')" id="nav-updates"
-            class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 px-5 py-2 hover:bg-surface-variant/40 dark:hover:bg-neutral-800 rounded-2xl active:scale-95 transition-all">
-            <span class="material-symbols-outlined text-[24px]">campaign</span>
-            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Updates</span>
+        
+        <button id="nav-updates" onclick="switchTab('updates')" class="nav-item flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 w-16 text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-gray-200">
+            <span class="material-symbols-outlined text-[26px] transition-transform" style="font-variation-settings: 'FILL' 0;">campaign</span>
         </button>
-        <button onclick="switchTab('profile')" id="nav-profile"
-            class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-gray-400 px-5 py-2 hover:bg-surface-variant/40 dark:hover:bg-neutral-800 rounded-2xl active:scale-95 transition-all">
-            <span class="material-symbols-outlined text-[24px]">person</span>
-            <span class="text-[10px] font-bold mt-0.5 tracking-wide">Profile</span>
+        
+        <button id="nav-profile" onclick="switchTab('profile')" class="nav-item flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 w-16 text-on-surface-variant dark:text-gray-400 hover:text-on-surface dark:hover:text-gray-200">
+            <span class="material-symbols-outlined text-[26px] transition-transform" style="font-variation-settings: 'FILL' 0;">person</span>
         </button>
+        
     </nav>
-
+    
     <!-- INLINE SCRIPT FOR UI TOGGLES -->
     <script>
         // Full Screen Create Post View
