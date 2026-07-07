@@ -17,36 +17,37 @@ const iconMap = {
 
 export function initNotifications(user) {
     currentUser = user;
-    setupStatusBarAndLayout(); // Visual fix for status bar overlapping
+    setupStatusBarAndLayout(); // Safe visual fix for status bar overlapping
     setupEventListeners();
     fetchNotifications();
-    setupPushNotifications(); 
+    setupPushNotifications();  // Safe initialization using window.Capacitor
 }
 
-// -----------------------------------
-// STATUS BAR & WEB VIEW LAYOUT FIX
-// -----------------------------------
-async function setupStatusBarAndLayout() {
+// --------------------------------------------------
+// SAFE LAYOUT ADJUSTMENT (NO BARE MODULE IMPORTS)
+// --------------------------------------------------
+function setupStatusBarAndLayout() {
     try {
-        // Enforce safe viewport rules via meta tags dynamically
+        // Enforce safe viewport rules to let CSS env working properly
         let viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
             viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
         }
 
-        const core = await import('@capacitor/core');
-        if (!core.Capacitor.isNativePlatform()) return;
-
-        // Apply a safe area offset directly to the HTML body container
+        // Apply fallback container space directly to body element
         document.body.style.paddingTop = 'env(safe-area-inset-top, 24px)';
         document.body.style.backgroundColor = '#FFFFFF';
 
-        const { StatusBar, Style } = await import('@capacitor/status-bar');
-        await StatusBar.setOverlaysWebView({ overlay: false });
-        await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-        await StatusBar.setStyle({ style: Style.Light });
+        // Reference the Capacitor global bridge object injected by Android container
+        const Cap = window.Capacitor;
+        if (Cap && Cap.isNativePlatform() && Cap.Plugins.StatusBar) {
+            const StatusBar = Cap.Plugins.StatusBar;
+            StatusBar.setOverlaysWebView({ overlay: false }).catch(()=>{});
+            StatusBar.setBackgroundColor({ color: '#FFFFFF' }).catch(()=>{});
+            StatusBar.setStyle({ style: 'LIGHT' }).catch(()=>{});
+        }
     } catch (err) {
-        console.warn('Status Bar setup skipped:', err);
+        console.warn('Status Bar style step skipped:', err);
     }
 }
 
@@ -88,23 +89,22 @@ function setupEventListeners() {
     });
 }
 
-// -----------------------------------
-// PUSH NOTIFICATIONS WITH SCREEN ALERTS
-// -----------------------------------
+// --------------------------------------------------
+// SAFE PUSH NOTIFICATION (USES GLOBAL BRIDGE OBJECT)
+// --------------------------------------------------
 async function setupPushNotifications() {
-    let Capacitor, PushNotifications;
+    const Cap = window.Capacitor;
     
-    try {
-        const core = await import('@capacitor/core');
-        const push = await import('@capacitor/push-notifications');
-        Capacitor = core.Capacitor;
-        PushNotifications = push.PushNotifications;
-    } catch (err) {
-        // Safe bypass on desktop web preview
+    // Gracefully exit if not running inside the compiled Android wrapper 
+    if (!Cap || !Cap.isNativePlatform()) {
         return; 
     }
 
-    if (!Capacitor.isNativePlatform()) return; 
+    const PushNotifications = Cap.Plugins.PushNotifications;
+    if (!PushNotifications) {
+        alert("Capacitor bridge found, but PushNotifications plugin is missing inside Android container build.");
+        return;
+    }
 
     try {
         let permStatus = await PushNotifications.checkPermissions();
@@ -113,18 +113,18 @@ async function setupPushNotifications() {
         }
         
         if (permStatus.receive !== 'granted') {
-            alert(`Notification permission was blocked or denied: ${permStatus.receive}`);
+            alert(`Notification system status blocked: ${permStatus.receive}`);
             return;
         }
 
-        // Add listeners BEFORE registering
+        // Setup callbacks onto the plugin runtime instance
         await PushNotifications.addListener('registration', async (token) => {
-            alert(`FCM Token Generated Successfully!\nToken: ${token.value.substring(0, 25)}...`);
+            alert(`FCM Registration Successful!\nToken: ${token.value.substring(0, 25)}...`);
             await saveTokenToSupabase(token.value);
         });
 
         await PushNotifications.addListener('registrationError', (error) => {
-            alert(`FCM Core Registration Error Event:\n${JSON.stringify(error)}`);
+            alert(`FCM Native Event Error:\n${JSON.stringify(error)}`);
         });
 
         await PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -136,11 +136,11 @@ async function setupPushNotifications() {
             openNotifications();
         });
 
-        // Trigger native registration
+        // Request initial registration token lookup from Google FCM
         await PushNotifications.register();
 
     } catch (err) {
-        alert(`Push Crash Loop caught:\n${err.message || err}`);
+        alert(`FCM Boot Failure:\n${err.message || err}`);
     }
 }
 
@@ -152,15 +152,15 @@ async function saveTokenToSupabase(token) {
             .eq('id', currentUser.id);
             
         if (error) throw error;
-        alert("Success: Token saved to Supabase successfully!");
+        alert("Database Status: Token written to your profile record!");
     } catch (err) {
-        alert(`Supabase Write Error:\n${err.message || JSON.stringify(err)}`);
+        alert(`Supabase Remote Update Blocked:\n${err.message || JSON.stringify(err)}`);
     }
 }
 
-// -----------------------------------
-// UI & FETCHING LOGIC
-// -----------------------------------
+// --------------------------------------------------
+// CORE NOTIFICATION APP INTERFACE LOGIC
+// --------------------------------------------------
 export function openNotifications() {
     const modal = document.getElementById('modal-notifications');
     const bottomNav = document.querySelector('nav'); 
