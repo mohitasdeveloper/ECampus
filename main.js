@@ -10,16 +10,52 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 
 let currentUserProfile = null;
 
+// ========================================================
+// PROFESSIONAL SKELETON LOADERS
+// ========================================================
+const FEED_SKELETON = `
+    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-pulse">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
+            <div class="flex-1">
+                <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/3 mb-2"></div>
+                <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/4"></div>
+            </div>
+        </div>
+        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-3/4 mb-2"></div>
+        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-full mb-2"></div>
+        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-5/6 mb-4"></div>
+        <div class="w-full h-48 bg-surface-variant/50 dark:bg-neutral-800 rounded-2xl mb-4"></div>
+        <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 mt-2">
+            <div class="h-5 w-10 bg-surface-variant/50 dark:bg-neutral-800 rounded-md"></div>
+            <div class="h-5 w-10 bg-surface-variant/50 dark:bg-neutral-800 rounded-md"></div>
+        </div>
+    </div>
+`.repeat(3);
+
+const LIST_SKELETON = `
+    <div class="flex items-center gap-4 p-3 mb-3 animate-pulse bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800">
+        <div class="w-12 h-12 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
+        <div class="flex-1">
+            <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/2 mb-2"></div>
+            <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/3"></div>
+        </div>
+    </div>
+`.repeat(5);
+
+// ========================================================
+// APP INITIALIZATION & LAYOUT
+// ========================================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check user sessions
+    // 1. Check user sessions
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-    window.location.href = "./auth/login.html";
-    return;
-}
+        window.location.href = "./auth/login.html";
+        return;
+    }
 
-    // Fetch user profile
+    // 2. Fetch user profile
     const { data: profile, error } = await supabase
         .from('users')
         .select('*')
@@ -50,7 +86,7 @@ function initializeApp(profile) {
     updateHeaderAvatar(profile.profile_img_url, profile.full_name);
     populateProfileUI(profile);
     setupMoreMenuListener();
-    setupThemeToggle();
+    setupThemeToggle(); // Triggers status bar natively
     setupEditProfileAvatarUpload();
     setupProfileAvatarUpload();
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
@@ -59,6 +95,58 @@ function initializeApp(profile) {
     switchTab('dashboard');
 }
 
+// Native Status Bar Integration (Theme Aware)
+async function updateNativeStatusBar(isDark) {
+    try {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { StatusBar, Style } = await import('@capacitor/status-bar');
+            
+            // Match the exact background colors of the app
+            const bgColor = isDark ? '#121212' : '#f8f9fa';
+            
+            // Style.Dark = Light text (for dark mode) | Style.Light = Dark text (for light mode)
+            const textStyle = isDark ? Style.Dark : Style.Light; 
+            
+            await StatusBar.setOverlaysWebView({ overlay: false });
+            await StatusBar.setBackgroundColor({ color: bgColor });
+            await StatusBar.setStyle({ style: textStyle });
+        }
+    } catch (error) {
+        console.warn('Status bar configuration bypassed (not installed or web environment).');
+    }
+}
+
+function setupThemeToggle() {
+    const themeToggle = document.getElementById('theme-toggle-switch');
+    if (!themeToggle) return;
+
+    const isDarkMode = localStorage.getItem('theme') === 'dark';
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    themeToggle.checked = isDarkMode;
+    updateNativeStatusBar(isDarkMode); // Initialize on boot
+
+    themeToggle.addEventListener('change', () => {
+        if (themeToggle.checked) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            updateNativeStatusBar(true);
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            updateNativeStatusBar(false);
+        }
+    });
+}
+
+function getTickHtmlLocal(tickType) {
+    if (!tickType || tickType === 'none') return '';
+    const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
+    return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+}
+
+// ========================================================
+// CORE PROFILE UI & SOCIALS
+// ========================================================
 function setupMoreMenuListener() {
     const moreMenu = document.getElementById('public-profile-more-menu');
     if (moreMenu) {
@@ -92,10 +180,8 @@ function setupBlockedUsersListener() {
         const unblockBtn = e.target.closest('.unblock-btn');
         if (unblockBtn && !unblockBtn.disabled) {
             const userIdToUnblock = unblockBtn.dataset.userId;
-
             unblockBtn.disabled = true;
             unblockBtn.textContent = '...';
-
             await handleConnectionAction(userIdToUnblock, 'unblock', null);
             openBlockedUsersModal(); 
         }
@@ -129,7 +215,7 @@ function renderSocialLinks(links, container = null) {
             linkEl.href = link.url;
             linkEl.target = '_blank';
             linkEl.title = link.platform.charAt(0).toUpperCase() + link.platform.slice(1);
-            linkEl.className = `w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white text-2xl ${platformInfo.color} transition-transform hover:scale-110`;
+            linkEl.className = `w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white text-2xl ${platformInfo.color} transition-transform hover:scale-110 shrink-0 shadow-sm`;
             linkEl.innerHTML = `<i class="fa-brands ${platformInfo.icon}"></i>`;
             targetContainer.appendChild(linkEl);
         });
@@ -138,7 +224,7 @@ function renderSocialLinks(links, container = null) {
     if (!container) {
         const addButton = document.createElement('button');
         addButton.onclick = () => openEditSocialsModal();
-        addButton.className = 'w-[52px] h-[52px] rounded-2xl flex items-center justify-center bg-gray-100 dark:bg-neutral-800 border-2 border-dashed border-gray-300 dark:border-neutral-700 text-gray-400 dark:text-gray-500 hover:border-primary hover:text-primary transition-colors';
+        addButton.className = 'w-[52px] h-[52px] rounded-2xl flex items-center justify-center bg-gray-100 dark:bg-neutral-800 border-2 border-dashed border-gray-300 dark:border-neutral-700 text-gray-400 dark:text-gray-500 hover:border-primary hover:text-primary transition-colors shrink-0';
         addButton.innerHTML = `<span class="material-symbols-outlined">add</span>`;
         targetContainer.appendChild(addButton);
     }
@@ -147,7 +233,7 @@ function renderSocialLinks(links, container = null) {
 function populateProfileUI(profile) {
     if (!profile) return;
     
-    // 1. Header Name & Verified Tick Injection
+    // Header Name & Verified Tick
     const headerNameEl = document.getElementById('my-profile-header-name');
     if (headerNameEl) headerNameEl.textContent = profile.full_name;
     
@@ -163,25 +249,25 @@ function populateProfileUI(profile) {
         }
     }
     
-    // 2. Stats Row
+    // Stats Row
     const avatarEl = document.getElementById('my-profile-avatar');
     if (avatarEl) avatarEl.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     
     const connCountEl = document.getElementById('my-profile-connection-count');
     if (connCountEl) connCountEl.textContent = profile.connection_count || 0;
     
-    // 3. Bio Section
+    // Bio Section
     const courseEl = document.getElementById('my-profile-course');
     if (courseEl) courseEl.textContent = profile.course || 'Student';
     
     const bioEl = document.getElementById('my-profile-bio');
     if (bioEl) bioEl.textContent = profile.bio || 'No bio yet. Click "Edit Profile" to add one!';
     
-    // Feed avatar & Top Navigation avatar updates
+    // Feed avatar
     const feedInputAvatar = document.getElementById('feed-input-avatar');
     if (feedInputAvatar) feedInputAvatar.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     
-    // Load Socials & Privacy setting
+    // Socials & Privacy
     renderSocialLinks(profile.social_links, document.getElementById('my-profile-social-links'));
     const privacyToggle = document.getElementById('privacy-toggle-switch');
     if (privacyToggle) privacyToggle.checked = profile.is_private || false;
@@ -191,16 +277,17 @@ function populateProfileUI(profile) {
         fetchMyProfileFeed(profile.id);
     }
 }
-// --- 2. Add these NEW functions anywhere in main.js ---
 
+// ========================================================
+// PROFILE FEED RENDER ENGINE (Matches Main Feed)
+// ========================================================
 async function fetchMyProfileFeed(userId) {
     const feedContainer = document.getElementById('my-profile-feed');
     if(!feedContainer) return;
 
-    feedContainer.innerHTML = `<p class="text-sm italic text-center py-6 text-on-surface-variant dark:text-gray-400">Loading your posts...</p>`;
+    feedContainer.innerHTML = FEED_SKELETON; // Inject Skeleton
     
     try {
-        // Fetch posts exactly like the main dashboard feed
         const { data: posts, error } = await supabase
             .from('posts')
             .select(`
@@ -216,89 +303,20 @@ async function fetchMyProfileFeed(userId) {
         
         if (error) throw error;
 
-        // Update post count stat dynamically
-        document.getElementById('my-profile-posts-count').textContent = posts.length;
+        const countEl = document.getElementById('my-profile-posts-count');
+        if (countEl) countEl.textContent = posts.length;
 
         if (posts.length === 0) {
             feedContainer.innerHTML = `
-                <div class="py-12 flex flex-col items-center justify-center opacity-40">
+                <div class="py-12 flex flex-col items-center justify-center opacity-40 text-on-surface-variant">
                     <span class="material-symbols-outlined text-[42px] mb-2">menu_book</span>
-                    <p class="text-sm font-medium text-on-surface-variant">No posts yet</p>
+                    <p class="text-sm font-medium">No posts yet</p>
                 </div>`;
             return;
         }
 
-        // Render full interactive cards
-        feedContainer.innerHTML = posts.map(post => {
-            const postUser = post.users;
-            const likes = post.post_likes || [];
-            const likeCount = likes.length;
-            const commentCount = post.post_comments[0]?.count || 0;
-            
-            let contentHtml = '';
-
-            // Handle Post Types
-            if (post.post_type === 'text') {
-                contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
-            } else if (post.post_type === 'image') {
-                contentHtml = `
-                    <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
-                    <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
-                        <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
-                    </div>
-                `;
-            } else if (post.post_type === 'event') {
-                const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
-                const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
-                contentHtml = `
-                    <div class="bg-secondary/5 border border-secondary/20 rounded-2xl mb-4 flex flex-col overflow-hidden">
-                        ${eventImgHtml}
-                        <div class="p-5">
-                            <div class="bg-secondary/10 text-secondary w-max px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-3">Upcoming Event</div>
-                            <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 leading-relaxed mb-4 whitespace-pre-wrap">${post.content}</p>
-                            <p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium mb-1"><span class="material-symbols-outlined text-[18px]">calendar_today</span> ${dateStr}</p>
-                        </div>
-                    </div>
-                `;
-            } else if (post.post_type === 'poll') {
-                contentHtml = `
-                    <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
-                    <div class="bg-primary/5 border border-primary/20 rounded-2xl p-4 text-center">
-                        <span class="material-symbols-outlined text-primary text-[32px] mb-2">poll</span>
-                        <p class="text-sm font-bold text-primary">Poll Active</p>
-                    </div>
-                `;
-            }
-
-            // Notice the new Delete Button injected at the top right of the card
-            return `
-            <div id="my-feed-post-${post.id}" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm text-left relative">
-                
-                <button onclick="deleteMyPost('${post.id}')" class="absolute top-4 right-4 bg-error/10 text-error p-2 rounded-full active:scale-90 transition-transform hover:bg-error/20">
-                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-
-                <div class="flex items-center gap-3 mb-4 pr-10">
-                    <img src="${postUser.profile_img_url}" class="w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover shrink-0">
-                    <div>
-                        <h4 class="font-bold text-[14px] text-on-surface dark:text-gray-100">${postUser.full_name}</h4>
-                        <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
-                    </div>
-                </div>
-                ${contentHtml}
-                
-                <div class="flex items-center justify-between pt-3 border-t border-surface-variant/40 dark:border-neutral-800 mt-2">
-                    <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
-                        <span class="material-symbols-outlined text-[18px]">favorite</span>
-                        <span class="text-xs font-bold">${likeCount}</span>
-                    </div>
-                    <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
-                        <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
-                        <span class="text-xs font-bold">${commentCount}</span>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
+        // Render full interactive cards EXACTLY like feed.js
+        feedContainer.innerHTML = generatePostHTML(posts, currentUserProfile.id);
 
     } catch (err) {
         console.error("Error fetching my feed:", err);
@@ -306,54 +324,156 @@ async function fetchMyProfileFeed(userId) {
     }
 }
 
-// Logic to seamlessly delete the post from database and remove it from UI
-window.deleteMyPost = async function(postId) {
-    if (!confirm("Are you sure you want to delete this post?")) return;
+// Universal Feed HTML Generator (Used for My Profile & Public Profile)
+function generatePostHTML(posts, currentUserId) {
+    return posts.map(post => {
+        const user = post.users;
+        if (!user) return '';
 
-    try {
-        const { error } = await supabase
-            .from('posts')
-            .update({ is_deleted: true })
-            .eq('id', postId)
-            .eq('user_id', currentUserProfile.id);
+        const likes = post.post_likes || [];
+        const likeCount = likes.length;
+        const userHasLiked = likes.some(like => like.user_id === currentUserId);
+        const commentCount = post.post_comments[0]?.count || 0;
 
-        if (error) throw error;
+        let contentHtml = '';
+        const verifiedBadge = getTickHtmlLocal(user.tick_type);
+        
+        const headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
-        // Animate the card out of the DOM smoothly
-        const postElement = document.getElementById(`my-feed-post-${postId}`);
-        if (postElement) {
-            postElement.style.opacity = '0';
-            postElement.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                postElement.remove();
-                
-                // Update the counter
-                const countEl = document.getElementById('my-profile-posts-count');
-                countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
-            }, 300);
+        // Text Post
+        if (post.post_type === 'text') {
+            contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
+        } 
+        // Image Post
+        else if (post.post_type === 'image') {
+            contentHtml = `
+                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
+                <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
+                    <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
+                </div>
+            `;
         }
-        showToast('Post deleted successfully', 'success');
+        // Event Post
+        else if (post.post_type === 'event') {
+            const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
+            const btnText = post.event_button_text || 'View Link';
+            const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-4 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform shadow-md shadow-secondary/20">${btnText}</a>` : '';
+            const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
 
-    } catch (err) {
-        console.error("Error deleting post:", err);
-        showToast('Failed to delete post.', 'error');
-    }
+            contentHtml = `
+                <div class="bg-secondary/5 border border-secondary/20 rounded-2xl mb-4 flex flex-col overflow-hidden">
+                    ${eventImgHtml}
+                    <div class="p-5">
+                        <div class="bg-secondary/10 text-secondary w-max px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-3">Upcoming Event</div>
+                        <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 leading-relaxed mb-4 whitespace-pre-wrap">${post.content}</p>
+                        
+                        <div class="space-y-2">
+                            <p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium">
+                                <span class="material-symbols-outlined text-[18px]">calendar_today</span> ${dateStr}
+                            </p>
+                            ${post.event_location ? `<p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-[18px]">location_on</span> ${post.event_location}</p>` : ''}
+                        </div>
+                        ${registerHtml}
+                    </div>
+                </div>
+            `;
+        }
+        // Poll Post
+        else if (post.post_type === 'poll') {
+            const votes = post.post_poll_votes || [];
+            const totalVotes = votes.length;
+            const myVotes = votes.filter(v => v.user_id === currentUserId).map(v => v.option_index);
+            const userHasVoted = myVotes.length > 0;
+            
+            const isExpired = post.poll_expires_at && new Date(post.poll_expires_at) < new Date();
+            const showResults = userHasVoted || isExpired || post.poll_is_anon;
+
+            const optionsHtml = (post.poll_options || []).map((opt, index) => {
+                const optVotes = votes.filter(v => v.option_index === index).length;
+                const percentage = totalVotes === 0 ? 0 : Math.round((optVotes / totalVotes) * 100);
+                const iVotedForThis = myVotes.includes(index);
+                const viewVotersBtn = (!post.poll_is_anon && optVotes > 0) ? `<span onclick="event.stopPropagation(); window.openPollVoters('${post.id}', ${index})" class="material-symbols-outlined text-[16px] ml-1.5 text-on-surface-variant hover:text-primary transition-colors cursor-pointer" title="View Voters">visibility</span>` : '';
+
+                return `
+                <div data-post-id="${post.id}" data-option-index="${index}" data-is-multiple="${post.poll_is_multiple_choice}" class="poll-option-btn ${!isExpired ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'} relative w-full bg-surface-variant/30 dark:bg-surface-variant/10 border border-surface-variant/50 dark:border-neutral-700 rounded-2xl p-3.5 overflow-hidden group hover:border-primary/50 transition-all mb-2">
+                    <div class="poll-progress-bar absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults ? percentage : 0}%"></div>
+                    <div class="relative flex justify-between items-center text-[13px] font-bold text-on-surface dark:text-gray-100 z-10">
+                        <span class="flex items-center gap-2">
+                            <span class="poll-check-circle w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80 dark:border-gray-500'}">
+                                ${iVotedForThis ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}
+                            </span>
+                            ${opt}
+                        </span>
+                        <span class="flex items-center">
+                            <span class="poll-percentage ${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
+                            ${viewVotersBtn}
+                        </span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const expiryText = isExpired ? 'Poll ended' : (post.poll_expires_at ? `Ends ${timeAgo(post.poll_expires_at)}` : 'Ongoing');
+            const typeText = post.poll_is_multiple_choice ? 'Multiple choice' : 'Single choice';
+
+            contentHtml = `
+                <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
+                <div class="poll-options-wrapper space-y-2.5 mb-3 px-1">${optionsHtml}</div>
+                <div class="flex justify-between px-2 text-[11px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">
+                    <span class="poll-footer-text"><span class="poll-total-votes">${totalVotes}</span> votes • ${typeText} ${post.poll_is_anon ? 'Anonymous' : 'Public'}</span>
+                    <span>${expiryText}</span>
+                </div>
+            `;
+        }
+
+        return `
+        <div data-post-id="${post.id}" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-fadeIn relative">
+            
+            ${post.is_verified ? '<div class="absolute -top-3 -right-3 bg-[#e8b339] text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase shadow-lg shadow-[#e8b339]/30 flex items-center gap-1 z-10"><span class="material-symbols-outlined text-[14px]">stars</span> Verified Post</div>' : ''}
+
+            <div class="flex items-center gap-3 mb-3">
+                ${headerIcon}
+                <div class="flex-1">
+                    <h4 data-user-id="${user.id}" class="profile-link font-bold text-[14px] text-on-surface dark:text-gray-100 leading-tight cursor-pointer hover:text-primary transition-colors flex items-center gap-1">
+                        ${user.full_name} ${verifiedBadge}
+                    </h4>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
+                </div>
+                <button data-post-id="${post.id}" data-user-id="${user.id}" data-is-verified="${post.is_verified}" class="post-options-btn text-on-surface-variant hover:text-on-surface dark:text-gray-400 dark:hover:text-gray-100 p-1 rounded-full hover:bg-surface-variant/50 transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                </button>
+            </div>
+            
+            ${contentHtml}
+            
+            <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
+                <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[13px] font-medium active:scale-95 ${userHasLiked ? 'text-primary' : 'dark:text-gray-400'}">
+                    <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
+                    <span>${likeCount}</span>
+                </button>
+                <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
+                    <span>${commentCount}</span>
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
 }
 
+
+// ========================================================
+// SIDEBAR & SETTINGS
+// ========================================================
 function openSettingsSidebar() {
     const sidebar = document.getElementById('settings-sidebar');
     const content = document.getElementById('settings-sidebar-content');
-    const bottomNav = document.querySelector('nav'); // Select the bottom navigation bar
+    const bottomNav = document.querySelector('nav'); 
     
     sidebar.classList.remove('hidden');
     sidebar.classList.add('flex');
-    
-    // Hide the bottom navigation
     if (bottomNav) bottomNav.classList.add('hidden');
     
-    // Force DOM reflow to allow transition animation
     void sidebar.offsetWidth;
-    
     sidebar.classList.remove('opacity-0');
     content.classList.remove('translate-x-full');
 }
@@ -369,26 +489,19 @@ function closeSettingsSidebar() {
     setTimeout(() => {
         sidebar.classList.remove('flex');
         sidebar.classList.add('hidden');
-        
-        // Bring back the bottom navigation after the sidebar is completely closed
         if (bottomNav) bottomNav.classList.remove('hidden');
     }, 300);
 }
 
 async function togglePrivacy(isPrivate) {
     try {
-        const { error } = await supabase
-            .from('users')
-            .update({ is_private: isPrivate })
-            .eq('id', currentUserProfile.id);
-        
+        const { error } = await supabase.from('users').update({ is_private: isPrivate }).eq('id', currentUserProfile.id);
         if (error) throw error;
         currentUserProfile.is_private = isPrivate;
         showToast(isPrivate ? 'Account is now Private' : 'Account is now Public', 'success');
     } catch (err) {
         console.error("Privacy toggle error:", err);
         showToast('Failed to update privacy settings', 'error');
-        // Revert toggle switch UI on failure
         document.getElementById('privacy-toggle-switch').checked = !isPrivate;
     }
 }
@@ -405,7 +518,6 @@ function shareMyProfile() {
     }
 }
 
-// Bind new functions to the global window object so HTML onClick attributes can call them
 window.openSettingsSidebar = openSettingsSidebar;
 window.closeSettingsSidebar = closeSettingsSidebar;
 window.togglePrivacy = togglePrivacy;
@@ -413,30 +525,12 @@ window.shareMyProfile = shareMyProfile;
 
 function updateHeaderAvatar(avatarUrl, fullName) {
     const avatarImg = document.getElementById('header-avatar');
-    if (avatarImg) {
-        avatarImg.src = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=e1e3e4`;
-    }
+    if (avatarImg) avatarImg.src = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=e1e3e4`;
 }
 
-function setupThemeToggle() {
-    const themeToggle = document.getElementById('theme-toggle-switch');
-    if (!themeToggle) return;
-
-    const isDarkMode = localStorage.getItem('theme') === 'dark';
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    themeToggle.checked = isDarkMode;
-
-    themeToggle.addEventListener('change', () => {
-        if (themeToggle.checked) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    });
-}
-
+// ========================================================
+// UPLOADS & USER ACTIONS
+// ========================================================
 function setupEditProfileAvatarUpload() {
     const avatarInput = document.getElementById('edit-avatar-upload-input');
     if (!avatarInput) return;
@@ -448,7 +542,6 @@ function setupEditProfileAvatarUpload() {
         const preview = document.getElementById('edit-profile-avatar-preview');
         const originalSrc = preview.src;
         preview.src = URL.createObjectURL(file); 
-
         showToast('Uploading new avatar...', 'info');
 
         try {
@@ -459,13 +552,11 @@ function setupEditProfileAvatarUpload() {
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
-            const imageUrl = data.secure_url;
-
-            await saveUserProfile({ profile_img_url: imageUrl }, false); 
-            preview.src = imageUrl; 
-
+            
+            await saveUserProfile({ profile_img_url: data.secure_url }, false); 
+            preview.src = data.secure_url; 
         } catch (error) {
-            console.error('Error updating avatar from edit modal:', error);
+            console.error('Error updating avatar:', error);
             showToast('Failed to update avatar.', 'error');
             preview.src = originalSrc; 
         } finally {
@@ -477,7 +568,6 @@ function setupEditProfileAvatarUpload() {
 function setupProfileAvatarUpload() {
     const avatarContainer = document.getElementById('profile-avatar-container');
     const avatarInput = document.getElementById('avatar-upload-input');
-
     if (!avatarContainer || !avatarInput) return;
 
     avatarContainer.addEventListener('click', () => avatarInput.click());
@@ -494,26 +584,17 @@ function setupProfileAvatarUpload() {
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
 
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-                method: 'POST',
-                body: formData,
-            });
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
-            const imageUrl = data.secure_url;
 
-            const { error } = await supabase
-                .from('users')
-                .update({ profile_img_url: imageUrl })
-                .eq('auth_user_id', currentUserProfile.auth_user_id);
-
+            const { error } = await supabase.from('users').update({ profile_img_url: data.secure_url }).eq('auth_user_id', currentUserProfile.auth_user_id);
             if (error) throw error;
 
-            currentUserProfile.profile_img_url = imageUrl;
-            document.getElementById('profile-avatar-large').src = imageUrl;
-            updateHeaderAvatar(imageUrl, currentUserProfile.full_name);
+            currentUserProfile.profile_img_url = data.secure_url;
+            document.getElementById('profile-avatar-large').src = data.secure_url;
+            updateHeaderAvatar(data.secure_url, currentUserProfile.full_name);
             showToast('Avatar updated successfully!', 'success');
-
         } catch (error) {
             console.error('Error updating avatar:', error);
             showToast('Failed to update avatar. Please try again.', 'error');
@@ -569,13 +650,7 @@ async function saveUserProfile(extraUpdates = {}, closeModal = true) {
     };
 
     try {
-        const { data, error } = await supabase
-            .from('users')
-            .update(updates)
-            .eq('id', currentUserProfile.id)
-            .select()
-            .single();
-
+        const { data, error } = await supabase.from('users').update(updates).eq('id', currentUserProfile.id).select().single();
         if (error) throw error;
 
         currentUserProfile = data; 
@@ -615,10 +690,10 @@ function renderTempSocialsList() {
     }
     tempSocialLinks.forEach((link, index) => {
         list.innerHTML += `
-            <div class="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800/50 p-2 rounded-lg">
-                <span class="font-bold text-xs capitalize text-gray-600 dark:text-gray-300 w-16">${link.platform}</span>
+            <div class="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800/50 p-2 rounded-lg border border-surface-variant/30 dark:border-neutral-700">
+                <span class="font-bold text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-300 w-20">${link.platform}</span>
                 <input type="text" value="${link.url}" class="flex-1 bg-transparent text-xs text-gray-500 dark:text-gray-400 outline-none" readonly>
-                <button onclick="removeSocialLinkTemp(${index})" class="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full">
+                <button onclick="removeSocialLinkTemp(${index})" class="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors">
                     <span class="material-symbols-outlined text-sm">delete</span>
                 </button>
             </div>
@@ -649,10 +724,7 @@ function removeSocialLinkTemp(index) {
 }
 
 async function saveSocialLinks() {
-    const { error } = await supabase
-        .from('users')
-        .update({ social_links: tempSocialLinks })
-        .eq('id', currentUserProfile.id);
+    const { error } = await supabase.from('users').update({ social_links: tempSocialLinks }).eq('id', currentUserProfile.id);
 
     if (error) {
         showToast('Failed to save social links.', 'error');
@@ -669,18 +741,18 @@ window.openEditProfileModal = openEditProfileModal;
 window.closeEditProfileModal = closeEditProfileModal;
 window.triggerEditAvatarUpload = triggerEditAvatarUpload;
 window.saveUserProfile = saveUserProfile;
-
 window.openEditSocialsModal = openEditSocialsModal;
 window.closeSocialsModal = closeSocialsModal;
 window.addSocialLinkTemp = addSocialLinkTemp;
 window.removeSocialLinkTemp = removeSocialLinkTemp;
 window.saveSocialLinks = saveSocialLinks;
 
+// ========================================================
+// PUBLIC/PRIVATE PROFILE VIEWS 
+// ========================================================
 async function viewUserProfile(userId) {
     const moreMenu = document.getElementById('public-profile-more-menu');
-    if (moreMenu) {
-        moreMenu.classList.add('hidden');
-    }
+    if (moreMenu) moreMenu.classList.add('hidden');
 
     if (userId === currentUserProfile.id) {
         switchTab('profile');
@@ -690,27 +762,20 @@ async function viewUserProfile(userId) {
     const { data: user, error } = await supabase.from('users').select('*').eq('id', userId).single();
     if (error || !user) {
         showToast('Could not load profile.', 'error');
-        console.error('Error fetching user profile:', error);
         return;
     }
 
     document.getElementById('modal-profile-public').dataset.userId = userId;
     document.getElementById('modal-profile-private').dataset.userId = userId;
 
-    const { data: connection, error: connError } = await supabase
+    const { data: connection } = await supabase
         .from('connections')
         .select('status, action_user_id')
         .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
         .single();
 
-    if (connError && connError.code !== 'PGRST116') { 
-        showToast('Could not check connection status.', 'error');
-        console.error('Error fetching connection:', connError);
-    }
-
     const isConnected = connection?.status === 'accepted';
 
-    // Core validation routing logic testing database privacy tags explicitly
     if (user.is_private && !isConnected) {
         document.getElementById('private-profile-header-name').textContent = user.full_name;
         document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
@@ -725,7 +790,6 @@ async function viewUserProfile(userId) {
             actionsContainer.innerHTML = `<button class="btn-primary w-full">Request to Connect</button>`;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(user.id, 'request', actionsContainer.firstElementChild);
         }
-
         openProfileModal('private');
     } else {
         document.getElementById('public-profile-header-name').textContent = user.full_name;
@@ -739,9 +803,8 @@ async function viewUserProfile(userId) {
         renderProfileActions(user, connection);
         openProfileModal('public');
 
-        // Dynamic feed rendering mirroring style, interactive buttons, context from feed.js engine
         const profileFeedContainer = document.getElementById('public-profile-feed');
-        profileFeedContainer.innerHTML = `<p class="text-sm italic text-center py-6 text-on-surface-variant dark:text-gray-400">Loading live posts...</p>`;
+        profileFeedContainer.innerHTML = FEED_SKELETON; // Inject Skeleton Here too!
 
         try {
             const { data: posts, error: postsError } = await supabase
@@ -769,109 +832,7 @@ async function viewUserProfile(userId) {
                 return;
             }
 
-            // Map and build feed block leveraging verified components mapping to your specific design guidelines
-            profileFeedContainer.innerHTML = posts.map(post => {
-                const postUser = post.users;
-                if (!postUser) return '';
-
-                const likes = post.post_likes || [];
-                const likeCount = likes.length;
-                const userHasLiked = likes.some(like => like.user_id === currentUserProfile.id);
-                const commentCount = post.post_comments[0]?.count || 0;
-
-                let contentHtml = '';
-                
-                const getTickHtmlLocal = (tickType) => {
-                    if (!tickType || tickType === 'none') return '';
-                    const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-                    return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
-                };
-
-                const verifiedBadge = getTickHtmlLocal(postUser.tick_type);
-                const headerIcon = `<img src="${postUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(postUser.full_name)}&background=e1e3e4`}" class="w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover shrink-0">`;
-
-                if (post.post_type === 'text') {
-                    contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
-                } else if (post.post_type === 'image') {
-                    contentHtml = `
-                        <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
-                        <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
-                            <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
-                        </div>
-                    `;
-                } else if (post.post_type === 'event') {
-                    const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
-                    const btnText = post.event_button_text || 'View Link';
-                    const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-4 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold shadow-md shadow-secondary/20">${btnText}</a>` : '';
-                    const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
-
-                    contentHtml = `
-                        <div class="bg-secondary/5 border border-secondary/20 rounded-2xl mb-4 flex flex-col overflow-hidden">
-                            ${eventImgHtml}
-                            <div class="p-5">
-                                <div class="bg-secondary/10 text-secondary w-max px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-3">Upcoming Event</div>
-                                <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 leading-relaxed mb-4 whitespace-pre-wrap">${post.content}</p>
-                                <div class="space-y-2">
-                                    <p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium">
-                                        <span class="material-symbols-outlined text-[18px]">calendar_today</span> ${dateStr}
-                                    </p>
-                                    ${post.event_location ? `<p class="text-[13px] text-on-surface-variant dark:text-gray-300 flex items-center gap-2 font-medium"><span class="material-symbols-outlined text-[18px]">location_on</span> ${post.event_location}</p>` : ''}
-                                </div>
-                                ${registerHtml}
-                            </div>
-                        </div>
-                    `;
-                } else if (post.post_type === 'poll') {
-                    const votes = post.post_poll_votes || [];
-                    const totalVotes = votes.length;
-                    const myVotes = votes.filter(v => v.user_id === currentUserProfile.id).map(v => v.option_index);
-                    const userHasVoted = myVotes.length > 0;
-                    const isExpired = post.poll_expires_at && new Date(post.poll_expires_at) < new Date();
-                    const showResults = userHasVoted || isExpired || post.poll_is_anon;
-
-                    const optionsHtml = (post.poll_options || []).map((opt, index) => {
-                        const optVotes = votes.filter(v => v.option_index === index).length;
-                        const percentage = totalVotes === 0 ? 0 : Math.round((optVotes / totalVotes) * 100);
-                        const iVotedForThis = myVotes.includes(index);
-                        return `
-                        <div data-post-id="${post.id}" data-option-index="${index}" data-is-multiple="${post.poll_is_multiple_choice}" class="poll-option-btn ${!isExpired ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'} relative w-full bg-surface-variant/30 dark:bg-surface-variant/10 border border-surface-variant/50 dark:border-neutral-700 rounded-2xl p-3.5 overflow-hidden mb-2">
-                            <div class="poll-progress-bar absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults ? percentage : 0}%"></div>
-                            <div class="relative flex justify-between items-center text-[13px] font-bold text-on-surface dark:text-gray-100 z-10">
-                                <span class="flex items-center gap-2">
-                                    <span class="poll-check-circle w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80 dark:border-gray-500'}">
-                                        ${iVotedForThis ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}
-                                    </span>
-                                    ${opt}
-                                </span>
-                                <span class="poll-percentage ${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
-                            </div>
-                        </div>`;
-                    }).join('');
-
-                    const expiryText = isExpired ? 'Poll ended' : (post.poll_expires_at ? `Ends ${timeAgo(post.poll_expires_at)}` : 'Ongoing');
-                    contentHtml = `
-                        <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
-                        <div class="poll-options-wrapper space-y-2.5 mb-3 px-1">${optionsHtml}</div>
-                        <div class="flex justify-between px-2 text-[11px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">
-                            <span>${totalVotes} votes • ${post.poll_is_multiple_choice ? 'Multiple' : 'Single'} choice</span>
-                            <span>${expiryText}</span>
-                        </div>
-                    `;
-                }
-
-                return `
-                <div data-post-id="${post.id}" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm text-left relative">
-                    ${post.is_verified ? '<div class="absolute -top-3 -right-3 bg-[#e8b339] text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase shadow-md flex items-center gap-1 z-10"><span class="material-symbols-outlined text-[14px]">stars</span> Verified Post</div>' : ''}
-                    <div class="flex items-center gap-3 mb-3">
-                        ${headerIcon}
-                        <div class="flex-1">
-                            <h4 class="font-bold text-[14px] text-on-surface dark:text-gray-100 flex items-center gap-1">${postUser.full_name} ${verifiedBadge}</h4>
-                            <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
-                        </div>
-                    </div>
-                    ${contentHtml}
-                </div>`;
-            }).join('');
+            profileFeedContainer.innerHTML = generatePostHTML(posts, currentUserProfile.id);
 
         } catch (postsErr) {
             console.error('Error fetching profile feed layout:', postsErr);
@@ -887,7 +848,7 @@ function renderProfileActions(user, connection) {
 
     actionsContainer.innerHTML = '';
     moreMenu.innerHTML = '';
-    moreMenuBtn.classList.remove('hidden'); // Structured safely right next to the connect button inside the flex wrapper
+    moreMenuBtn.classList.remove('hidden'); 
     moreMenu.classList.add('hidden');
 
     const userId = user.id;
@@ -895,20 +856,20 @@ function renderProfileActions(user, connection) {
     let moreMenuItems = [];
 
     if (!connection) { 
-        mainButtonHtml = `<button class="btn-primary flex-1 !py-2.5 rounded-xl">Connect</button>`;
+        mainButtonHtml = `<button class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Connect</button>`;
         actionsContainer.innerHTML = mainButtonHtml;
         actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'request', actionsContainer.firstElementChild);
         moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
 
     } else if (connection.status === 'pending') {
         if (connection.action_user_id === currentUserProfile.id) { 
-            mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl">Cancel Request</button>`;
+            mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Cancel Request</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'cancel', actionsContainer.firstElementChild);
         } else { 
             mainButtonHtml = `
-                <button class="btn-primary flex-1 !py-2.5 rounded-xl">Accept</button>
-                <button class="btn-secondary flex-1 !py-2.5 rounded-xl">Decline</button>
+                <button class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Accept</button>
+                <button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Decline</button>
             `;
             actionsContainer.innerHTML = mainButtonHtml;
             actionsContainer.children[0].onclick = () => handleConnectionAction(userId, 'accept', actionsContainer.children[0]);
@@ -917,29 +878,29 @@ function renderProfileActions(user, connection) {
         moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
 
     } else if (connection.status === 'accepted') {
-        mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl" disabled>✓ Connected</button>`;
+        mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm" disabled>✓ Connected</button>`;
         actionsContainer.innerHTML = mainButtonHtml;
         moreMenuItems.push({ label: 'Remove connection', action: 'unfriend', class: 'text-error' });
         moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
 
     } else if (connection.status === 'blocked') {
         if (connection.action_user_id === currentUserProfile.id) { 
-            mainButtonHtml = `<button class="btn-error flex-1 !py-2.5 rounded-xl">Unblock</button>`;
+            mainButtonHtml = `<button class="btn-error flex-1 !py-2.5 rounded-xl text-sm">Unblock</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'unblock', actionsContainer.firstElementChild);
         } else { 
-            mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl" disabled>Blocked</button>`;
+            mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm" disabled>Blocked</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
         }
     }
 
     if (!(connection?.status === 'blocked' && connection.action_user_id !== currentUserProfile.id)) {
-        moreMenuItems.push({ label: 'Report User', action: 'report', class: 'text-warning' });
+        moreMenuItems.push({ label: 'Report User', action: 'report', class: 'text-orange-500' });
     }
 
     if (moreMenuItems.length > 0) {
         moreMenu.innerHTML = moreMenuItems.map(item =>
-            `<button data-action="${item.action}" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg ${item.class}">${item.label}</button>`
+            `<button data-action="${item.action}" class="w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-lg ${item.class} transition-colors">${item.label}</button>`
         ).join('');
     }
 }
@@ -958,12 +919,9 @@ export async function handleConnectionAction(targetUserId, action, btn) {
         });
 
         if (error) throw error;
-
         showToast(getSuccessMessage(data), 'success');
 
-        if (btn && action === 'request' && data === 'request_sent') {
-            btn.textContent = 'Request Sent';
-        }
+        if (btn && action === 'request' && data === 'request_sent') btn.textContent = 'Request Sent';
 
         const modal = document.getElementById('modal-profile-public');
         if (modal && !modal.classList.contains('hidden') && modal.dataset.userId === targetUserId) {
@@ -981,15 +939,7 @@ export async function handleConnectionAction(targetUserId, action, btn) {
 }
 
 function getSuccessMessage(result) {
-    const messages = {
-        request_sent: 'Connection request sent!',
-        accepted: 'Connection accepted!',
-        cancelled: 'Request cancelled.',
-        declined: 'Request declined.',
-        unfriended: 'Connection removed.',
-        blocked: 'User blocked.',
-        unblocked: 'User unblocked.'
-    };
+    const messages = { request_sent: 'Connection request sent!', accepted: 'Connection accepted!', cancelled: 'Request cancelled.', declined: 'Request declined.', unfriended: 'Connection removed.', blocked: 'User blocked.', unblocked: 'User unblocked.' };
     return messages[result] || 'Action successful!';
 }
 
@@ -1022,11 +972,7 @@ async function submitReport() {
     btn.textContent = 'Submitting...';
 
     try {
-        const { error } = await supabase.rpc('create_report', {
-            p_reported_user_id: userId,
-            p_reason: reason,
-            p_description: description || null
-        });
+        const { error } = await supabase.rpc('create_report', { p_reported_user_id: userId, p_reason: reason, p_description: description || null });
         if (error) throw error;
         showToast('Report submitted successfully. Our team will review it.', 'success');
         closeReportModal();
@@ -1043,63 +989,31 @@ async function submitReport() {
 window.viewUserProfile = viewUserProfile;
 
 function switchTab(tabId) {
-    // Hide all pages
-    document.querySelectorAll(".tab-content").forEach(tab => {
-        tab.classList.add("hidden");
-    });
-
-    // Show selected page
+    document.querySelectorAll(".tab-content").forEach(tab => tab.classList.add("hidden"));
+    
     const activeView = document.getElementById(`view-${tabId}`);
-    if (activeView) {
-        activeView.classList.remove("hidden");
-    }
+    if (activeView) activeView.classList.remove("hidden");
 
-    // Show header only on Feed
     const header = document.querySelector("header");
+    if (tabId === "dashboard") header.classList.remove("hidden");
+    else header.classList.add("hidden");
 
-    if (tabId === "dashboard") {
-        header.classList.remove("hidden");
-    } else {
-        header.classList.add("hidden");
-    }
-
-    // Bottom navigation
     document.querySelectorAll(".nav-item").forEach(btn => {
         btn.classList.remove("bg-primary", "text-white");
-        btn.classList.add(
-            "text-on-surface-variant",
-            "dark:text-gray-400"
-        );
-
+        btn.classList.add("text-on-surface-variant", "dark:text-gray-400");
         const icon = btn.querySelector(".material-symbols-outlined");
-        if (icon) {
-            icon.style.fontVariationSettings = "'FILL' 0";
-        }
+        if (icon) icon.style.fontVariationSettings = "'FILL' 0";
     });
 
     const activeBtn = document.getElementById(`nav-${tabId}`);
-
     if (activeBtn) {
-        activeBtn.classList.remove(
-            "text-on-surface-variant",
-            "dark:text-gray-400"
-        );
-
-        activeBtn.classList.add(
-            "bg-primary",
-            "text-white"
-        );
-
+        activeBtn.classList.remove("text-on-surface-variant", "dark:text-gray-400");
+        activeBtn.classList.add("bg-primary", "text-white");
         const icon = activeBtn.querySelector(".material-symbols-outlined");
-        if (icon) {
-            icon.style.fontVariationSettings = "'FILL' 1";
-        }
+        if (icon) icon.style.fontVariationSettings = "'FILL' 1";
     }
 
-    window.scrollTo({
-        top: 0,
-        behavior: "instant"
-    });
+    window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 function openProfileModal(type) {
@@ -1107,9 +1021,7 @@ function openProfileModal(type) {
     if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('translate-y-full');
-        }, 10);
+        setTimeout(() => modal.classList.remove('translate-y-full'), 10);
     }
 }
 
@@ -1128,17 +1040,18 @@ function closeProfileModals() {
 window.openReportModal = openReportModal;
 window.closeReportModal = closeReportModal;
 window.submitReport = submitReport;
-window.toggleMoreMenu = () => {
-    document.getElementById('public-profile-more-menu').classList.toggle('hidden');
-};
+window.toggleMoreMenu = () => document.getElementById('public-profile-more-menu').classList.toggle('hidden');
 
+// ========================================================
+// LIST MODALS (CONNECTIONS / BLOCKED) WITH SKELETONS
+// ========================================================
 async function openConnectionsModal() {
     const modal = document.getElementById('modal-connections');
     const list = document.getElementById('connections-list');
     if (!modal || !list) return;
 
     modal.classList.replace('hidden', 'flex');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading connections...</p>`;
+    list.innerHTML = LIST_SKELETON; // Inject Loading Skeleton
 
     try {
         const { data, error } = await supabase
@@ -1149,36 +1062,32 @@ async function openConnectionsModal() {
 
         if (error) throw error;
 
-        const connections = data.map(conn => {
-            return conn.user_one.id === currentUserProfile.id ? conn.user_two : conn.user_one;
-        }).filter(Boolean); 
+        const connections = data.map(conn => conn.user_one.id === currentUserProfile.id ? conn.user_two : conn.user_one).filter(Boolean); 
 
         if (connections.length === 0) {
-            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You have no connections yet.</p>`;
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">You have no connections yet.</p>`;
             return;
         }
 
         list.innerHTML = connections.map(user => `
-            <div onclick="viewUserProfile('${user.id}'); closeConnectionsModal();" class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
-                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover">
+            <div onclick="viewUserProfile('${user.id}'); closeConnectionsModal();" class="flex items-center gap-4 p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm cursor-pointer hover:bg-surface-variant/20 transition-colors">
+                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/50">
                 <div class="flex-1">
-                    <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${user.full_name}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">${user.course || 'Student'}</p>
+                    <p class="font-bold text-sm text-on-surface dark:text-gray-100">${user.full_name}</p>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${user.course || 'Student'}</p>
                 </div>
             </div>
         `).join('');
 
     } catch (error) {
         console.error('Error fetching connections:', error);
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load connections.</p>`;
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load connections.</p>`;
     }
 }
 
 function closeConnectionsModal() {
     const modal = document.getElementById('modal-connections');
-    if (modal) {
-        modal.classList.replace('flex', 'hidden');
-    }
+    if (modal) modal.classList.replace('flex', 'hidden');
 }
 
 window.openConnectionsModal = openConnectionsModal;
@@ -1190,7 +1099,7 @@ async function openBlockedUsersModal() {
     if (!modal || !list) return;
 
     modal.classList.replace('hidden', 'flex');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">Loading blocked users...</p>`;
+    list.innerHTML = LIST_SKELETON; // Inject Loading Skeleton
 
     try {
         const { data, error } = await supabase
@@ -1201,23 +1110,21 @@ async function openBlockedUsersModal() {
 
         if (error) throw error;
 
-        const blockedUsers = data.map(conn => {
-            return conn.user_one.id === currentUserProfile.id ? conn.user_two : conn.user_one;
-        }).filter(Boolean);
+        const blockedUsers = data.map(conn => conn.user_one.id === currentUserProfile.id ? conn.user_two : conn.user_one).filter(Boolean);
 
         if (blockedUsers.length === 0) {
-            list.innerHTML = `<p class="text-sm italic text-center py-8 text-gray-500 dark:text-gray-400">You haven't blocked anyone.</p>`;
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">You haven't blocked anyone.</p>`;
             return;
         }
 
         list.innerHTML = blockedUsers.map(user => `
-            <div class="blocked-user-item flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm">
-                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover">
+            <div class="flex items-center gap-4 p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm">
+                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/50">
                 <div class="flex-1">
-                    <p class="font-bold text-sm text-gray-900 dark:text-gray-100">${user.full_name}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">${user.course || 'Student'}</p>
+                    <p class="font-bold text-sm text-on-surface dark:text-gray-100">${user.full_name}</p>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${user.course || 'Student'}</p>
                 </div>
-                <button data-user-id="${user.id}" class="unblock-btn btn-error !px-4 !py-2 !text-xs">
+                <button data-user-id="${user.id}" class="unblock-btn bg-error/10 text-error px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform hover:bg-error/20">
                     Unblock
                 </button>
             </div>
@@ -1225,7 +1132,7 @@ async function openBlockedUsersModal() {
 
     } catch (error) {
         console.error('Error fetching blocked users:', error);
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-red-500">Failed to load blocked users.</p>`;
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load blocked users.</p>`;
     }
 }
 
@@ -1238,18 +1145,18 @@ window.openBlockedUsersModal = openBlockedUsersModal;
 window.closeBlockedUsersModal = closeBlockedUsersModal;
 
 // ========================================================
-// SINGLE POST VIEWER ENGINE (Deep Linking from Notifications)
+// SINGLE POST VIEWER ENGINE
 // ========================================================
-
 window.openSinglePostView = async function(postId) {
     const modal = document.getElementById('modal-single-post');
     const container = document.getElementById('single-post-container');
+    const bottomNav = document.querySelector('nav');
     
-    // Slide In
     modal.classList.replace('hidden', 'flex');
+    if (bottomNav) bottomNav.classList.add('hidden');
     setTimeout(() => modal.classList.remove('translate-x-full'), 10);
     
-    container.innerHTML = `<p class="text-sm italic text-center py-10 text-on-surface-variant">Loading post...</p>`;
+    container.innerHTML = FEED_SKELETON; // Inject Skeleton
     
     try {
         const { data: posts, error } = await supabase
@@ -1265,6 +1172,7 @@ window.openSinglePostView = async function(postId) {
             .eq('is_deleted', false);
             
         if (error) throw error;
+        
         if (!posts || posts.length === 0) {
             container.innerHTML = `
                 <div class="py-16 flex flex-col items-center justify-center opacity-40 text-on-surface-variant">
@@ -1274,66 +1182,7 @@ window.openSinglePostView = async function(postId) {
             return;
         }
         
-        const post = posts[0];
-        const postUser = post.users;
-        const likes = post.post_likes || [];
-        const likeCount = likes.length;
-        const commentCount = post.post_comments[0]?.count || 0;
-        
-        let contentHtml = '';
-
-        // Safely extract tick html
-        const getTickHtmlLocal = (tickType) => {
-            if (!tickType || tickType === 'none') return '';
-            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-            return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
-        };
-        const verifiedBadge = getTickHtmlLocal(postUser.tick_type);
-
-        // Map Content Formats
-        if (post.post_type === 'text') {
-            contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
-        } else if (post.post_type === 'image') {
-            contentHtml = `
-                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
-                <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
-                    <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
-                </div>
-            `;
-        } else if (post.post_type === 'event' || post.post_type === 'poll') {
-            // Provide a graceful fallback link to view interactive formats directly on their profile
-            contentHtml = `
-                <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
-                <div class="bg-primary/10 border border-primary/20 rounded-2xl p-5 text-center cursor-pointer hover:bg-primary/20 transition-colors" onclick="closeSinglePostView(); viewUserProfile('${postUser.id}')">
-                    <span class="material-symbols-outlined text-primary text-[32px] mb-2">touch_app</span>
-                    <p class="text-sm font-bold text-primary">View Interactive Post on Profile</p>
-                </div>
-            `;
-        }
-
-        // Render Final Card
-        container.innerHTML = `
-        <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm text-left relative mt-4">
-            <div class="flex items-center gap-3 mb-4">
-                <img src="${postUser.profile_img_url}" class="w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover shrink-0 cursor-pointer" onclick="closeSinglePostView(); viewUserProfile('${postUser.id}')">
-                <div>
-                    <h4 class="font-bold text-[14px] text-on-surface dark:text-gray-100 flex items-center cursor-pointer" onclick="closeSinglePostView(); viewUserProfile('${postUser.id}')">${postUser.full_name} ${verifiedBadge}</h4>
-                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
-                </div>
-            </div>
-            ${contentHtml}
-            
-            <div class="flex items-center justify-between pt-3 border-t border-surface-variant/40 dark:border-neutral-800 mt-2">
-                <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
-                    <span class="material-symbols-outlined text-[18px]">favorite</span>
-                    <span class="text-xs font-bold">${likeCount}</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400">
-                    <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
-                    <span class="text-xs font-bold">${commentCount}</span>
-                </div>
-            </div>
-        </div>`;
+        container.innerHTML = generatePostHTML(posts, currentUserProfile.id);
 
     } catch (error) {
         console.error('Error fetching single post:', error);
@@ -1344,5 +1193,12 @@ window.openSinglePostView = async function(postId) {
 window.closeSinglePostView = function() {
     const modal = document.getElementById('modal-single-post');
     modal.classList.add('translate-x-full');
+    
+    const notifModal = document.getElementById('modal-notifications');
+    if (notifModal && notifModal.classList.contains('hidden')) {
+        const bottomNav = document.querySelector('nav');
+        if (bottomNav) bottomNav.classList.remove('hidden');
+    }
+    
     setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
 }
