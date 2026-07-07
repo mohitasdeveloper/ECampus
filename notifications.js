@@ -2,9 +2,9 @@ import { supabase } from './supabase.js';
 import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { handleConnectionAction } from './main.js';
+import { PushNotifications } from '@capacitor/push-notifications'; // Import native push plugin
 
 let currentUser = null;
-let allNotifications = [];
 
 const iconMap = {
     'post_like': { icon: 'favorite', color: 'text-red-500', bg: 'bg-red-500/10' },
@@ -17,129 +17,133 @@ const iconMap = {
 
 export function initNotifications(user) {
     currentUser = user;
-    setupEventListeners();
     fetchNotifications();
-}
+    setupPushNotifications(); // Initialize push registrations
 
-function setupEventListeners() {
-    // Override top-header bell click
-    const notifBtn = document.getElementById('notif-btn');
-    if (notifBtn) {
-        // Remove old inline listeners if any exist
-        const newBtn = notifBtn.cloneNode(true);
-        notifBtn.parentNode.replaceChild(newBtn, notifBtn);
-        newBtn.addEventListener('click', openNotifications);
+    const container = document.getElementById('notifications-container');
+    if (container) {
+        container.addEventListener('click', (e) => {
+            const acceptBtn = e.target.closest('.accept-request-btn');
+            const declineBtn = e.target.closest('.decline-request-btn');
+            const userLink = e.target.closest('.notif-user-link');
+
+            if (acceptBtn) {
+                handleAcceptRequest(acceptBtn.dataset.userId, acceptBtn);
+            } else if (declineBtn) {
+                handleDeclineRequest(declineBtn.dataset.userId, declineBtn);
+            } else if (userLink) {
+                document.getElementById('full-notif-panel').classList.add('translate-x-full');
+                window.viewUserProfile(userLink.dataset.userId);
+            }
+        });
     }
 
+    document.getElementById('notif-btn')?.addEventListener('click', () => {
+        document.getElementById('full-notif-panel').classList.remove('translate-x-full');
+        fetchNotifications();
+    });
+
+    document.getElementById('close-notif-btn')?.addEventListener('click', () => {
+        document.getElementById('full-notif-panel').classList.add('translate-x-full');
+    });
+
     document.getElementById('mark-read-btn')?.addEventListener('click', markAllAsRead);
-    document.getElementById('notif-tab-all')?.addEventListener('click', () => switchNotifTab('all'));
-    document.getElementById('notif-tab-requests')?.addEventListener('click', () => switchNotifTab('requests'));
+}
 
-    // Event Delegation for Clicks (Routing)
-    const lists = ['notifications-list-all', 'notifications-list-requests'];
-    lists.forEach(id => {
-        const container = document.getElementById(id);
-        if (container) {
-            container.addEventListener('click', (e) => {
-                const notifCard = e.target.closest('.notif-card');
-                const acceptBtn = e.target.closest('.accept-request-btn');
-                const declineBtn = e.target.closest('.decline-request-btn');
-                
-                if (acceptBtn) {
-                    handleAcceptRequest(acceptBtn.dataset.userId, acceptBtn);
-                    return;
-                }
-                if (declineBtn) {
-                    handleDeclineRequest(declineBtn.dataset.userId, declineBtn);
-                    return;
-                }
-                if (notifCard) {
-                    const notifId = notifCard.dataset.notifId;
-                    const notif = allNotifications.find(n => n.id === notifId);
-                    if (notif) handleNotificationClick(notif, notifCard);
-                }
-            });
+// Push Notification Registration and Listeners
+async function setupPushNotifications() {
+    try {
+        // Request notification permission from the user
+        let permStatus = await PushNotifications.checkPermissions();
+        
+        if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
         }
-    });
+
+        if (permStatus.receive !== 'granted') {
+            console.warn("Push notification permission denied.");
+            return;
+        }
+
+        // Register with Apple / Google push services
+        await PushNotifications.register();
+
+        // Listen for successful token generation
+        await PushNotifications.addListener('registration', async (token) => {
+            console.log('Push registration success, token:', token.value);
+            await saveTokenToSupabase(token.value);
+        });
+
+        // Listen for registration errors
+        await PushNotifications.addListener('registrationError', (error) => {
+            console.error('Push registration error: ', error);
+        });
+
+        // Listen for incoming notifications when app is active (Foreground)
+        await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            showToast(`${notification.title}: ${notification.body}`, 'info');
+            fetchNotifications(); // Refresh inline notifications UI
+        });
+
+        // Listen for when a user taps on a system notification banner
+        await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+            console.log('Push action performed', notification.actionId, notification.notification);
+            // Open panel or redirect when tapped
+            document.getElementById('full-notif-panel')?.classList.remove('translate-x-full');
+            fetchNotifications();
+        });
+
+    } catch (err) {
+        console.error("Error setting up native Push Notifications:", err);
+    }
 }
 
-export function openNotifications() {
-    const modal = document.getElementById('modal-notifications');
-    modal.classList.replace('hidden', 'flex');
-    setTimeout(() => modal.classList.remove('translate-x-full'), 10);
-    fetchNotifications();
-}
+// Save the registration token to your backend database link
+async function saveTokenToSupabase(token) {
+    try {
+        // This assumes your Supabase 'users' table has a column named 'fcm_token'
+        const { error } = await supabase
+            .from('users')
+            .update({ fcm_token: token })
+            .eq('id', currentUser.id);
 
-export function closeNotifications() {
-    const modal = document.getElementById('modal-notifications');
-    modal.classList.add('translate-x-full');
-    setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
-}
-
-function switchNotifTab(tabName) {
-    document.getElementById('notif-content-all').classList.add('hidden');
-    document.getElementById('notif-content-requests').classList.add('hidden');
-    document.getElementById(`notif-content-${tabName}`).classList.remove('hidden');
-
-    const tabs = ['all', 'requests'];
-    tabs.forEach(t => {
-        const btn = document.getElementById(`notif-tab-${t}`);
-        btn.classList.remove('border-primary', 'text-primary');
-        btn.classList.add('border-transparent', 'text-on-surface-variant', 'dark:text-gray-400');
-    });
-
-    const activeBtn = document.getElementById(`notif-tab-${tabName}`);
-    activeBtn.classList.add('border-primary', 'text-primary');
-    activeBtn.classList.remove('border-transparent', 'text-on-surface-variant', 'dark:text-gray-400');
+        if (error) throw error;
+        console.log("Device push token securely saved to profile.");
+    } catch (err) {
+        console.error("Could not save push token to Supabase:", err);
+    }
 }
 
 async function fetchNotifications() {
+    const container = document.getElementById('notifications-container');
+    if (!container) return;
+    container.innerHTML = `<p class="text-sm italic text-center py-10 text-on-surface-variant dark:text-gray-400">Loading activity...</p>`;
+
     try {
         const { data, error } = await supabase
             .from('notifications')
-            .select('id, type, message, target_id, is_read, created_at, sender:sender_id(id, full_name, profile_img_url)')
+            .select('id, type, message, is_read, created_at, sender:sender_id(id, full_name, profile_img_url)')
             .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(30);
 
         if (error) throw error;
-        allNotifications = data;
 
-        const requests = data.filter(n => n.type === 'connection_request');
-        const general = data.filter(n => n.type !== 'connection_request');
-
-        renderList('notifications-list-all', general, "No recent activity.");
-        renderList('notifications-list-requests', requests, "No pending connection requests.");
-
-        // Global Badge
         const unreadCount = data.filter(n => !n.is_read).length;
         const badge = document.getElementById('notif-badge');
         if (badge) badge.classList.toggle('hidden', unreadCount === 0);
 
-        const markReadBtn = document.getElementById('mark-read-btn');
-        if (markReadBtn) markReadBtn.classList.toggle('hidden', unreadCount === 0);
-
-        // Requests Tab Badge
-        const reqBadge = document.getElementById('requests-badge');
-        if (requests.length > 0) {
-            reqBadge.textContent = requests.length;
-            reqBadge.classList.remove('hidden');
-        } else {
-            reqBadge.classList.add('hidden');
+        if (data.length === 0) {
+            container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 opacity-40 text-on-surface-variant"><span class="material-symbols-outlined text-[48px] mb-2">notifications_off</span><p class="text-sm font-medium">No new activity.</p></div>`;
+            return;
         }
+
+        container.innerHTML = data.map(notif => renderNotificationItem(notif)).join('');
 
     } catch (error) {
         console.error('Error fetching notifications:', error);
+        container.innerHTML = `<p class="text-sm italic text-center py-10 text-error">Failed to load activity.</p>`;
     }
-}
-
-function renderList(containerId, data, emptyMessage) {
-    const container = document.getElementById(containerId);
-    if (data.length === 0) {
-        container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 opacity-40 text-on-surface-variant"><span class="material-symbols-outlined text-[42px] mb-2">notifications_off</span><p class="text-sm font-medium">${emptyMessage}</p></div>`;
-        return;
-    }
-    container.innerHTML = data.map(notif => renderNotificationItem(notif)).join('');
 }
 
 function renderNotificationItem(notif) {
@@ -166,15 +170,15 @@ function renderNotificationItem(notif) {
     }
 
     return `
-        <div data-notif-id="${notif.id}" class="notif-card p-4 ${isUnread} flex items-start gap-3.5 cursor-pointer hover:bg-surface-variant/30 dark:hover:bg-neutral-800/50 transition-colors">
-            <div class="relative shrink-0">
+        <div class="p-4 ${isUnread} flex items-start gap-3.5 hover:bg-surface-variant/30 dark:hover:bg-neutral-800/50 transition-colors">
+            <div class="relative shrink-0 notif-user-link cursor-pointer" data-user-id="${sender.id}">
                 <img src="${sender.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(sender.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover shadow-sm border border-surface-variant/50">
                 <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full ${ui.bg} flex items-center justify-center border-[1.5px] border-surface dark:border-[#121212]">
                     <span class="material-symbols-outlined text-[10px] ${ui.color}" style="font-variation-settings: 'FILL' 1">${ui.icon}</span>
                 </div>
             </div>
             <div class="flex-1 min-w-0">
-                <p class="text-[13px] text-on-surface dark:text-gray-200 leading-snug">
+                <p class="text-[13px] text-on-surface dark:text-gray-200 leading-snug notif-user-link cursor-pointer" data-user-id="${sender.id}">
                     <span class="font-extrabold text-[14px]">${sender.full_name}</span> ${textContent}
                 </p>
                 <p class="text-[11px] font-medium text-on-surface-variant dark:text-gray-500 mt-0.5">${timeAgo(notif.created_at)}</p>
@@ -182,44 +186,6 @@ function renderNotificationItem(notif) {
             </div>
         </div>
     `;
-}
-
-// -----------------------------------
-// ROUTING & ACTIONS
-// -----------------------------------
-async function handleNotificationClick(notif, element) {
-    // 1. Mark as Read Visually & in DB
-    if (!notif.is_read) {
-        element.classList.remove('bg-primary/5', 'dark:bg-primary/10');
-        element.classList.add('bg-surface', 'dark:bg-[#121212]');
-        supabase.from('notifications').update({ is_read: true }).eq('id', notif.id).then();
-        
-        // Update local state to avoid re-triggering
-        notif.is_read = true; 
-        const badge = document.getElementById('notif-badge');
-        const unreadCount = allNotifications.filter(n => !n.is_read).length;
-        if (badge) badge.classList.toggle('hidden', unreadCount === 0);
-    }
-
-    // 2. Route Click
-    if (notif.type.startsWith('post_')) {
-        window.openSinglePostView(notif.target_id);
-    } 
-    else if (notif.type.startsWith('hotpost_')) {
-        // Check if user still has an active Hotpost
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { data } = await supabase.from('hotposts').select('id').eq('user_id', currentUser.id).eq('is_deleted', false).gt('created_at', twentyFourHoursAgo).limit(1);
-        
-        if (data && data.length > 0) {
-            window.openHotpostViewer(currentUser.id); // Triggers the viewer from hotposts.js
-        } else {
-            showToast('This Hotpost has expired.', 'info');
-        }
-    } 
-    else if (notif.type === 'connection_accepted') {
-        closeNotifications();
-        window.viewUserProfile(notif.sender.id);
-    }
 }
 
 async function handleAcceptRequest(userId, btn) {
@@ -234,12 +200,19 @@ async function handleDeclineRequest(userId, btn) {
 
 async function markAllAsRead() {
     try {
-        const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
+        const { error } = await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false);
+
         if (error) throw error;
+        
+        const badge = document.getElementById('notif-badge');
+        if (badge) badge.classList.add('hidden');
+        
         fetchNotifications();
     } catch (error) {
         console.error('Error marking as read:', error);
     }
 }
-
-window.closeNotifications = closeNotifications;
