@@ -1205,64 +1205,85 @@ window.closeSinglePostView = function() {
     
     setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
 
-    // ========================================================
+  // ========================================================
 // NATIVE ANDROID BACK BUTTON ROUTER (The Waterfall)
 // ========================================================
-async function setupAppBackButton() {
-    // Only intercept if running as a native Android/iOS app via Capacitor
-    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+function setupAppBackButton() {
+    
+    // The core logic that checks layers from Top to Bottom
+    const checkAndCloseTopLayer = () => {
+        // 1. Define the hierarchy from top-most (z-index) to bottom
+        const modalHierarchy = [
+            { id: 'modal-confirm-action', close: () => document.getElementById('confirm-action-no')?.click() },
+            { id: 'modal-action-sheet', close: () => window.closeActionSheet() },
+            { id: 'modal-story-details', close: () => document.getElementById('activity-backdrop-close')?.click() },
+            { id: 'modal-post-comments', close: () => document.getElementById('close-post-comments-btn')?.click() },
+            { id: 'modal-poll-voters', close: () => document.getElementById('modal-poll-voters').classList.replace('flex','hidden') },
+            { id: 'modal-report-post', close: () => window.closeReportPostModal() },
+            { id: 'modal-report-user', close: () => window.closeReportModal() },
+            { id: 'modal-edit-socials', close: () => window.closeSocialsModal() },
+            { id: 'modal-edit-profile', close: () => window.closeEditProfileModal() },
+            { id: 'modal-connections', close: () => window.closeConnectionsModal() },
+            { id: 'modal-blocked-users', close: () => window.closeBlockedUsersModal() },
+            { id: 'modal-single-post', close: () => window.closeSinglePostView() },
+            { id: 'modal-notifications', close: () => window.closeNotifications() },
+            { id: 'settings-sidebar', close: () => window.closeSettingsSidebar() },
+            { id: 'view-create-post', close: () => window.closeCreatePostView() },
+            { id: 'modal-profile-public', close: () => window.closeProfileModals() },
+            { id: 'modal-profile-private', close: () => window.closeProfileModals() },
+            { id: 'modal-hotpost-camera', close: () => document.getElementById('close-hotpost-camera-btn')?.click() },
+            { id: 'modal-view-hotpost', close: () => document.getElementById('close-hotpost-viewer-btn')?.click() }
+        ];
 
-    try {
-        const { App } = await import('@capacitor/app');
-
-        App.addListener('backButton', ({ canGoBack }) => {
-            
-            // 1. Define the hierarchy of modals from highest z-index to lowest
-            const modalHierarchy = [
-                { id: 'modal-confirm-action', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('confirm-action-no')?.click() },
-                { id: 'modal-story-details', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('activity-backdrop-close')?.click() },
-                { id: 'modal-hotpost-camera', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('close-hotpost-camera-btn')?.click() },
-                { id: 'modal-view-hotpost', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('close-hotpost-viewer-btn')?.click() },
-                { id: 'modal-report-post', check: (el) => !el.classList.contains('hidden'), close: () => window.closeReportPostModal() },
-                { id: 'modal-report-user', check: (el) => !el.classList.contains('hidden'), close: () => window.closeReportModal() },
-                { id: 'modal-action-sheet', check: (el) => !el.classList.contains('hidden'), close: () => window.closeActionSheet() },
-                { id: 'modal-single-post', check: (el) => !el.classList.contains('translate-x-full'), close: () => window.closeSinglePostView() },
-                { id: 'modal-notifications', check: (el) => !el.classList.contains('translate-x-full'), close: () => window.closeNotifications() },
-                { id: 'settings-sidebar', check: (el) => !el.classList.contains('opacity-0'), close: () => window.closeSettingsSidebar() },
-                { id: 'view-create-post', check: (el) => !el.classList.contains('translate-y-full'), close: () => window.closeCreatePostView() },
-                { id: 'modal-profile-public', check: (el) => !el.classList.contains('translate-y-full'), close: () => window.closeProfileModals() },
-                { id: 'modal-profile-private', check: (el) => !el.classList.contains('translate-y-full'), close: () => window.closeProfileModals() },
-                { id: 'modal-poll-voters', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('modal-poll-voters').classList.replace('flex','hidden') },
-                { id: 'modal-post-comments', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('close-post-comments-btn')?.click() },
-                { id: 'modal-edit-profile', check: (el) => !el.classList.contains('hidden'), close: () => window.closeEditProfileModal() },
-                { id: 'modal-edit-socials', check: (el) => !el.classList.contains('hidden'), close: () => window.closeSocialsModal() },
-                { id: 'modal-connections', check: (el) => !el.classList.contains('hidden'), close: () => window.closeConnectionsModal() },
-                { id: 'modal-blocked-users', check: (el) => !el.classList.contains('hidden'), close: () => window.closeBlockedUsersModal() }
-            ];
-
-            // 2. Scan the DOM to see if ANY of these modals are currently open
-            for (const modal of modalHierarchy) {
-                const el = document.getElementById(modal.id);
-                if (el && modal.check(el)) {
-                    modal.close(); // Close the top-most modal
-                    return;        // Stop executing so we don't close everything at once!
-                }
+        // 2. Scan the DOM to see if ANY of these modals are currently open
+        for (const modal of modalHierarchy) {
+            const el = document.getElementById(modal.id);
+            // If the modal exists and DOES NOT have the 'hidden' class, it means it's open!
+            if (el && !el.classList.contains('hidden')) {
+                modal.close(); 
+                return true; // We closed a modal! Stop checking.
             }
+        }
 
-            // 3. If no modals are open, check what Tab we are on
-            const dashboardView = document.getElementById('view-dashboard');
-            if (dashboardView && dashboardView.classList.contains('hidden')) {
-                // If we are on Search, Updates, or Profile, go back to the Main Feed
-                if (window.switchTab) window.switchTab('dashboard');
-                return;
+        // 3. If no modals are open, check if we are on a different tab (Search, Profile, etc.)
+        const dashboardView = document.getElementById('view-dashboard');
+        if (dashboardView && dashboardView.classList.contains('hidden')) {
+            if (window.switchTab) window.switchTab('dashboard'); // Route back to Feed
+            return true; // We switched tabs! Stop checking.
+        }
+
+        return false; // Nothing to close! We are on the Feed with no modals. Let native back proceed.
+    };
+
+    // --- A. NATIVE CAPACITOR APP INTEGRATION ---
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        try {
+            // FIX: Using the global Plugins object avoids Vanilla JS import crashes!
+            const App = window.Capacitor.Plugins.App;
+            if (App) {
+                App.addListener('backButton', () => {
+                    const handled = checkAndCloseTopLayer();
+                    if (!handled) {
+                        App.exitApp(); // Safely exit the app if we are on the Home screen
+                    }
+                });
             }
-
-            // 4. If we are on the Main Feed and nothing is open, it is safe to Exit the App natively.
-            App.exitApp();
-        });
-
-    } catch (error) {
-        console.warn('Capacitor App plugin bypassed (Running in Web Browser).');
-    }
-}
+        } catch (err) {
+            console.warn('Capacitor App plugin bypassed.', err);
+        }
+    } 
+    
+    // --- B. WEB BROWSER FALLBACK (For PWA / Testing) ---
+    // Push an initial state so the browser has a history entry to pop
+    window.history.pushState({ app_active: true }, "");
+    
+    window.addEventListener('popstate', () => {
+        const handled = checkAndCloseTopLayer();
+        if (handled) {
+            // If we closed a modal, push a new state so the user can press back again for the next layer
+            window.history.pushState({ app_active: true }, "");
+        } else {
+            // If nothing was handled, it will just navigate back natively (exiting the PWA/tab)
+        }
+    });
 }
