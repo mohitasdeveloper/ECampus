@@ -3,6 +3,7 @@ import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { handleConnectionAction } from './main.js';
 import { PushNotifications } from '@capacitor/push-notifications'; // Import native push plugin
+import { Capacitor } from '@capacitor/core'; // Import Capacitor core to check the platform
 
 let currentUser = null;
 
@@ -18,7 +19,7 @@ const iconMap = {
 export function initNotifications(user) {
     currentUser = user;
     fetchNotifications();
-    setupPushNotifications(); // Initialize push registrations
+    setupPushNotifications(); // Initialize push registrations safely
 
     const container = document.getElementById('notifications-container');
     if (container) {
@@ -52,8 +53,14 @@ export function initNotifications(user) {
 
 // Push Notification Registration and Listeners
 async function setupPushNotifications() {
+    // Check if the app is running on a standard web browser
+    if (!Capacitor.isNativePlatform()) {
+        console.log('Push notifications registration bypassed: App is running in a web browser environment.');
+        return; 
+    }
+
     try {
-        // Request notification permission from the user
+        // Request notification permission from the user on native Android/iOS
         let permStatus = await PushNotifications.checkPermissions();
         
         if (permStatus.receive === 'prompt') {
@@ -65,7 +72,7 @@ async function setupPushNotifications() {
             return;
         }
 
-        // Register with Apple / Google push services
+        -- Register with Apple / Google push services
         await PushNotifications.register();
 
         // Listen for successful token generation
@@ -101,7 +108,6 @@ async function setupPushNotifications() {
 // Save the registration token to your backend database link
 async function saveTokenToSupabase(token) {
     try {
-        // This assumes your Supabase 'users' table has a column named 'fcm_token'
         const { error } = await supabase
             .from('users')
             .update({ fcm_token: token })
