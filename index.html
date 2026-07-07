@@ -772,24 +772,17 @@
     </div>
 
    <!-- HOTPOST CAMERA & EDITOR MODAL (Ultimate Native Engine) -->
-    <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
-        <!-- Live Camera Feed -->
+   <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
         <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
         
-        <!-- Editor Container (Shows after capturing) -->
         <div id="hotpost-preview-container" class="absolute w-full h-full hidden overflow-hidden bg-black">
-            <!-- Base Image -->
             <img id="hotpost-preview-img" class="absolute w-full h-full object-cover" />
-            <!-- Doodle Layer -->
             <canvas id="hotpost-doodle-canvas"></canvas>
-            <!-- Free-Floating Draggable Text -->
             <div id="hotpost-draggable-text" class="hotpost-draggable-text hidden"></div>
-            <!-- Swipe Filter Toast -->
             <div id="filter-name-toast" class="filter-name-toast hidden"></div>
         </div>
         
-        <!-- Editor Tools (Top Right) -->
-       <div id="editor-tools-container" class="absolute top-[max(1.25rem,env(safe-area-inset-top))] right-4 z-50 hidden flex-col gap-4 items-center">
+        <div id="editor-tools-container" class="absolute top-[max(1.25rem,env(safe-area-inset-top))] right-4 z-50 hidden flex-col gap-4 items-center">
             <button id="add-text-hotpost-btn" class="text-white font-extrabold text-[18px] p-2.5 bg-black/40 backdrop-blur-md rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all shadow-md">Aa</button>
             <button id="doodle-hotpost-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all shadow-md">
                 <span class="material-symbols-outlined text-[22px]">draw</span>
@@ -803,23 +796,7 @@
             <button id="close-hotpost-camera-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">close</span></button>
         </div>
         <button id="switch-hotpost-camera-btn" class="absolute top-[max(1.25rem,env(safe-area-inset-top))] right-4 z-50 text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">cameraswitch</span></button>
-        </div>
-<div id="hotpost-text-editor-overlay" class="absolute inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden flex-col">
-            <div class="flex justify-between items-center p-5">
-                <button id="cancel-text-btn" class="text-white font-bold text-[16px] active:scale-95">Cancel</button>
-                <button id="done-text-btn" class="bg-white text-black px-4 py-1.5 rounded-full font-bold text-[14px] active:scale-95">Done</button>
-            </div>
-            <div class="flex-1 flex items-center justify-center p-4">
-                <textarea id="hotpost-in-ui-textarea" class="w-full bg-transparent text-white text-center font-extrabold text-[32px] outline-none border-none resize-none overflow-hidden placeholder-white/50" placeholder="Type something..." rows="3"></textarea>
-            </div>
-        </div>
-        <!-- Camera Controls (Top Left & Top Right) -->
-        <div class="absolute top-5 left-4 z-50 flex gap-4">
-            <button id="close-hotpost-camera-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">close</span></button>
-        </div>
-        <button id="switch-hotpost-camera-btn" class="absolute top-5 right-4 z-50 text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">cameraswitch</span></button>
 
-        <!-- Doodle Color Picker Dropdown -->
         <div id="doodle-color-picker" class="absolute top-20 left-1/2 -translate-x-1/2 z-50 hidden gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-lg">
             <button class="doodle-color-btn w-6 h-6 rounded-full bg-white border-2 border-transparent active:scale-90 transition-transform" data-color="#FFFFFF"></button>
             <button class="doodle-color-btn w-6 h-6 rounded-full bg-black border-2 border-white/50 active:scale-90 transition-transform" data-color="#000000"></button>
@@ -828,16 +805,23 @@
             <button class="doodle-color-btn w-6 h-6 rounded-full bg-[#007AFF] border-2 border-transparent active:scale-90 transition-transform" data-color="#007AFF"></button>
         </div>
 
-        <!-- Bottom UI Actions -->
-        <div class="absolute bottom-10 z-50 w-full px-8 pointer-events-none">
-            <!-- Capture State -->
+        <div id="hotpost-text-editor-overlay" class="absolute inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden flex-col">
+            <div class="flex justify-between items-center p-5">
+                <button id="cancel-text-btn" class="text-white font-bold text-[16px] active:scale-95">Cancel</button>
+                <button id="done-text-btn" class="bg-white text-black px-4 py-1.5 rounded-full font-bold text-[14px] active:scale-95">Done</button>
+            </div>
+            <div class="flex-1 flex items-center justify-center p-4">
+                <textarea id="hotpost-in-ui-textarea" class="w-full bg-transparent text-white text-center font-extrabold text-[32px] outline-none border-none resize-none overflow-hidden placeholder-white/50" placeholder="Type something..." rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="absolute bottom-[max(2.5rem,env(safe-area-inset-bottom))] z-50 w-full px-8 pointer-events-none">
             <div id="capture-ui" class="flex justify-center pointer-events-auto">
                 <button id="capture-hotpost-btn" class="w-[84px] h-[84px] rounded-full bg-transparent border-[4px] border-white backdrop-blur-sm flex items-center justify-center active:scale-95 transition-all shadow-[0_0_20px_rgba(0,0,0,0.3)]">
                     <div class="w-[68px] h-[68px] bg-white rounded-full transition-transform"></div>
                 </button>
             </div>
             
-            <!-- Send/Publish State -->
             <div id="preview-ui" class="hidden justify-between items-center w-full pointer-events-auto">
                 <button id="retake-hotpost-btn" class="text-white font-bold p-3.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px]">delete</span></button>
                 
