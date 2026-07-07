@@ -17,34 +17,36 @@ const iconMap = {
 
 export function initNotifications(user) {
     currentUser = user;
-    setupStatusBar(); // Style native status bar safely
+    setupStatusBarAndLayout(); // Visual fix for status bar overlapping
     setupEventListeners();
     fetchNotifications();
     setupPushNotifications(); 
 }
 
 // -----------------------------------
-// NATIVE STATUS BAR MANAGEMENT
+// STATUS BAR & WEB VIEW LAYOUT FIX
 // -----------------------------------
-async function setupStatusBar() {
+async function setupStatusBarAndLayout() {
     try {
+        // Enforce safe viewport rules via meta tags dynamically
+        let viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+        }
+
         const core = await import('@capacitor/core');
         if (!core.Capacitor.isNativePlatform()) return;
 
-        const { StatusBar, Style } = await import('@capacitor/status-bar');
+        // Apply a safe area offset directly to the HTML body container
+        document.body.style.paddingTop = 'env(safe-area-inset-top, 24px)';
+        document.body.style.backgroundColor = '#FFFFFF';
 
-        // Pushes the WebView down so it doesn't collide with native icons
+        const { StatusBar, Style } = await import('@capacitor/status-bar');
         await StatusBar.setOverlaysWebView({ overlay: false });
-        
-        // Sets a crisp, solid white background color
         await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-        
-        // Style.Light ensures the system renders DARK text/icons over the white background
         await StatusBar.setStyle({ style: Style.Light });
-        
-        console.log('Native Status Bar configured to white background with dark icons.');
     } catch (err) {
-        console.warn('Status Bar configuration skipped:', err);
+        console.warn('Status Bar setup skipped:', err);
     }
 }
 
@@ -87,7 +89,7 @@ function setupEventListeners() {
 }
 
 // -----------------------------------
-// PUSH NOTIFICATIONS (Cross-Browser Safe)
+// PUSH NOTIFICATIONS WITH SCREEN ALERTS
 // -----------------------------------
 async function setupPushNotifications() {
     let Capacitor, PushNotifications;
@@ -98,30 +100,31 @@ async function setupPushNotifications() {
         Capacitor = core.Capacitor;
         PushNotifications = push.PushNotifications;
     } catch (err) {
-        console.log('Running in standard Web Browser. Push notifications bypassed safely.');
+        // Safe bypass on desktop web preview
         return; 
     }
 
-    if (!Capacitor.isNativePlatform()) {
-        console.log('Push notifications bypassed: Running in Web Browser.');
-        return; 
-    }
+    if (!Capacitor.isNativePlatform()) return; 
 
     try {
         let permStatus = await PushNotifications.checkPermissions();
         if (permStatus.receive === 'prompt') {
             permStatus = await PushNotifications.requestPermissions();
         }
-        if (permStatus.receive !== 'granted') return;
+        
+        if (permStatus.receive !== 'granted') {
+            alert(`Notification permission was blocked or denied: ${permStatus.receive}`);
+            return;
+        }
 
-        // CRITICAL FIX: Set up event listeners BEFORE calling .register()
+        // Add listeners BEFORE registering
         await PushNotifications.addListener('registration', async (token) => {
-            console.log('FCM Token successfully generated:', token.value);
+            alert(`FCM Token Generated Successfully!\nToken: ${token.value.substring(0, 25)}...`);
             await saveTokenToSupabase(token.value);
         });
 
         await PushNotifications.addListener('registrationError', (error) => {
-            console.error('FCM Registration Error:', error);
+            alert(`FCM Core Registration Error Event:\n${JSON.stringify(error)}`);
         });
 
         await PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -129,25 +132,29 @@ async function setupPushNotifications() {
             fetchNotifications(); 
         });
 
-        await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        await PushNotifications.addListener('pushNotificationActionPerformed', () => {
             openNotifications();
         });
 
-        // Fire registration request after listeners are bound
+        // Trigger native registration
         await PushNotifications.register();
 
     } catch (err) {
-        console.error("Error setting up native Push Notifications:", err);
+        alert(`Push Crash Loop caught:\n${err.message || err}`);
     }
 }
 
 async function saveTokenToSupabase(token) {
     try {
-        const { error } = await supabase.from('users').update({ fcm_token: token }).eq('id', currentUser.id);
+        const { error } = await supabase
+            .from('users')
+            .update({ fcm_token: token })
+            .eq('id', currentUser.id);
+            
         if (error) throw error;
-        console.log("FCM Token saved to Supabase successfully.");
+        alert("Success: Token saved to Supabase successfully!");
     } catch (err) {
-        console.error("Could not save push token:", err);
+        alert(`Supabase Write Error:\n${err.message || JSON.stringify(err)}`);
     }
 }
 
@@ -237,6 +244,7 @@ async function fetchNotifications() {
 
 function renderList(containerId, data, emptyMessage) {
     const container = document.getElementById(containerId);
+    if (!container) return;
     if (data.length === 0) {
         container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 opacity-40 text-on-surface-variant"><span class="material-symbols-outlined text-[42px] mb-2">notifications_off</span><p class="text-sm font-medium">${emptyMessage}</p></div>`;
         return;
@@ -286,9 +294,6 @@ function renderNotificationItem(notif) {
     `;
 }
 
-// -----------------------------------
-// ROUTING & ACTIONS
-// -----------------------------------
 async function handleNotificationClick(notif, element) {
     element.classList.remove('bg-primary/5', 'dark:bg-primary/10');
     element.classList.add('bg-surface', 'dark:bg-[#121212]');
@@ -332,6 +337,5 @@ async function markAllAsReadSilent() {
     }
 }
 
-// Expose open and close endpoints to window object cleanly
 window.openNotifications = openNotifications;
 window.closeNotifications = closeNotifications;
