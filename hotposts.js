@@ -830,23 +830,7 @@ function processStoryDisappear() {
     }
 }
 
-function closeHotpostViewer() {
-    document.getElementById('modal-view-hotpost').classList.replace('flex', 'hidden');
-    clearTimeout(currentViewerState.storyTimer);
-    const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
-    if (activeBar) activeBar.style.animation = 'none';
-    
-    // FAILSAFE: Wipe all 3D scaling and inline styles when closing the viewer completely
-    const viewerContent = document.getElementById('hotpost-viewer-content');
-    if (viewerContent) {
-        viewerContent.style.transform = '';
-        viewerContent.style.opacity = '';
-        viewerContent.style.transition = '';
-        viewerContent.classList.remove('viewer-pushed-back');
-    }
-    
-    processStoryDisappear();
-}
+
 
 function playUserStories(userIndex, postIndex = 0) {
     // 1. Check if we reached the end of the stories
