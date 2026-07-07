@@ -4,18 +4,38 @@ import { timeAgo } from './utils.js';
 import { CLOUDINARY_CLOUD_NAME } from './config.js';
 
 let currentUser = null;
-let isVoting = false; // Lock to prevent rapid clicking on polls
+let isVoting = false; 
+
+// ========================================================
+// PROFESSIONAL SKELETON LOADER
+// ========================================================
+const FEED_SKELETON = `
+    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-pulse">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
+            <div class="flex-1">
+                <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/3 mb-2"></div>
+                <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/4"></div>
+            </div>
+        </div>
+        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-3/4 mb-2"></div>
+        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-full mb-2"></div>
+        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-5/6 mb-4"></div>
+        <div class="w-full h-48 bg-surface-variant/50 dark:bg-neutral-800 rounded-2xl mb-4"></div>
+        <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 mt-2">
+            <div class="h-5 w-10 bg-surface-variant/50 dark:bg-neutral-800 rounded-md"></div>
+            <div class="h-5 w-10 bg-surface-variant/50 dark:bg-neutral-800 rounded-md"></div>
+        </div>
+    </div>
+`.repeat(3);
 
 export function initFeed(user) {
     currentUser = user;
     
-    // Check permission to show advanced post tabs
     setupCreatePostPermissions();
-    
     fetchPosts();
     setupImagePreviews();
 
-    // Fill user info in Create Post modal when opened
     document.addEventListener('openCreatePostView', () => {
         if(currentUser) {
             document.getElementById('create-post-avatar').src = currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`;
@@ -23,33 +43,24 @@ export function initFeed(user) {
         }
     });
 
-    // 1. Event Delegation for Feed Interactions
-    const feedContainer = document.getElementById('feed-posts-container');
-    if (feedContainer) {
-        feedContainer.addEventListener('click', (e) => {
-            const likeBtn = e.target.closest('.like-btn');
-            const commentBtn = e.target.closest('.comment-btn');
-            const pollOption = e.target.closest('.poll-option-btn');
-            const profileLink = e.target.closest('.profile-link');
-            const optionsBtn = e.target.closest('.post-options-btn');
-            if (likeBtn) handleLike(likeBtn.dataset.postId, likeBtn.dataset.liked === 'true');
-            if (commentBtn) openCommentsModal(commentBtn.dataset.postId);
-            if (pollOption) handlePollVote(pollOption.dataset.postId, parseInt(pollOption.dataset.optionIndex), pollOption.dataset.isMultiple === 'true');
-            if (profileLink) window.viewUserProfile(profileLink.dataset.userId);
-            if (optionsBtn) openPostOptions(optionsBtn.dataset.postId, optionsBtn.dataset.userId, optionsBtn.dataset.isVerified === 'true');
-        });
-    }
+    // 1. GLOBAL Event Delegation (Listens to the whole body so Profile & Notification views work too!)
+    document.body.addEventListener('click', (e) => {
+        const likeBtn = e.target.closest('.like-btn');
+        const commentBtn = e.target.closest('.comment-btn');
+        const pollOption = e.target.closest('.poll-option-btn');
+        const profileLink = e.target.closest('.profile-link');
+        const optionsBtn = e.target.closest('.post-options-btn');
+        const commentOptionsBtn = e.target.closest('.comment-options-btn');
 
-    // 2. Event Delegation for Comment Interactions
-    const commentsList = document.getElementById('post-comments-list');
-    if (commentsList) {
-        commentsList.addEventListener('click', (e) => {
-            const optionsBtn = e.target.closest('.comment-options-btn');
-            if (optionsBtn) openCommentOptions(optionsBtn.dataset.commentId, optionsBtn.dataset.userId);
-        });
-    }
+        if (likeBtn) handleLike(likeBtn.dataset.postId, likeBtn.dataset.liked === 'true');
+        if (commentBtn) openCommentsModal(commentBtn.dataset.postId);
+        if (pollOption) handlePollVote(pollOption.dataset.postId, parseInt(pollOption.dataset.optionIndex), pollOption.dataset.isMultiple === 'true');
+        if (profileLink) window.viewUserProfile(profileLink.dataset.userId);
+        if (optionsBtn) openPostOptions(optionsBtn.dataset.postId, optionsBtn.dataset.userId, optionsBtn.dataset.isVerified === 'true');
+        if (commentOptionsBtn) openCommentOptions(commentOptionsBtn.dataset.commentId, commentOptionsBtn.dataset.userId);
+    });
 
-    // 3. Modals and Submissions
+    // 2. Modals and Submissions
     document.getElementById('submit-post-btn')?.addEventListener('click', submitPost);
     document.getElementById('send-comment-btn')?.addEventListener('click', () => {
         submitComment(document.getElementById('send-comment-btn').dataset.postId);
@@ -58,7 +69,7 @@ export function initFeed(user) {
     document.getElementById('submit-report-post-btn')?.addEventListener('click', submitPostReport);
     document.getElementById('close-post-comments-btn')?.addEventListener('click', closeCommentsModal);
 
-    // 4. Tab switching in create post modal
+    // 3. Tab switching in create post modal
     document.querySelectorAll('.post-type-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             document.querySelectorAll('.post-type-tab').forEach(t => {
@@ -84,12 +95,7 @@ export function initFeed(user) {
 
 function getTickHtml(tickType) {
     if (!tickType || tickType === 'none') return '';
-    const colors = {
-        blue: 'text-[#1d9bf0]',
-        gold: 'text-[#e8b339]',
-        green: 'text-primary',
-        gray: 'text-surface-variant'
-    };
+    const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
     const colorClass = colors[tickType.toLowerCase()] || colors.blue;
     return `<span class="material-symbols-outlined text-[14px] ${colorClass} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
 }
@@ -132,7 +138,7 @@ function setupImagePreviews() {
 async function uploadToCloudinary(file) {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'ecampus_posts');
+    formData.append('upload_preset', CLOUDINARY_CLOUD_NAME ? 'ecampus_posts' : 'ecampus_posts'); 
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
         method: 'POST',
@@ -183,13 +189,10 @@ async function submitPost() {
         } 
         else if (postType === 'event') {
             const fileInput = document.getElementById('event-image-upload');
-            if (fileInput.files[0]) {
-                payload.event_image_url = await uploadToCloudinary(fileInput.files[0]);
-            }
+            if (fileInput.files[0]) payload.event_image_url = await uploadToCloudinary(fileInput.files[0]);
             payload.event_date = document.getElementById('event-date').value || null;
             payload.event_location = document.getElementById('event-location').value.trim();
             payload.event_register_url = document.getElementById('event-register-url').value.trim();
-            // Capture the new custom button text, defaulting to 'View Link'
             const customBtnInput = document.getElementById('event-button-text');
             payload.event_button_text = (customBtnInput && customBtnInput.value.trim()) ? customBtnInput.value.trim() : 'View Link';
         }
@@ -197,7 +200,6 @@ async function submitPost() {
         const { error } = await supabase.from('posts').insert(payload);
         if (error) throw error;
 
-        // Reset and close view
         window.closeCreatePostView();
         document.getElementById('post-content-input').value = '';
         if (document.getElementById('post-image-upload')) document.getElementById('post-image-upload').value = '';
@@ -223,7 +225,9 @@ async function submitPost() {
 async function fetchPosts() {
     const container = document.getElementById('feed-posts-container');
     if (!container) return;
-    container.innerHTML = `<p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading live network feed...</p>`;
+    
+    // Inject the Skeleton Loader
+    container.innerHTML = FEED_SKELETON;
 
     try {
         const { data, error } = await supabase
@@ -251,7 +255,7 @@ async function fetchPosts() {
 function renderPosts(posts) {
     const container = document.getElementById('feed-posts-container');
     if (posts.length === 0) {
-        container.innerHTML = `<p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">The feed is empty. Be the first to post!</p>`;
+        container.innerHTML = `<div class="py-12 flex flex-col items-center justify-center opacity-40"><span class="material-symbols-outlined text-[42px] mb-2">menu_book</span><p class="text-sm font-medium text-on-surface-variant">The feed is empty.</p></div>`;
         return;
     }
 
@@ -267,7 +271,6 @@ function renderPosts(posts) {
         let contentHtml = '';
         const verifiedBadge = getTickHtml(user.tick_type);
         
-        // Consistent DP Header for ALL post types
         const headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
         // Text Post
@@ -321,10 +324,7 @@ function renderPosts(posts) {
             const optionsHtml = (post.poll_options || []).map((opt, index) => {
                 const optVotes = votes.filter(v => v.option_index === index).length;
                 const percentage = totalVotes === 0 ? 0 : Math.round((optVotes / totalVotes) * 100);
-                const isWinner = percentage > 0 && percentage === Math.max(...(post.poll_options || []).map((_, i) => totalVotes === 0 ? 0 : Math.round((votes.filter(v => v.option_index === i).length / totalVotes) * 100)));
                 const iVotedForThis = myVotes.includes(index);
-                
-                // Show voters button if public
                 const viewVotersBtn = (!post.poll_is_anon && optVotes > 0) ? `<span onclick="event.stopPropagation(); window.openPollVoters('${post.id}', ${index})" class="material-symbols-outlined text-[16px] ml-1.5 text-on-surface-variant hover:text-primary transition-colors cursor-pointer" title="View Voters">visibility</span>` : '';
 
                 return `
@@ -398,23 +398,27 @@ function renderPosts(posts) {
 // ==========================================
 
 async function handleLike(postId, isLiked) {
-    const likeBtn = document.querySelector(`.like-btn[data-post-id="${postId}"]`);
-    if (!likeBtn) return;
-    const countSpan = likeBtn.querySelector('span:last-child');
-    const iconSpan = likeBtn.querySelector('span:first-child');
-    const currentCount = parseInt(countSpan.textContent);
-
-    likeBtn.dataset.liked = (!isLiked).toString();
-    countSpan.textContent = isLiked ? currentCount - 1 : currentCount + 1;
+    // Because we use document.body, this updates all matching like buttons dynamically (Feed + Profile)
+    const likeBtns = document.querySelectorAll(`.like-btn[data-post-id="${postId}"]`);
+    if (!likeBtns || likeBtns.length === 0) return;
     
-    if(!isLiked) {
-        likeBtn.classList.add('text-primary');
-        likeBtn.classList.remove('dark:text-gray-400');
-    } else {
-        likeBtn.classList.remove('text-primary');
-        likeBtn.classList.add('dark:text-gray-400');
-    }
-    iconSpan.style.fontVariationSettings = `'FILL' ${!isLiked ? 1 : 0}`;
+    likeBtns.forEach(likeBtn => {
+        const countSpan = likeBtn.querySelector('span:last-child');
+        const iconSpan = likeBtn.querySelector('span:first-child');
+        const currentCount = parseInt(countSpan.textContent);
+
+        likeBtn.dataset.liked = (!isLiked).toString();
+        countSpan.textContent = isLiked ? currentCount - 1 : currentCount + 1;
+        
+        if(!isLiked) {
+            likeBtn.classList.add('text-primary');
+            likeBtn.classList.remove('dark:text-gray-400');
+        } else {
+            likeBtn.classList.remove('text-primary');
+            likeBtn.classList.add('dark:text-gray-400');
+        }
+        iconSpan.style.fontVariationSettings = `'FILL' ${!isLiked ? 1 : 0}`;
+    });
 
     try {
         if (isLiked) {
@@ -427,87 +431,75 @@ async function handleLike(postId, isLiked) {
     }
 }
 
-// Fixed Poll Voting with Local DOM Update and UI state locking
 async function handlePollVote(postId, optionIndex, isMultipleChoice) {
-    if (isVoting) return; // Prevent rapid clicking while processing
+    if (isVoting) return; 
     isVoting = true;
     
     try {
-        // We now rely on the database trigger for single-choice overwrite logic
-        // But we still attempt an insert or toggle.
         const { error } = await supabase.from('post_poll_votes').insert({
             post_id: postId,
             user_id: currentUser.id,
             option_index: optionIndex
         });
 
-        // If they click an option they already voted for (conflict), untoggle it
         if (error && error.code === '23505') {
             await supabase.from('post_poll_votes').delete().match({ post_id: postId, user_id: currentUser.id, option_index: optionIndex });
         }
         
-        // Fetch just the votes for this post to update math locally
         const { data: votes } = await supabase.from('post_poll_votes').select('user_id, option_index').eq('post_id', postId);
-        
         updatePollDOM(postId, votes);
 
     } catch (error) {
         console.error("Poll vote error:", error);
     } finally {
-        isVoting = false; // Release the lock
+        isVoting = false; 
     }
 }
 
 function updatePollDOM(postId, votes) {
-    const postEl = document.querySelector(`div[data-post-id="${postId}"]`);
-    if (!postEl) return;
+    const postEls = document.querySelectorAll(`div[data-post-id="${postId}"]`);
+    if (!postEls || postEls.length === 0) return;
     
-    const options = postEl.querySelectorAll('.poll-option-btn');
-    const totalVotes = votes.length;
-    const myVotes = votes.filter(v => v.user_id === currentUser.id).map(v => v.option_index);
-    const userHasVoted = myVotes.length > 0;
-    
-    // Find max votes for winning highlight
-    let maxVotes = 0;
-    const voteCounts = [];
-    options.forEach((opt, idx) => {
-        const count = votes.filter(v => v.option_index === idx).length;
-        voteCounts.push(count);
-        if (count > maxVotes) maxVotes = count;
-    });
+    postEls.forEach(postEl => {
+        const options = postEl.querySelectorAll('.poll-option-btn');
+        const totalVotes = votes.length;
+        const myVotes = votes.filter(v => v.user_id === currentUser.id).map(v => v.option_index);
+        const userHasVoted = myVotes.length > 0;
+        
+        const voteCounts = [];
+        options.forEach((opt, idx) => {
+            voteCounts.push(votes.filter(v => v.option_index === idx).length);
+        });
 
-    options.forEach((opt, idx) => {
-        const count = voteCounts[idx];
-        const percentage = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
-        const iVotedForThis = myVotes.includes(idx);
-        
-        // Update bar
-        const bar = opt.querySelector('.poll-progress-bar');
-        if (bar) bar.style.width = `${userHasVoted ? percentage : 0}%`;
-        
-        // Update circle
-        const circle = opt.querySelector('.poll-check-circle');
-        if (circle) {
-            if (iVotedForThis) {
-                circle.className = 'poll-check-circle w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center';
-                circle.innerHTML = '<span class="w-2 h-2 rounded-full bg-primary"></span>';
-            } else {
-                circle.className = 'poll-check-circle w-4 h-4 rounded-full border-2 border-surface-variant/80 dark:border-gray-500';
-                circle.innerHTML = '';
+        options.forEach((opt, idx) => {
+            const count = voteCounts[idx];
+            const percentage = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+            const iVotedForThis = myVotes.includes(idx);
+            
+            const bar = opt.querySelector('.poll-progress-bar');
+            if (bar) bar.style.width = `${userHasVoted ? percentage : 0}%`;
+            
+            const circle = opt.querySelector('.poll-check-circle');
+            if (circle) {
+                if (iVotedForThis) {
+                    circle.className = 'poll-check-circle w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center';
+                    circle.innerHTML = '<span class="w-2 h-2 rounded-full bg-primary"></span>';
+                } else {
+                    circle.className = 'poll-check-circle w-4 h-4 rounded-full border-2 border-surface-variant/80 dark:border-gray-500';
+                    circle.innerHTML = '';
+                }
             }
-        }
+            
+            const percSpan = opt.querySelector('.poll-percentage');
+            if (percSpan) {
+                percSpan.textContent = `${percentage}%`;
+                percSpan.className = `poll-percentage ${userHasVoted ? 'opacity-100' : 'opacity-0'} transition-opacity`;
+            }
+        });
         
-        // Update text
-        const percSpan = opt.querySelector('.poll-percentage');
-        if (percSpan) {
-            percSpan.textContent = `${percentage}%`;
-            percSpan.className = `poll-percentage ${userHasVoted ? 'opacity-100' : 'opacity-0'} transition-opacity`;
-        }
+        const votesCountSpan = postEl.querySelector('.poll-total-votes');
+        if (votesCountSpan) votesCountSpan.textContent = totalVotes;
     });
-    
-    // Update footer votes text
-    const votesCountSpan = postEl.querySelector('.poll-total-votes');
-    if (votesCountSpan) votesCountSpan.textContent = totalVotes;
 }
 
 // Fetch and display voters for public polls
@@ -545,11 +537,9 @@ window.openPollVoters = async (postId, optionIndex) => {
     }
 };
 
-
 // ==========================================
 // ACTION SHEETS & SOFT DELETES 
 // ==========================================
-
 function openPostOptions(postId, postOwnerId, isVerified) {
     const isOwner = currentUser.id === postOwnerId;
     let buttonsHtml = '';
@@ -596,43 +586,29 @@ window.deletePost = async (postId) => {
     if (!confirm('Are you sure you want to delete this post?')) return;
     window.closeActionSheet();
 
-    // Optimistic UI update: hide the post immediately for a better user experience
-    const postElement = document.querySelector(`div[data-post-id="${postId}"]`);
-    if (postElement) postElement.style.display = 'none';
+    // Optimistic UI update: hide the post from all places (Feed, Profile)
+    const postElements = document.querySelectorAll(`div[data-post-id="${postId}"]`);
+    postElements.forEach(el => el.style.display = 'none');
     
-    // SOFT DELETE
-const { data, error } = await supabase
-    .from('posts')
-    .update({ is_deleted: true })
-    .eq('id', postId)
-    .select();
-
-console.log("Delete Result:", data);
-console.log("Delete Error:", error);
+    const { error } = await supabase.from('posts').update({ is_deleted: true }).eq('id', postId);
     
     if (error) {
-        if (postElement) postElement.style.display = 'block'; // Revert if failed
+        postElements.forEach(el => el.style.display = 'block'); // Revert
         showToast('Failed to delete post.', 'error');
-        console.error(error);
     } else {
         showToast('Post deleted.', 'success');
-        // We removed it from the DOM already, but we can refetch in background if needed
     }
 };
 
 window.deleteComment = async (commentId) => {
     window.closeActionSheet();
-    
-    // SOFT DELETE
     const { error } = await supabase.from('post_comments').update({ is_deleted: true }).eq('id', commentId);
     
     if (error) {
         showToast('Failed to delete comment.', 'error');
-        console.error(error);
     } else {
         showToast('Comment deleted.', 'success');
         closeCommentsModal();
-        fetchPosts(); 
     }
 };
 
@@ -678,7 +654,6 @@ async function submitPostReport() {
         window.closeReportPostModal();
     } catch (error) {
         showToast(error.message || 'Failed to submit report.', 'error');
-        console.error('Report error:', error);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Submit Report';
@@ -688,7 +663,6 @@ async function submitPostReport() {
 // ==========================================
 // COMMENTS 
 // ==========================================
-
 async function openCommentsModal(postId) {
     const modal = document.getElementById('modal-post-comments');
     const list = document.getElementById('post-comments-list');
@@ -758,17 +732,17 @@ async function submitComment(postId) {
 
     if (error) {
         showToast('Failed to post comment.', 'error');
-        console.error('Error submitting comment:', error);
     } else {
         input.value = '';
         openCommentsModal(postId); 
 
-        const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"]`);
-        if (commentBtn) {
+        // Update comment counter universally across Feed and Profile views
+        const commentBtns = document.querySelectorAll(`.comment-btn[data-post-id="${postId}"]`);
+        commentBtns.forEach(commentBtn => {
             const countSpan = commentBtn.querySelector('span:last-child');
             const currentCount = parseInt(countSpan.textContent);
             countSpan.textContent = currentCount + 1;
-        }
+        });
     }
     btn.disabled = false;
 }
