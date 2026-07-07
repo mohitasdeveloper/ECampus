@@ -10,6 +10,14 @@ let hotpostsByUser = new Map();
 let currentUser = null;
 let sessionViewedPostIds = new Set();
 
+// Native Shimmer for Hotposts
+const HOTPOST_SKELETON = `
+    <div class="flex flex-col items-center gap-1.5 shrink-0">
+        <div class="w-[68px] h-[68px] rounded-full shimmer-bg shadow-sm"></div>
+        <div class="w-12 h-2.5 rounded-full shimmer-bg mt-1"></div>
+    </div>
+`.repeat(6);
+
 // Camera & Image
 let currentCameraStream = null;
 let currentFacingMode = 'environment';
@@ -156,6 +164,7 @@ async function openCameraModal() {
     const video = document.getElementById('hotpost-camera-feed');
     modal.classList.replace('hidden', 'flex');
     resetCameraUI();
+    toggleCameraStatusBar(true); // Turn status bar Pitch Black
 
     if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
 
@@ -169,6 +178,13 @@ async function openCameraModal() {
         showToast('Camera access denied.', 'error');
         closeCameraModal();
     }
+}
+
+function closeCameraModal() {
+    const modal = document.getElementById('modal-hotpost-camera');
+    if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
+    modal.classList.replace('flex', 'hidden');
+    toggleCameraStatusBar(false); // Revert status bar to normal theme
 }
 
 function closeCameraModal() {
@@ -483,7 +499,8 @@ async function submitHotpost() {
     const originalBtnInner = btn.innerHTML;
     
     btn.disabled = true;
-    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-white">progress_activity</span>`;
+    // Fixed spinner color to black so it shows on the white button
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-black text-[24px]">progress_activity</span>`;
 
     try {
         const getCompiledBlob = () => new Promise((resolve) => {
@@ -492,21 +509,17 @@ async function submitHotpost() {
             bakeCanvas.height = baseImageObj.height;
             const ctx = bakeCanvas.getContext('2d');
 
-            // 1. Draw Base & Filter
             if (FILTER_LIST[currentFilterIndex].css !== 'none') {
                 ctx.filter = FILTER_LIST[currentFilterIndex].css;
             }
             ctx.drawImage(baseImageObj, 0, 0, bakeCanvas.width, bakeCanvas.height);
             ctx.filter = 'none'; 
 
-            // 2. Draw Doodles
             const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
             if (doodlePaths.length > 0) {
-                // Doodles map 1:1 because they were drawn relatively
                 ctx.drawImage(doodleCanvas, 0, 0, bakeCanvas.width, bakeCanvas.height);
             }
 
-            // 3. Draw Text (Apply Pinch-to-Zoom Scaling)
             if (textContent) {
                 const baseFontSize = Math.floor(bakeCanvas.width * 0.08); 
                 const finalFontSize = Math.floor(baseFontSize * textScale); 
@@ -518,7 +531,6 @@ async function submitHotpost() {
                 ctx.shadowColor = "rgba(0,0,0,0.9)";
                 ctx.shadowBlur = 20;
                 
-                // Decode percentages back to absolute pixels
                 const finalX = bakeCanvas.width * textPosX;
                 const finalY = bakeCanvas.height * textPosY;
                 ctx.fillText(textContent, finalX, finalY);
@@ -581,6 +593,12 @@ window.toggleVisibilitySetting = function() {
 // DASHBOARD VIEW & CIRCLES
 // ==========================================
 async function fetchHotposts() {
+    const container = document.querySelector('#hotposts-container');
+    if (!container) return;
+    
+    // Inject the Shimmer Loading Circles immediately
+    container.innerHTML = HOTPOST_SKELETON;
+
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
@@ -613,7 +631,6 @@ async function fetchHotposts() {
 
     renderHotpostCircles();
 }
-
 function renderHotpostCircles() {
     const container = document.querySelector('#view-dashboard .flex.gap-4.overflow-x-auto');
     if (!container) return;
@@ -631,7 +648,7 @@ function renderHotpostCircles() {
                 <span class="material-symbols-outlined text-[14px] font-bold">add</span>
             </div>
         </div>
-        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Add Story</span>
+        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Create</span>
     `;
     addCircle.addEventListener('click', openCameraModal);
     container.appendChild(addCircle);
@@ -648,7 +665,7 @@ function renderHotpostCircles() {
                     <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover">
                 </div>
             </div>
-            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Your Story</span>
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">My Hotposts</span>
         `;
         myCircle.addEventListener('click', () => openHotpostViewer(currentUser.id));
         container.appendChild(myCircle);
@@ -971,6 +988,22 @@ async function handleReplyToHotpost(event) {
             replyBtn.innerHTML = originalHtml;
             resumeStory();
         }, 1500);
+    }
+}
+
+async function toggleCameraStatusBar(isCameraOpen) {
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        try {
+            const { StatusBar, Style } = await import('@capacitor/status-bar');
+            if (isCameraOpen) {
+                await StatusBar.setBackgroundColor({ color: '#000000' });
+                await StatusBar.setStyle({ style: Style.Dark });
+            } else {
+                const isDark = document.documentElement.classList.contains('dark');
+                await StatusBar.setBackgroundColor({ color: isDark ? '#121212' : '#f8f9fa' });
+                await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+            }
+        } catch (e) { console.log('Status bar override bypassed.'); }
     }
 }
 
