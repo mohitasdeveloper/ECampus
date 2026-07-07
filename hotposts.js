@@ -187,11 +187,6 @@ function closeCameraModal() {
     toggleCameraStatusBar(false); // Revert status bar to normal theme
 }
 
-function closeCameraModal() {
-    const modal = document.getElementById('modal-hotpost-camera');
-    if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
-    modal.classList.replace('flex', 'hidden');
-}
 
 function switchCamera() {
     currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
