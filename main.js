@@ -86,11 +86,14 @@ function initializeApp(profile) {
     updateHeaderAvatar(profile.profile_img_url, profile.full_name);
     populateProfileUI(profile);
     setupMoreMenuListener();
-    setupThemeToggle(); // Triggers status bar natively
+    setupThemeToggle(); 
     setupEditProfileAvatarUpload();
     setupProfileAvatarUpload();
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
     setupBlockedUsersListener();
+
+    // Turn on Native Android Back Button Router
+    setupAppBackButton();
 
     switchTab('dashboard');
 }
@@ -1201,4 +1204,65 @@ window.closeSinglePostView = function() {
     }
     
     setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+
+    // ========================================================
+// NATIVE ANDROID BACK BUTTON ROUTER (The Waterfall)
+// ========================================================
+async function setupAppBackButton() {
+    // Only intercept if running as a native Android/iOS app via Capacitor
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+
+    try {
+        const { App } = await import('@capacitor/app');
+
+        App.addListener('backButton', ({ canGoBack }) => {
+            
+            // 1. Define the hierarchy of modals from highest z-index to lowest
+            const modalHierarchy = [
+                { id: 'modal-confirm-action', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('confirm-action-no')?.click() },
+                { id: 'modal-story-details', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('activity-backdrop-close')?.click() },
+                { id: 'modal-hotpost-camera', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('close-hotpost-camera-btn')?.click() },
+                { id: 'modal-view-hotpost', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('close-hotpost-viewer-btn')?.click() },
+                { id: 'modal-report-post', check: (el) => !el.classList.contains('hidden'), close: () => window.closeReportPostModal() },
+                { id: 'modal-report-user', check: (el) => !el.classList.contains('hidden'), close: () => window.closeReportModal() },
+                { id: 'modal-action-sheet', check: (el) => !el.classList.contains('hidden'), close: () => window.closeActionSheet() },
+                { id: 'modal-single-post', check: (el) => !el.classList.contains('translate-x-full'), close: () => window.closeSinglePostView() },
+                { id: 'modal-notifications', check: (el) => !el.classList.contains('translate-x-full'), close: () => window.closeNotifications() },
+                { id: 'settings-sidebar', check: (el) => !el.classList.contains('opacity-0'), close: () => window.closeSettingsSidebar() },
+                { id: 'view-create-post', check: (el) => !el.classList.contains('translate-y-full'), close: () => window.closeCreatePostView() },
+                { id: 'modal-profile-public', check: (el) => !el.classList.contains('translate-y-full'), close: () => window.closeProfileModals() },
+                { id: 'modal-profile-private', check: (el) => !el.classList.contains('translate-y-full'), close: () => window.closeProfileModals() },
+                { id: 'modal-poll-voters', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('modal-poll-voters').classList.replace('flex','hidden') },
+                { id: 'modal-post-comments', check: (el) => !el.classList.contains('hidden'), close: () => document.getElementById('close-post-comments-btn')?.click() },
+                { id: 'modal-edit-profile', check: (el) => !el.classList.contains('hidden'), close: () => window.closeEditProfileModal() },
+                { id: 'modal-edit-socials', check: (el) => !el.classList.contains('hidden'), close: () => window.closeSocialsModal() },
+                { id: 'modal-connections', check: (el) => !el.classList.contains('hidden'), close: () => window.closeConnectionsModal() },
+                { id: 'modal-blocked-users', check: (el) => !el.classList.contains('hidden'), close: () => window.closeBlockedUsersModal() }
+            ];
+
+            // 2. Scan the DOM to see if ANY of these modals are currently open
+            for (const modal of modalHierarchy) {
+                const el = document.getElementById(modal.id);
+                if (el && modal.check(el)) {
+                    modal.close(); // Close the top-most modal
+                    return;        // Stop executing so we don't close everything at once!
+                }
+            }
+
+            // 3. If no modals are open, check what Tab we are on
+            const dashboardView = document.getElementById('view-dashboard');
+            if (dashboardView && dashboardView.classList.contains('hidden')) {
+                // If we are on Search, Updates, or Profile, go back to the Main Feed
+                if (window.switchTab) window.switchTab('dashboard');
+                return;
+            }
+
+            // 4. If we are on the Main Feed and nothing is open, it is safe to Exit the App natively.
+            App.exitApp();
+        });
+
+    } catch (error) {
+        console.warn('Capacitor App plugin bypassed (Running in Web Browser).');
+    }
+}
 }
