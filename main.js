@@ -780,15 +780,7 @@ async function viewUserProfile(userId) {
     const isConnected = connection?.status === 'accepted';
 
     if (user.is_private && !isConnected) {
-        document.getElementById('const getTickHtmlLocal = (tickType) => {
-            if (!tickType || tickType === 'none') return '';
-            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-            return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
-        };
-
-        document.getElementById('private-profile-header-name').innerHTML = `${user.full_name} ${getTickHtmlLocal(user.tick_type)}`;
-        document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
-        document.getElementById('private-profile-name').innerHTML = `${user.full_name} ${getTickHtmlLocal(user.tick_type)}`;').textContent = user.full_name;
+        document.getElementById('private-profile-header-name').textContent = user.full_name;
         document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('private-profile-name').textContent = user.full_name;
         document.getElementById('private-profile-course').textContent = user.course || 'Student';
@@ -803,9 +795,9 @@ async function viewUserProfile(userId) {
         }
         openProfileModal('private');
     } else {
-       document.getElementById('public-profile-header-name').innerHTML = `${user.full_name} ${getTickHtmlLocal(user.tick_type)}`;
+        document.getElementById('public-profile-header-name').textContent = user.full_name;
         document.getElementById('public-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
-        document.getElementById('public-profile-name').innerHTML = `${user.full_name} ${getTickHtmlLocal(user.tick_type)}`;
+        document.getElementById('public-profile-name').textContent = user.full_name;
         document.getElementById('public-profile-course').textContent = user.course || 'Student';
         document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
         document.getElementById('public-profile-connection-count').textContent = user.connection_count || 0;
