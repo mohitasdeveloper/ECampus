@@ -32,14 +32,11 @@ export function initFeed(user) {
             const pollOption = e.target.closest('.poll-option-btn');
             const profileLink = e.target.closest('.profile-link');
             const optionsBtn = e.target.closest('.post-options-btn');
-            const shareBtn = e.target.closest('.share-post-btn');
-
             if (likeBtn) handleLike(likeBtn.dataset.postId, likeBtn.dataset.liked === 'true');
             if (commentBtn) openCommentsModal(commentBtn.dataset.postId);
             if (pollOption) handlePollVote(pollOption.dataset.postId, parseInt(pollOption.dataset.optionIndex), pollOption.dataset.isMultiple === 'true');
             if (profileLink) window.viewUserProfile(profileLink.dataset.userId);
             if (optionsBtn) openPostOptions(optionsBtn.dataset.postId, optionsBtn.dataset.userId, optionsBtn.dataset.isVerified === 'true');
-            if (shareBtn) sharePostAsImage(shareBtn.dataset.postId);
         });
     }
 
@@ -390,9 +387,6 @@ function renderPosts(posts) {
                     <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
                     <span>${commentCount}</span>
                 </button>
-                <button data-post-id="${post.id}" class="share-post-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-[#0ea5e9] transition-colors text-[13px] font-medium active:scale-95 ml-auto">
-                    <span class="material-symbols-outlined text-[20px]">share</span>
-                </button>
             </div>
         </div>
         `;
@@ -551,59 +545,6 @@ window.openPollVoters = async (postId, optionIndex) => {
     }
 };
 
-// ==========================================
-// SHARE POST AS IMAGE (HTML2CANVAS)
-// ==========================================
-
-async function sharePostAsImage(postId) {
-    const postElement = document.querySelector(`div[data-post-id="${postId}"]`);
-    if (!postElement) return;
-
-    showToast('Preparing post to share...', 'info');
-
-    try {
-        const optionsBtn = postElement.querySelector('.post-options-btn');
-        const shareBtn = postElement.querySelector('.share-post-btn');
-        if (optionsBtn) optionsBtn.style.visibility = 'hidden';
-        if (shareBtn) shareBtn.style.visibility = 'hidden';
-
-        // Fix dullness: Ensure explicit canvas configuration
-        const canvas = await html2canvas(postElement, {
-            backgroundColor: document.documentElement.classList.contains('dark') ? '#1e1e1e' : '#ffffff',
-            scale: 3, 
-            useCORS: true,
-            allowTaint: true,
-            imageTimeout: 0 // Removes timing delays causing unrendered pixels
-        });
-
-        if (optionsBtn) optionsBtn.style.visibility = 'visible';
-        if (shareBtn) shareBtn.style.visibility = 'visible';
-
-        canvas.toBlob(async (blob) => {
-            const file = new File([blob], `ecampus-post-${postId}.png`, { type: 'image/png' });
-            
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'ECampus Post',
-                    text: 'Check out this post on ECampus!',
-                    files: [file]
-                });
-            } else {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `ecampus-post-${postId}.png`;
-                a.click();
-                URL.revokeObjectURL(url);
-                showToast('Image downloaded to your device!', 'success');
-            }
-        }, 'image/png');
-
-    } catch (err) {
-        console.error('Error taking screenshot:', err);
-        showToast('Failed to generate image.', 'error');
-    }
-}
 
 // ==========================================
 // ACTION SHEETS & SOFT DELETES 
