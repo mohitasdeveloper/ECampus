@@ -17,38 +17,9 @@ const iconMap = {
 
 export function initNotifications(user) {
     currentUser = user;
-    setupStatusBarAndLayout(); // Safe visual fix for status bar overlapping
     setupEventListeners();
     fetchNotifications();
-    setupPushNotifications();  // Safe initialization using window.Capacitor
-}
-
-// --------------------------------------------------
-// SAFE LAYOUT ADJUSTMENT (NO BARE MODULE IMPORTS)
-// --------------------------------------------------
-function setupStatusBarAndLayout() {
-    try {
-        // Enforce safe viewport rules to let CSS env working properly
-        let viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) {
-            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
-        }
-
-        // Apply fallback container space directly to body element
-        document.body.style.paddingTop = 'env(safe-area-inset-top, 24px)';
-        document.body.style.backgroundColor = '#FFFFFF';
-
-        // Reference the Capacitor global bridge object injected by Android container
-        const Cap = window.Capacitor;
-        if (Cap && Cap.isNativePlatform() && Cap.Plugins.StatusBar) {
-            const StatusBar = Cap.Plugins.StatusBar;
-            StatusBar.setOverlaysWebView({ overlay: false }).catch(()=>{});
-            StatusBar.setBackgroundColor({ color: '#FFFFFF' }).catch(()=>{});
-            StatusBar.setStyle({ style: 'LIGHT' }).catch(()=>{});
-        }
-    } catch (err) {
-        console.warn('Status Bar style step skipped:', err);
-    }
+    setupPushNotifications(); 
 }
 
 function setupEventListeners() {
@@ -90,41 +61,27 @@ function setupEventListeners() {
 }
 
 // --------------------------------------------------
-// SAFE PUSH NOTIFICATION (USES GLOBAL BRIDGE OBJECT)
+// PUSH NOTIFICATIONS (Clean Production Version)
 // --------------------------------------------------
 async function setupPushNotifications() {
     const Cap = window.Capacitor;
-    
-    // Gracefully exit if not running inside the compiled Android wrapper 
-    if (!Cap || !Cap.isNativePlatform()) {
-        return; 
-    }
+    if (!Cap || !Cap.isNativePlatform()) return; 
 
     const PushNotifications = Cap.Plugins.PushNotifications;
-    if (!PushNotifications) {
-        alert("Capacitor bridge found, but PushNotifications plugin is missing inside Android container build.");
-        return;
-    }
+    if (!PushNotifications) return;
 
     try {
         let permStatus = await PushNotifications.checkPermissions();
         if (permStatus.receive === 'prompt') {
             permStatus = await PushNotifications.requestPermissions();
         }
-        
-        if (permStatus.receive !== 'granted') {
-            alert(`Notification system status blocked: ${permStatus.receive}`);
-            return;
-        }
+        if (permStatus.receive !== 'granted') return;
 
-        // Setup callbacks onto the plugin runtime instance
+        // Register natively
+        await PushNotifications.register();
+
         await PushNotifications.addListener('registration', async (token) => {
-            alert(`FCM Registration Successful!\nToken: ${token.value.substring(0, 25)}...`);
             await saveTokenToSupabase(token.value);
-        });
-
-        await PushNotifications.addListener('registrationError', (error) => {
-            alert(`FCM Native Event Error:\n${JSON.stringify(error)}`);
         });
 
         await PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -136,31 +93,22 @@ async function setupPushNotifications() {
             openNotifications();
         });
 
-        // Request initial registration token lookup from Google FCM
-        await PushNotifications.register();
-
     } catch (err) {
-        alert(`FCM Boot Failure:\n${err.message || err}`);
+        console.error("Push Notifications skipped:", err);
     }
 }
 
 async function saveTokenToSupabase(token) {
     try {
-        const { error } = await supabase
-            .from('users')
-            .update({ fcm_token: token })
-            .eq('id', currentUser.id);
-            
-        if (error) throw error;
-        alert("Database Status: Token written to your profile record!");
+        await supabase.from('users').update({ fcm_token: token }).eq('id', currentUser.id);
     } catch (err) {
-        alert(`Supabase Remote Update Blocked:\n${err.message || JSON.stringify(err)}`);
+        console.error("Could not save push token:", err);
     }
 }
 
-// --------------------------------------------------
-// CORE NOTIFICATION APP INTERFACE LOGIC
-// --------------------------------------------------
+// -----------------------------------
+// UI & FETCHING LOGIC
+// -----------------------------------
 export function openNotifications() {
     const modal = document.getElementById('modal-notifications');
     const bottomNav = document.querySelector('nav'); 
@@ -337,5 +285,4 @@ async function markAllAsReadSilent() {
     }
 }
 
-window.openNotifications = openNotifications;
 window.closeNotifications = closeNotifications;
