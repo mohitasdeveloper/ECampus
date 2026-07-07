@@ -14,31 +14,31 @@ let currentUserProfile = null;
 // PROFESSIONAL SKELETON LOADERS
 // ========================================================
 const FEED_SKELETON = `
-    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-pulse">
+    <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5">
         <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
+            <div class="w-10 h-10 rounded-full shimmer-bg shrink-0"></div>
             <div class="flex-1">
-                <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/3 mb-2"></div>
-                <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/4"></div>
+                <div class="h-3.5 shimmer-bg rounded-md w-1/3 mb-2.5"></div>
+                <div class="h-2.5 shimmer-bg rounded-md w-1/4"></div>
             </div>
         </div>
-        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-3/4 mb-2"></div>
-        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-full mb-2"></div>
-        <div class="h-3 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-5/6 mb-4"></div>
-        <div class="w-full h-48 bg-surface-variant/50 dark:bg-neutral-800 rounded-2xl mb-4"></div>
-        <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 mt-2">
-            <div class="h-5 w-10 bg-surface-variant/50 dark:bg-neutral-800 rounded-md"></div>
-            <div class="h-5 w-10 bg-surface-variant/50 dark:bg-neutral-800 rounded-md"></div>
+        <div class="h-3 shimmer-bg rounded-md w-3/4 mb-2.5"></div>
+        <div class="h-3 shimmer-bg rounded-md w-full mb-2.5"></div>
+        <div class="h-3 shimmer-bg rounded-md w-5/6 mb-4"></div>
+        <div class="w-full h-48 shimmer-bg rounded-2xl mb-4"></div>
+        <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-4 mt-2">
+            <div class="h-5 w-12 shimmer-bg rounded-md"></div>
+            <div class="h-5 w-12 shimmer-bg rounded-md"></div>
         </div>
     </div>
 `.repeat(3);
 
 const LIST_SKELETON = `
-    <div class="flex items-center gap-4 p-3 mb-3 animate-pulse bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800">
-        <div class="w-12 h-12 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
+    <div class="flex items-center gap-4 p-3 mb-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800">
+        <div class="w-12 h-12 rounded-full shimmer-bg shrink-0"></div>
         <div class="flex-1">
-            <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/2 mb-2"></div>
-            <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded-md w-1/3"></div>
+            <div class="h-3.5 shimmer-bg rounded-md w-1/2 mb-2.5"></div>
+            <div class="h-2.5 shimmer-bg rounded-md w-1/3"></div>
         </div>
     </div>
 `.repeat(5);
@@ -141,7 +141,7 @@ function setupThemeToggle() {
 function getTickHtmlLocal(tickType) {
     if (!tickType || tickType === 'none') return '';
     const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-    return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+    return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
 }
 
 // ========================================================
