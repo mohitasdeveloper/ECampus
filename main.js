@@ -1204,6 +1204,8 @@ window.closeSinglePostView = function() {
     }
     
     setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+
+    };
 // ========================================================
 // NATIVE ANDROID BACK BUTTON ROUTER (The Waterfall)
 // ========================================================
