@@ -3,8 +3,6 @@ import { showToast } from './ui.js';
 import { timeAgo } from './utils.js';
 import { handleConnectionAction } from './main.js';
 
-// Notice: We removed the static @capacitor imports from here!
-
 let currentUser = null;
 let allNotifications = [];
 
@@ -19,15 +17,40 @@ const iconMap = {
 
 export function initNotifications(user) {
     currentUser = user;
+    setupStatusBar(); // Style native status bar safely
     setupEventListeners();
     fetchNotifications();
     setupPushNotifications(); 
 }
 
+// -----------------------------------
+// NATIVE STATUS BAR MANAGEMENT
+// -----------------------------------
+async function setupStatusBar() {
+    try {
+        const core = await import('@capacitor/core');
+        if (!core.Capacitor.isNativePlatform()) return;
+
+        const { StatusBar, Style } = await import('@capacitor/status-bar');
+
+        // Pushes the WebView down so it doesn't collide with native icons
+        await StatusBar.setOverlaysWebView({ overlay: false });
+        
+        // Sets a crisp, solid white background color
+        await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+        
+        // Style.Light ensures the system renders DARK text/icons over the white background
+        await StatusBar.setStyle({ style: Style.Light });
+        
+        console.log('Native Status Bar configured to white background with dark icons.');
+    } catch (err) {
+        console.warn('Status Bar configuration skipped:', err);
+    }
+}
+
 function setupEventListeners() {
     const notifBtn = document.getElementById('notif-btn');
     if (notifBtn) {
-        // Clear old event listeners by cloning
         const newBtn = notifBtn.cloneNode(true);
         notifBtn.parentNode.replaceChild(newBtn, notifBtn);
         newBtn.addEventListener('click', openNotifications);
@@ -36,7 +59,6 @@ function setupEventListeners() {
     document.getElementById('notif-tab-all')?.addEventListener('click', () => switchNotifTab('all'));
     document.getElementById('notif-tab-requests')?.addEventListener('click', () => switchNotifTab('requests'));
 
-    // Event Delegation for Routing Clicks
     const lists = ['notifications-list-all', 'notifications-list-requests'];
     lists.forEach(id => {
         const container = document.getElementById(id);
@@ -71,7 +93,6 @@ async function setupPushNotifications() {
     let Capacitor, PushNotifications;
     
     try {
-        // Dynamic Import: If the browser can't find these, it will jump to the catch block safely.
         const core = await import('@capacitor/core');
         const push = await import('@capacitor/push-notifications');
         Capacitor = core.Capacitor;
@@ -93,10 +114,14 @@ async function setupPushNotifications() {
         }
         if (permStatus.receive !== 'granted') return;
 
-        await PushNotifications.register();
-
+        // CRITICAL FIX: Set up event listeners BEFORE calling .register()
         await PushNotifications.addListener('registration', async (token) => {
+            console.log('FCM Token successfully generated:', token.value);
             await saveTokenToSupabase(token.value);
+        });
+
+        await PushNotifications.addListener('registrationError', (error) => {
+            console.error('FCM Registration Error:', error);
         });
 
         await PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -108,6 +133,9 @@ async function setupPushNotifications() {
             openNotifications();
         });
 
+        // Fire registration request after listeners are bound
+        await PushNotifications.register();
+
     } catch (err) {
         console.error("Error setting up native Push Notifications:", err);
     }
@@ -115,7 +143,9 @@ async function setupPushNotifications() {
 
 async function saveTokenToSupabase(token) {
     try {
-        await supabase.from('users').update({ fcm_token: token }).eq('id', currentUser.id);
+        const { error } = await supabase.from('users').update({ fcm_token: token }).eq('id', currentUser.id);
+        if (error) throw error;
+        console.log("FCM Token saved to Supabase successfully.");
     } catch (err) {
         console.error("Could not save push token:", err);
     }
@@ -135,7 +165,6 @@ export function openNotifications() {
     
     fetchNotifications();
 
-    // INSTAGRAM LOGIC: Automatically clear the red badge upon opening
     const badge = document.getElementById('notif-badge');
     if (badge) badge.classList.add('hidden');
     markAllAsReadSilent(); 
@@ -186,7 +215,6 @@ async function fetchNotifications() {
         renderList('notifications-list-all', general, "No recent activity.");
         renderList('notifications-list-requests', requests, "No pending connection requests.");
 
-        // Global Badge Update (If modal is not open)
         const modal = document.getElementById('modal-notifications');
         if (modal && modal.classList.contains('hidden')) {
             const unreadCount = data.filter(n => !n.is_read).length;
@@ -194,7 +222,6 @@ async function fetchNotifications() {
             if (badge) badge.classList.toggle('hidden', unreadCount === 0);
         }
 
-        // Requests Tab Badge
         const reqBadge = document.getElementById('requests-badge');
         if (requests.length > 0) {
             reqBadge.textContent = requests.length;
@@ -305,4 +332,6 @@ async function markAllAsReadSilent() {
     }
 }
 
+// Expose open and close endpoints to window object cleanly
+window.openNotifications = openNotifications;
 window.closeNotifications = closeNotifications;
