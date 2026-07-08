@@ -1051,10 +1051,10 @@ window.saveSocialLinks = saveSocialLinks;
 // ========================================================
 // PUBLIC/PRIVATE PROFILE VIEWS 
 // ========================================================
-// ========================================================
-// PUBLIC/PRIVATE PROFILE VIEWS 
-// ========================================================
 async function viewUserProfile(userId) {
+    // 🚀 SAFETY CHECK: Stop accidental clicks if user was long-pressing!
+    if (window.isLongPressing) return; 
+
     const moreMenu = document.getElementById('public-profile-more-menu');
     if (moreMenu) moreMenu.classList.add('hidden');
 
@@ -1162,6 +1162,7 @@ async function viewUserProfile(userId) {
         }
     }
 }
+
 function renderProfileActions(user, connection) {
     const actionsContainer = document.getElementById('public-profile-actions');
     const moreMenuBtn = document.getElementById('public-profile-more-btn');
@@ -1762,3 +1763,112 @@ window.selectSocialPlatform = function(id) {
 };
 
 
+// ========================================================
+// NATIVE LONG-PRESS ENGINE (Profile Peek)
+// ========================================================
+let longPressTimer;
+window.isLongPressing = false; // Global flag to stop accidental clicks
+
+// Listen for touches globally across the app
+document.addEventListener('touchstart', handleTouchStart, { passive: true });
+document.addEventListener('touchend', handleTouchEnd);
+document.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+// Fallbacks for Desktop/Mouse testing
+document.addEventListener('mousedown', handleTouchStart);
+document.addEventListener('mouseup', handleTouchEnd);
+document.addEventListener('mousemove', handleTouchMove);
+
+function handleTouchStart(e) {
+    // Check if the user is touching a profile picture
+    const target = e.target.closest('.profile-link');
+    if (!target) return;
+    
+    const userId = target.dataset.userId;
+    if (!userId) return;
+
+    window.isLongPressing = false;
+    
+    // Start the 400ms timer
+    longPressTimer = setTimeout(() => {
+        window.isLongPressing = true;
+        
+        // Native Haptic Vibration (Makes it feel incredibly premium on Android)
+        if (navigator.vibrate) navigator.vibrate(50);
+        
+        openProfilePeek(userId, target);
+    }, 400); 
+}
+
+function handleTouchMove() {
+    // If the user scrolls their finger, cancel the long press
+    clearTimeout(longPressTimer);
+}
+
+function handleTouchEnd(e) {
+    clearTimeout(longPressTimer);
+    
+    // If a long press successfully happened, prevent the normal click event
+    if (window.isLongPressing) {
+        if (e.cancelable) e.preventDefault();
+        
+        // Reset the flag after a tiny delay so normal taps work again
+        setTimeout(() => { window.isLongPressing = false; }, 300);
+    }
+}
+
+// Logic to populate and show the Peek card
+window.openProfilePeek = async function(userId, imgEl) {
+    const modal = document.getElementById('modal-profile-peek');
+    const card = document.getElementById('peek-card');
+    
+    // Instantly show the image they clicked on for zero load time
+    if (imgEl && imgEl.tagName === 'IMG') {
+        document.getElementById('peek-avatar').src = imgEl.src;
+    }
+    
+    document.getElementById('peek-name').innerHTML = 'Loading...';
+    document.getElementById('peek-course').textContent = 'Fetching details...';
+    
+    // Animate In
+    modal.classList.replace('hidden', 'flex');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        card.classList.remove('scale-90');
+    }, 10);
+
+    // Fetch user details in the background
+    try {
+        const { data: user, error } = await supabase.from('users').select('full_name, profile_img_url, course, tick_type').eq('id', userId).single();
+        if (error) throw error;
+        
+        const optimizedAvatar = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(user.profile_img_url, 'avatar') : user.profile_img_url;
+        document.getElementById('peek-avatar').src = optimizedAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+        
+        const verifiedBadge = typeof getTickHtmlLocal === 'function' ? getTickHtmlLocal(user.tick_type) : '';
+        document.getElementById('peek-name').innerHTML = `${user.full_name} ${verifiedBadge}`;
+        document.getElementById('peek-course').textContent = user.course || 'Campus Member';
+        
+       // Setup the "View Profile" button
+        document.getElementById('peek-view-profile-btn').onclick = () => {
+            closeProfilePeek();
+            setTimeout(() => viewUserProfile(userId), 200); // 👈 Fixed function name here!
+        };
+    } catch (err) {
+        document.getElementById('peek-name').textContent = 'User Details Unavailable';
+        document.getElementById('peek-course').textContent = '';
+    }
+}
+
+window.closeProfilePeek = function() {
+    const modal = document.getElementById('modal-profile-peek');
+    const card = document.getElementById('peek-card');
+    
+    // Animate Out
+    modal.classList.add('opacity-0');
+    card.classList.add('scale-90');
+    
+    setTimeout(() => {
+        modal.classList.replace('flex', 'hidden');
+    }, 300);
+}
