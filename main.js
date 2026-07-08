@@ -11,6 +11,29 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 let currentUserProfile = null;
 
 // ========================================================
+// SPLASH SCREEN MANAGER
+// ========================================================
+window.addEventListener('load', () => {
+    // We add a tiny 600ms delay to make it feel deliberate and premium,
+    // ensuring all database content is injected and fonts are perfectly rendered.
+    setTimeout(() => {
+        const splash = document.getElementById('app-splash-screen');
+        if (splash) {
+            // Fade it out
+            splash.style.opacity = '0';
+            
+            // Re-enable scrolling on the main body
+            document.body.classList.remove('overflow-hidden');
+            
+            // Remove it completely from the DOM after the fade animation finishes
+            setTimeout(() => {
+                splash.remove();
+            }, 500); 
+        }
+    }, 600); 
+});
+
+// ========================================================
 // PROFESSIONAL SKELETON LOADERS
 // ========================================================
 const FEED_SKELETON = `
