@@ -680,39 +680,10 @@
                     <input type="text" id="edit-profile-id" class="w-full bg-transparent border-none p-0 text-[15px] font-medium text-on-surface dark:text-gray-100 outline-none focus:ring-0 placeholder-on-surface-variant/40">
                 </div>
 
-                <div class="flex flex-col py-3 border-b border-surface-variant/40 dark:border-neutral-800 relative">
+              <div class="flex flex-col py-3 border-b border-surface-variant/40 dark:border-neutral-800 relative cursor-pointer" onclick="openCoursePicker()">
                     <label class="text-[11px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider mb-1">Course</label>
-                    <select id="edit-profile-course" class="w-full bg-transparent border-none p-0 text-[15px] font-medium text-on-surface dark:text-gray-100 outline-none focus:ring-0 appearance-none pr-8">
-                        <option value="">Select your course</option>
-                        <optgroup label="First Year (FY)">
-                            <option value="FY B.A">FY B.A</option>
-                            <option value="FY B.Sc">FY B.Sc</option>
-                            <option value="FY B.Com">FY B.Com</option>
-                            <option value="FY B.Com (Management Studies)">FY B.Com (Management Studies)</option>
-                            <option value="FY B.Com (Accounting & Finance)">FY B.Com (Accounting & Finance)</option>
-                            <option value="FY B.Com (Financial Markets)">FY B.Com (Financial Markets)</option>
-                            <option value="FY B.Sc (Computer Science)">FY B.Sc (Computer Science)</option>
-                        </optgroup>
-                        <optgroup label="Second Year (SY)">
-                            <option value="SY B.A.">SY B.A.</option>
-                            <option value="SY B.Sc">SY B.Sc</option>
-                            <option value="SY B.Com">SY B.Com</option>
-                            <option value="SY B.Com (Management Studies)">SY B.Com (Management Studies)</option>
-                            <option value="SY B.Com (Accounting & Finance)">SY B.Com (Accounting & Finance)</option>
-                            <option value="SY B.Com (Financial Markets)">SY B.Com (Financial Markets)</option>
-                            <option value="SY B.Sc (Computer Science)">SY B.Sc (Computer Science)</option>
-                        </optgroup>
-                        <optgroup label="Third Year (TY)">
-                            <option value="TY B.A">TY B.A</option>
-                            <option value="TY B.Sc">TY B.Sc</option>
-                            <option value="TY B.Com">TY B.Com</option>
-                            <option value="TY B.Com (Management Studies)">TY B.Com (Management Studies)</option>
-                            <option value="TY B.Com (Accounting & Finance)">TY B.Com (Accounting & Finance)</option>
-                            <option value="TY B.Com (Financial Markets)">TY B.Com (Financial Markets)</option>
-                            <option value="TY B.Sc (Computer Science)">TY B.Sc (Computer Science)</option>
-                        </optgroup>
-                    </select>
-                    <span class="material-symbols-outlined absolute right-0 top-[26px] text-on-surface-variant pointer-events-none">unfold_more</span>
+                    <input type="text" id="edit-profile-course" readonly class="w-full bg-transparent border-none p-0 text-[15px] font-medium text-on-surface dark:text-gray-100 outline-none focus:ring-0 placeholder-on-surface-variant/40 pointer-events-none" placeholder="Select your course">
+                    <span class="material-symbols-outlined absolute right-0 top-[26px] text-on-surface-variant pointer-events-none">chevron_right</span>
                 </div>
 
                 <div class="flex flex-col py-3">
@@ -1001,6 +972,58 @@
             <div class="flex gap-3 w-full">
                 <button id="confirm-action-no" class="flex-1 bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-3.5 rounded-xl font-bold active:scale-95 transition-transform">Cancel</button>
                 <button id="confirm-action-yes" class="flex-1 bg-error text-white py-3.5 rounded-xl font-bold active:scale-95 transition-transform shadow-md shadow-error/20">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-course-picker" class="fixed inset-0 z-[180] bg-black/40 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] flex flex-col max-h-[85vh]">
+            <button onclick="closeCoursePicker()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold text-on-surface dark:text-gray-100 shrink-0 mb-4">Select Course</h3>
+            
+            <div class="flex-1 overflow-y-auto pr-2 hide-scrollbar">
+                
+                <div class="mb-6">
+                    <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 sticky top-0 bg-surface dark:bg-[#1e1e1e] py-1 z-10">First Year (FY)</h4>
+                    <div class="space-y-1">
+                        <button onclick="selectCourse('FY B.A')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.A</button>
+                        <button onclick="selectCourse('FY B.Sc')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Sc</button>
+                        <button onclick="selectCourse('FY B.Com')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com</button>
+                        <button onclick="selectCourse('FY B.Com (Management Studies)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com (Management Studies)</button>
+                        <button onclick="selectCourse('FY B.Com (Accounting & Finance)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com (Accounting & Finance)</button>
+                        <button onclick="selectCourse('FY B.Com (Financial Markets)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com (Financial Markets)</button>
+                        <button onclick="selectCourse('FY B.Sc (Computer Science)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Sc (Computer Science)</button>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 sticky top-0 bg-surface dark:bg-[#1e1e1e] py-1 z-10">Second Year (SY)</h4>
+                    <div class="space-y-1">
+                        <button onclick="selectCourse('SY B.A.')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.A.</button>
+                        <button onclick="selectCourse('SY B.Sc')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Sc</button>
+                        <button onclick="selectCourse('SY B.Com')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com</button>
+                        <button onclick="selectCourse('SY B.Com (Management Studies)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com (Management Studies)</button>
+                        <button onclick="selectCourse('SY B.Com (Accounting & Finance)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com (Accounting & Finance)</button>
+                        <button onclick="selectCourse('SY B.Com (Financial Markets)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com (Financial Markets)</button>
+                        <button onclick="selectCourse('SY B.Sc (Computer Science)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Sc (Computer Science)</button>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 sticky top-0 bg-surface dark:bg-[#1e1e1e] py-1 z-10">Third Year (TY)</h4>
+                    <div class="space-y-1">
+                        <button onclick="selectCourse('TY B.A')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.A</button>
+                        <button onclick="selectCourse('TY B.Sc')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Sc</button>
+                        <button onclick="selectCourse('TY B.Com')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com</button>
+                        <button onclick="selectCourse('TY B.Com (Management Studies)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com (Management Studies)</button>
+                        <button onclick="selectCourse('TY B.Com (Accounting & Finance)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com (Accounting & Finance)</button>
+                        <button onclick="selectCourse('TY B.Com (Financial Markets)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com (Financial Markets)</button>
+                        <button onclick="selectCourse('TY B.Sc (Computer Science)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Sc (Computer Science)</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
