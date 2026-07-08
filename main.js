@@ -152,7 +152,10 @@ function getTickHtmlLocal(tickType) {
 // ========================================================
 function setupMoreMenuListener() {
     const moreMenu = document.getElementById('public-profile-more-menu');
+    const moreBtn = document.getElementById('public-profile-more-btn');
+
     if (moreMenu) {
+        // 1. Handle clicking INSIDE the menu to trigger actions
         moreMenu.addEventListener('click', (e) => {
             const button = e.target.closest('button');
             if (!button) return;
@@ -173,6 +176,16 @@ function setupMoreMenuListener() {
             }
         });
     }
+
+    // 2. Handle clicking OUTSIDE the menu to close it automatically
+    document.addEventListener('click', (e) => {
+        if (moreMenu && !moreMenu.classList.contains('hidden')) {
+            // Check if the tap happened outside the menu AND outside the '...' button
+            if (moreBtn && !moreBtn.contains(e.target) && !moreMenu.contains(e.target)) {
+                moreMenu.classList.add('hidden');
+            }
+        }
+    });
 }
 
 function setupBlockedUsersListener() {
