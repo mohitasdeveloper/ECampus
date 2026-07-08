@@ -587,22 +587,56 @@ function openCommentOptions(commentId, commentOwnerId) {
     window.openActionSheet(buttonsHtml);
 }
 
-window.deletePost = async (postId) => {
-    if (!confirm('Are you sure you want to delete this post?')) return;
-    window.closeActionSheet();
+window.deletePost = function(postId) {
+    // 1. Close the action sheet
+    if (typeof closeActionSheet === 'function') closeActionSheet();
 
-    // Optimistic UI update: hide the post from all places (Feed, Profile)
-    const postElements = document.querySelectorAll(`div[data-post-id="${postId}"]`);
-    postElements.forEach(el => el.style.display = 'none');
-    
-    const { error } = await supabase.from('posts').update({ is_deleted: true }).eq('id', postId);
-    
-    if (error) {
-        postElements.forEach(el => el.style.display = 'block'); // Revert
-        showToast('Failed to delete post.', 'error');
-    } else {
-        showToast('Post deleted.', 'success');
-    }
+    // 2. Open the Native Confirmation Modal (This bypasses the mobile block!)
+    const modal = document.getElementById('modal-confirm-action');
+    if (!modal) return;
+
+    document.getElementById('confirm-action-title').textContent = "Delete Post?";
+    document.getElementById('confirm-action-message').textContent = "This will permanently remove this post from your feed and profile.";
+
+    modal.classList.replace('hidden', 'flex');
+
+    const confirmBtn = document.getElementById('confirm-action-yes');
+    const cancelBtn = document.getElementById('confirm-action-no');
+
+    // Clone buttons to safely clear any old event listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+    // 3. Handle the Cancel Button
+    newCancelBtn.addEventListener('click', () => {
+        modal.classList.replace('flex', 'hidden');
+    });
+
+    // 4. Handle the Confirm Button (Executes the deletion)
+    newConfirmBtn.addEventListener('click', async () => {
+        modal.classList.replace('flex', 'hidden');
+        showToast('Deleting post...', 'info');
+
+        // Optimistic UI: Hide the post from the screen instantly for a snappy feel
+        const postElements = document.querySelectorAll(`div[data-post-id="${postId}"]`);
+        postElements.forEach(el => el.style.display = 'none');
+
+        // Hit the database
+        const { error } = await supabase.from('posts').update({ is_deleted: true }).eq('id', postId);
+
+        if (error) {
+            console.error('Supabase Delete Error:', error);
+            // Revert the optimistic hide if the database fails
+            postElements.forEach(el => el.style.display = 'block'); 
+            showToast('Failed to delete post.', 'error');
+        } else {
+            showToast('Post deleted.', 'success');
+            // Destroy the HTML elements completely
+            postElements.forEach(el => el.remove()); 
+        }
+    });
 };
 
 window.deleteComment = async (commentId) => {
