@@ -753,6 +753,9 @@ window.saveSocialLinks = saveSocialLinks;
 // ========================================================
 // PUBLIC/PRIVATE PROFILE VIEWS 
 // ========================================================
+// ========================================================
+// PUBLIC/PRIVATE PROFILE VIEWS 
+// ========================================================
 async function viewUserProfile(userId) {
     const moreMenu = document.getElementById('public-profile-more-menu');
     if (moreMenu) moreMenu.classList.add('hidden');
@@ -765,24 +768,39 @@ async function viewUserProfile(userId) {
     const { data: user, error } = await supabase.from('users').select('*').eq('id', userId).single();
     if (error || !user) {
         showToast('Could not load profile.', 'error');
+        console.error('Error fetching user profile:', error);
         return;
     }
 
     document.getElementById('modal-profile-public').dataset.userId = userId;
     document.getElementById('modal-profile-private').dataset.userId = userId;
 
-    const { data: connection } = await supabase
+    const { data: connection, error: connError } = await supabase
         .from('connections')
         .select('status, action_user_id')
         .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
         .single();
 
+    if (connError && connError.code !== 'PGRST116') { 
+        showToast('Could not check connection status.', 'error');
+        console.error('Error fetching connection:', connError);
+    }
+
     const isConnected = connection?.status === 'accepted';
 
+    // Helper to safely render the verified tick
+    const getTickHtmlLocal = (tickType) => {
+        if (!tickType || tickType === 'none') return '';
+        const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
+        return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+    };
+
+    // Routing Logic
     if (user.is_private && !isConnected) {
-        document.getElementById('private-profile-header-name').textContent = user.full_name;
+        // Render Private View
+        document.getElementById('private-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
-        document.getElementById('private-profile-name').textContent = user.full_name;
+        document.getElementById('private-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('private-profile-course').textContent = user.course || 'Student';
 
         const actionsContainer = document.getElementById('private-profile-actions');
@@ -793,11 +811,13 @@ async function viewUserProfile(userId) {
             actionsContainer.innerHTML = `<button class="btn-primary w-full">Request to Connect</button>`;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(user.id, 'request', actionsContainer.firstElementChild);
         }
+
         openProfileModal('private');
     } else {
-        document.getElementById('public-profile-header-name').textContent = user.full_name;
+        // Render Public View
+        document.getElementById('public-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('public-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
-        document.getElementById('public-profile-name').textContent = user.full_name;
+        document.getElementById('public-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('public-profile-course').textContent = user.course || 'Student';
         document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
         document.getElementById('public-profile-connection-count').textContent = user.connection_count || 0;
@@ -807,7 +827,7 @@ async function viewUserProfile(userId) {
         openProfileModal('public');
 
         const profileFeedContainer = document.getElementById('public-profile-feed');
-        profileFeedContainer.innerHTML = FEED_SKELETON; // Inject Skeleton Here too!
+        profileFeedContainer.innerHTML = FEED_SKELETON; // Show loading shimmer
 
         try {
             const { data: posts, error: postsError } = await supabase
@@ -835,6 +855,7 @@ async function viewUserProfile(userId) {
                 return;
             }
 
+            // Maps and injects all post cards
             profileFeedContainer.innerHTML = generatePostHTML(posts, currentUserProfile.id);
 
         } catch (postsErr) {
@@ -843,7 +864,6 @@ async function viewUserProfile(userId) {
         }
     }
 }
-
 function renderProfileActions(user, connection) {
     const actionsContainer = document.getElementById('public-profile-actions');
     const moreMenuBtn = document.getElementById('public-profile-more-btn');
