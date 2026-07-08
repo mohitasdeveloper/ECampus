@@ -889,18 +889,47 @@ function renderTempSocialsList() {
 }
 
 function addSocialLinkTemp() {
-    const platform = document.getElementById('add-social-platform').value;
-    const url = document.getElementById('add-social-url').value.trim();
-    if (!url) {
-        showToast('Please enter a URL.', 'warning');
+    const platformId = document.getElementById('add-social-platform').value;
+    let val = document.getElementById('add-social-url').value.trim();
+    
+    if (!val) {
+        showToast('Please enter your username, number, or link.', 'warning');
         return;
     }
-    const existingLinkIndex = tempSocialLinks.findIndex(link => link.platform === platform);
-    if (existingLinkIndex > -1) {
-        tempSocialLinks[existingLinkIndex].url = url;
-    } else {
-        tempSocialLinks.push({ platform, url });
+
+    // Grab the configuration we set up in Step 3
+    const config = socialPlatformsConfig[platformId];
+    let finalUrl = val;
+
+    // ==========================================
+    // SMART URL CONSTRUCTION ENGINE
+    // ==========================================
+    // If the user didn't paste a full website link, we build it securely for them!
+    if (!val.startsWith('http://') && !val.startsWith('https://')) {
+        
+        // 1. Strip '@' if user added it manually (e.g., they typed @johndoe for Instagram)
+        if (val.startsWith('@') && platformId !== 'youtube') {
+            val = val.substring(1);
+        }
+        
+        // 2. Auto-add '@' for YouTube handles if missing
+        if (platformId === 'youtube' && !val.startsWith('@') && !val.includes('/')) {
+            val = '@' + val;
+        }
+
+        // 3. Combine the platform's secure prefix with their username/number
+        finalUrl = config.prefix + val;
     }
+
+    // Save to temporary list
+    const existingLinkIndex = tempSocialLinks.findIndex(link => link.platform === platformId);
+    if (existingLinkIndex > -1) {
+        tempSocialLinks[existingLinkIndex].url = finalUrl;
+    } else {
+        tempSocialLinks.push({ platform: platformId, url: finalUrl });
+    }
+    
+    // Update the UI
     renderTempSocialsList();
     document.getElementById('add-social-url').value = '';
 }
@@ -1587,6 +1616,64 @@ window.toggleLike = async function(postId) {
         // A quick hack to revert is just fetching the post again or running the inverse logic here.
     }
 };
+// ========================================================
+// SMART SOCIAL PLATFORM PICKER ENGINE
+// ========================================================
+const socialPlatformsConfig = {
+    instagram: { name: 'Instagram', icon: 'fa-brands fa-instagram', color: 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 text-white', placeholder: 'Username (e.g. johndoe)', type: 'text', prefix: 'https://instagram.com/' },
+    snapchat: { name: 'Snapchat', icon: 'fa-brands fa-snapchat', color: 'bg-[#FFFC00] text-black', placeholder: 'Snapchat Username', type: 'text', prefix: 'https://snapchat.com/add/' },
+    whatsapp: { name: 'WhatsApp', icon: 'fa-brands fa-whatsapp', color: 'bg-[#25D366] text-white', placeholder: 'Phone Number (e.g. 919876543210)', type: 'tel', prefix: 'https://wa.me/' },
+    linkedin: { name: 'LinkedIn', icon: 'fa-brands fa-linkedin-in', color: 'bg-[#0A66C2] text-white', placeholder: 'LinkedIn Username', type: 'text', prefix: 'https://linkedin.com/in/' },
+    twitter: { name: 'X (Twitter)', icon: 'fa-brands fa-x-twitter', color: 'bg-black dark:bg-white text-white dark:text-black', placeholder: 'X Username', type: 'text', prefix: 'https://x.com/' },
+    spotify: { name: 'Spotify', icon: 'fa-brands fa-spotify', color: 'bg-[#1DB954] text-white', placeholder: 'Spotify Profile URL', type: 'url', prefix: '' },
+    telegram: { name: 'Telegram', icon: 'fa-brands fa-telegram', color: 'bg-[#229ED9] text-white', placeholder: 'Telegram Username', type: 'text', prefix: 'https://t.me/' },
+    discord: { name: 'Discord', icon: 'fa-brands fa-discord', color: 'bg-[#5865F2] text-white', placeholder: 'Discord Username', type: 'text', prefix: 'https://discord.com/users/' },
+    reddit: { name: 'Reddit', icon: 'fa-brands fa-reddit-alien', color: 'bg-[#FF4500] text-white', placeholder: 'Reddit Username', type: 'text', prefix: 'https://reddit.com/user/' },
+    github: { name: 'GitHub', icon: 'fa-brands fa-github', color: 'bg-[#181717] dark:bg-white text-white dark:text-black', placeholder: 'GitHub Username', type: 'text', prefix: 'https://github.com/' },
+    youtube: { name: 'YouTube', icon: 'fa-brands fa-youtube', color: 'bg-[#FF0000] text-white', placeholder: 'Channel URL or @handle', type: 'text', prefix: 'https://youtube.com/' },
+    website: { name: 'Website', icon: 'fa-solid fa-globe', color: 'bg-primary text-white', placeholder: 'example.com', type: 'url', prefix: 'https://' }
+};
 
+window.openSocialPicker = function() {
+    const list = document.getElementById('social-picker-list');
+    list.innerHTML = '';
+    
+    // Generate the beautiful native list dynamically
+    Object.keys(socialPlatformsConfig).forEach(key => {
+        const config = socialPlatformsConfig[key];
+        list.innerHTML += `
+            <button onclick="selectSocialPlatform('${key}')" class="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-surface-variant/30 dark:hover:bg-neutral-800 transition-colors active:scale-[0.98] text-left border border-transparent hover:border-surface-variant/50 dark:hover:border-neutral-700">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm ${config.color}">
+                    <i class="${config.icon} text-[18px]"></i>
+                </div>
+                <span class="font-extrabold text-[15px] text-on-surface dark:text-gray-100 tracking-wide">${config.name}</span>
+            </button>
+        `;
+    });
+    
+    document.getElementById('modal-social-picker').classList.replace('hidden', 'flex');
+};
+
+window.closeSocialPicker = function() {
+    document.getElementById('modal-social-picker').classList.replace('flex', 'hidden');
+};
+
+window.selectSocialPlatform = function(id) {
+    const config = socialPlatformsConfig[id];
+    
+    // Update Trigger UI
+    document.getElementById('add-social-platform').value = id;
+    document.getElementById('selected-social-name').textContent = config.name;
+    document.getElementById('selected-social-icon').className = config.icon + ' text-[16px]';
+    document.getElementById('selected-social-icon-box').className = `w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${config.color}`;
+    
+    // Update Input UI Dynamically
+    const input = document.getElementById('add-social-url');
+    input.type = config.type;
+    input.placeholder = config.placeholder;
+    input.value = ''; 
+    
+    closeSocialPicker();
+};
 
 
