@@ -178,3 +178,28 @@ window.selectSignupCourse = function(courseName) {
     // 2. Close the modal
     closeSignupCoursePicker();
 };
+// ========================================================
+// CUSTOM GENDER PICKER ENGINE (SIGNUP)
+// ========================================================
+window.openSignupGenderPicker = function() {
+    const picker = document.getElementById('modal-signup-gender-picker');
+    if (picker) {
+        picker.classList.replace('hidden', 'flex');
+        // Hide keyboard if it is open
+        document.activeElement.blur();
+    }
+};
+
+window.closeSignupGenderPicker = function() {
+    const picker = document.getElementById('modal-signup-gender-picker');
+    if (picker) picker.classList.replace('flex', 'hidden');
+};
+
+window.selectSignupGender = function(gender) {
+    // 1. Set the input value
+    const input = document.getElementById('signup-gender');
+    if (input) input.value = gender;
+    
+    // 2. Close the modal
+    closeSignupGenderPicker();
+};
