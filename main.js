@@ -787,31 +787,88 @@ window.saveUserProfile = async function(extraUpdates = {}, closeModal = true) {
         }
     }
 };
+// ========================================================
+// SOCIAL LINKS EDITOR (Native Full-Screen Engine)
+// ========================================================
 function openEditSocialsModal() {
     if (!currentUserProfile) return;
-    tempSocialLinks = currentUserProfile.social_links ? JSON.parse(JSON.stringify(currentUserProfile.social_links)) : [];
+    
+    // 1. SAFETY FIX: Force the database output to be a valid Array to prevent the .forEach crash
+    let links = currentUserProfile.social_links;
+    if (typeof links === 'string') {
+        try { links = JSON.parse(links); } catch(e) { links = []; }
+    }
+    tempSocialLinks = Array.isArray(links) ? JSON.parse(JSON.stringify(links)) : [];
+    
+    // 2. Render the list
     renderTempSocialsList();
-    document.getElementById('modal-edit-socials').classList.replace('hidden', 'flex');
+    
+    // 3. Native Slide-in Animation
+    const modal = document.getElementById('modal-edit-socials');
+    const bottomNav = document.querySelector('nav');
+    
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (bottomNav) bottomNav.classList.add('hidden');
+    
+    setTimeout(() => {
+        modal.classList.remove('translate-x-full');
+    }, 10);
 }
 
 function closeSocialsModal() {
-    document.getElementById('modal-edit-socials').classList.replace('flex', 'hidden');
+    const modal = document.getElementById('modal-edit-socials');
+    const bottomNav = document.querySelector('nav');
+    
+    // Slide out to the right
+    modal.classList.add('translate-x-full');
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        if (bottomNav) bottomNav.classList.remove('hidden');
+    }, 300);
 }
 
 function renderTempSocialsList() {
     const list = document.getElementById('modal-socials-list');
     list.innerHTML = '';
-    if (tempSocialLinks.length === 0) {
-        list.innerHTML = `<p class="text-xs text-center text-gray-400 italic py-4">No links added yet.</p>`;
+    
+    // Empty State UI
+    if (!Array.isArray(tempSocialLinks) || tempSocialLinks.length === 0) {
+        list.innerHTML = `
+            <div class="py-10 flex flex-col items-center justify-center opacity-40 text-on-surface-variant">
+                <span class="material-symbols-outlined text-[42px] mb-2">link_off</span>
+                <p class="text-sm font-medium">No links added yet.</p>
+            </div>`;
         return;
     }
+
+    // Platform Specific Styles for premium look
+    const platformStyles = {
+        linkedin: { icon: 'fa-linkedin-in', color: 'text-[#0A66C2]' },
+        instagram: { icon: 'fa-instagram', color: 'text-pink-500' },
+        github: { icon: 'fa-github', color: 'text-on-surface dark:text-white' },
+        twitter: { icon: 'fa-x-twitter', color: 'text-on-surface dark:text-white' },
+        youtube: { icon: 'fa-youtube', color: 'text-[#FF0000]' },
+        website: { icon: 'fa-globe', color: 'text-primary' }
+    };
+
+    // Render each link as a beautiful card
     tempSocialLinks.forEach((link, index) => {
+        const style = platformStyles[link.platform] || { icon: 'fa-link', color: 'text-gray-500' };
+        
         list.innerHTML += `
-            <div class="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800/50 p-2 rounded-lg border border-surface-variant/30 dark:border-neutral-700">
-                <span class="font-bold text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-300 w-20">${link.platform}</span>
-                <input type="text" value="${link.url}" class="flex-1 bg-transparent text-xs text-gray-500 dark:text-gray-400 outline-none" readonly>
-                <button onclick="removeSocialLinkTemp(${index})" class="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-full transition-colors">
-                    <span class="material-symbols-outlined text-sm">delete</span>
+            <div class="flex items-center gap-3 bg-surface-container-lowest dark:bg-[#1e1e1e] p-3.5 rounded-2xl border border-surface-variant/50 dark:border-neutral-800 shadow-sm animate-fadeIn">
+                <div class="w-10 h-10 rounded-full bg-surface-variant/30 dark:bg-neutral-800 flex items-center justify-center ${style.color} shrink-0">
+                    <i class="fa-brands ${style.icon} text-[18px]"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-extrabold text-[13px] text-on-surface dark:text-gray-100 uppercase tracking-wide">${link.platform}</p>
+                    <p class="text-[12px] text-on-surface-variant dark:text-gray-400 truncate mt-0.5">${link.url}</p>
+                </div>
+                <button onclick="removeSocialLinkTemp(${index})" class="w-8 h-8 rounded-full bg-error/10 text-error flex items-center justify-center active:scale-95 transition-transform shrink-0">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
                 </button>
             </div>
         `;
