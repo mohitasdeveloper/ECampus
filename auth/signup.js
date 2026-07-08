@@ -152,3 +152,29 @@ document.addEventListener("DOMContentLoaded", () => {
     // check if already logged in
     checkUserSession();
 });
+
+// ========================================================
+// CUSTOM COURSE PICKER ENGINE (SIGNUP)
+// ========================================================
+window.openSignupCoursePicker = function() {
+    const picker = document.getElementById('modal-signup-course-picker');
+    if (picker) {
+        picker.classList.replace('hidden', 'flex');
+        // Hide keyboard if it is open
+        document.activeElement.blur();
+    }
+};
+
+window.closeSignupCoursePicker = function() {
+    const picker = document.getElementById('modal-signup-course-picker');
+    if (picker) picker.classList.replace('flex', 'hidden');
+};
+
+window.selectSignupCourse = function(courseName) {
+    // 1. Set the input value
+    const input = document.getElementById('signup-course');
+    if (input) input.value = courseName;
+    
+    // 2. Close the modal
+    closeSignupCoursePicker();
+};
