@@ -32,7 +32,24 @@ window.addEventListener('load', () => {
         }
     }, 600); 
 });
+// ========================================================
+// IMAGE OPTIMIZATION ENGINE
+// ========================================================
+window.optimizeImageUrl = function(url, type = 'feed') {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    if (url.includes('/upload/q_auto')) return url; // Prevent double injection
+    
+    // Aggressive compression parameters
+    let params = 'q_auto,f_auto,w_800'; // Standard Feed Image (Max 800px width)
+    
+    if (type === 'avatar') {
+        params = 'q_auto:eco,f_auto,w_150,h_150,c_fill'; // Tiny heavily compressed avatars
+    } else if (type === 'hotpost') {
+        params = 'q_auto:eco,f_auto,w_600'; // Ultra-compressed Hotposts for instant viewing
+    }
 
+    return url.replace('/upload/', `/upload/${params}/`);
+};
 // ========================================================
 // PROFESSIONAL SKELETON LOADERS
 // ========================================================
@@ -379,24 +396,30 @@ function generatePostHTML(posts, currentUserId) {
         let contentHtml = '';
         const verifiedBadge = getTickHtmlLocal(user.tick_type);
         
-        const headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
+        // 1. Optimize Avatar URL & add Lazy Loading & Profile Click Handler
+        const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+        const optimizedAvatar = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
+        
+        const headerIcon = `<img loading="lazy" onclick="openPublicProfile('${user.id}')" src="${optimizedAvatar}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
         // Text Post
         if (post.post_type === 'text') {
             contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
         } 
-        // Image Post
+        // Image Post (OPTIMIZED + LAZY LOAD)
         else if (post.post_type === 'image') {
+            const optimizedMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.media_url, 'feed') : post.media_url;
             contentHtml = `
                 <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
                 <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
-                    <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
+                    <img loading="lazy" src="${optimizedMedia}" class="w-full h-auto max-h-[80vh] object-contain">
                 </div>
             `;
         }
-        // Event Post
+        // Event Post (OPTIMIZED + LAZY LOAD)
         else if (post.post_type === 'event') {
-            const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
+            const optimizedEventMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.event_image_url, 'feed') : post.event_image_url;
+            const eventImgHtml = post.event_image_url ? `<img loading="lazy" src="${optimizedEventMedia}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
             const btnText = post.event_button_text || 'View Link';
             const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-4 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform shadow-md shadow-secondary/20">${btnText}</a>` : '';
             const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
@@ -419,7 +442,7 @@ function generatePostHTML(posts, currentUserId) {
                 </div>
             `;
         }
-        // Poll Post
+        // Poll Post (Unchanged)
         else if (post.post_type === 'poll') {
             const votes = post.post_poll_votes || [];
             const totalVotes = votes.length;
@@ -474,7 +497,7 @@ function generatePostHTML(posts, currentUserId) {
             <div class="flex items-center gap-3 mb-3">
                 ${headerIcon}
                 <div class="flex-1">
-                    <h4 data-user-id="${user.id}" class="profile-link font-bold text-[14px] text-on-surface dark:text-gray-100 leading-tight cursor-pointer hover:text-primary transition-colors flex items-center gap-1">
+                    <h4 onclick="openPublicProfile('${user.id}')" class="font-bold text-[14.5px] cursor-pointer hover:text-primary transition-colors flex items-center gap-1">
                         ${user.full_name} ${verifiedBadge}
                     </h4>
                     <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
@@ -487,20 +510,19 @@ function generatePostHTML(posts, currentUserId) {
             ${contentHtml}
             
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
-              <!-- LIKE BUTTON -->
+            <!-- LIKE BUTTON -->
             <button onclick="toggleLike('${post.id}')" class="flex items-center gap-1.5 group active:scale-95 transition-transform">
-                <!-- The Heart Icon -->
                 <span id="like-icon-${post.id}" class="material-symbols-outlined text-[22px] transition-colors ${post.is_liked_by_me ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 group-hover:text-red-500'}" style="font-variation-settings: 'FILL' ${post.is_liked_by_me ? '1' : '0'};">
                     favorite
                 </span>
-                <!-- The Like Count -->
                 <span id="like-count-${post.id}" class="text-[14px] font-bold ${post.is_liked_by_me ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400'}">
                     ${post.like_count || 0}
                 </span>
             </button>
-                <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
+                <!-- COMMENT BUTTON -->
+                <button onclick="openCommentsModal('${post.id}')" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
-                    <span>${commentCount}</span>
+                    <span id="comment-count-${post.id}">${commentCount}</span>
                 </button>
             </div>
         </div>
