@@ -3,16 +3,16 @@ import { supabase } from './supabase.js';
 let currentUser = null;
 let searchTimeout = null;
 
-// Professional Shimmer Skeleton for Search Results
+// Professional Shimmer Skeleton for Search Results (Flat Instagram Style)
 const LIST_SKELETON = `
-    <div class="flex items-center gap-4 p-3 mb-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm animate-pulse">
-        <div class="w-12 h-12 rounded-full shimmer-bg shrink-0"></div>
+    <div class="flex items-center gap-3 py-3 animate-pulse">
+        <div class="w-[52px] h-[52px] rounded-full shimmer-bg shrink-0"></div>
         <div class="flex-1">
             <div class="h-3.5 shimmer-bg rounded-md w-1/2 mb-2"></div>
             <div class="h-2.5 shimmer-bg rounded-md w-1/3"></div>
         </div>
     </div>
-`.repeat(5);
+`.repeat(8);
 
 export function initSearch(user) {
     currentUser = user;
@@ -59,19 +59,19 @@ async function fetchExploreUsers() {
     const container = document.getElementById('explore-users-container');
     if (!container) return;
     
-    container.innerHTML = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-3 ml-1">Popular Users</h3>` + LIST_SKELETON;
+    container.innerHTML = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-2 mt-1">Suggested for you</h3>` + LIST_SKELETON;
 
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('id, full_name, profile_img_url, course, tick_type, connection_count')
+            .select('id, full_name, profile_img_url, course, tick_type')
             .neq('id', currentUser.id) // Don't show myself
             .order('connection_count', { ascending: false })
             .limit(10);
 
         if (error) throw error;
         
-        let html = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-3 ml-1">Popular Users</h3>`;
+        let html = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-2 mt-1">Suggested for you</h3>`;
         html += renderUserList(data);
         container.innerHTML = html;
 
@@ -88,7 +88,7 @@ async function performSearch(query) {
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('id, full_name, profile_img_url, course, tick_type, connection_count')
+            .select('id, full_name, profile_img_url, course, tick_type')
             .ilike('full_name', `%${query}%`)
             .neq('id', currentUser.id)
             .limit(15);
@@ -113,23 +113,25 @@ async function performSearch(query) {
     }
 }
 
-// Universal UI Renderer (Handles plain DP styling & Tick Injection)
+// Universal UI Renderer (Clean, Instagram-Style Flat List)
 function renderUserList(users) {
     return users.map(user => `
-        <div onclick="window.viewUserProfile('${user.id}')" class="flex items-center gap-4 p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm cursor-pointer hover:bg-surface-variant/20 transition-colors active:scale-95">
+        <div onclick="window.viewUserProfile('${user.id}')" class="flex items-center gap-3 py-3 cursor-pointer active:opacity-60 transition-opacity">
             
-            <div class="w-12 h-12 rounded-full border border-surface-variant/60 dark:border-neutral-700 overflow-hidden bg-surface-variant/50 shrink-0 shadow-sm">
-                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-full h-full object-cover">
-            </div>
+            <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-[52px] h-[52px] rounded-full object-cover shrink-0 border border-surface-variant/50">
 
             <div class="flex-1 min-w-0">
-                <p class="font-bold text-[14px] text-on-surface dark:text-gray-100 truncate flex items-center gap-1">
-                    ${user.full_name} ${getTickHtml(user.tick_type)}
-                </p>
-                <p class="text-[12px] font-medium text-on-surface-variant dark:text-gray-400 mt-[1px] truncate">
-                    ${user.course || 'Student'} • <span class="text-primary font-bold">${user.connection_count || 0} connections</span>
+                <div class="flex items-center gap-1">
+                    <p class="font-bold text-[14px] text-on-surface dark:text-gray-100 truncate">
+                        ${user.full_name}
+                    </p>
+                    ${getTickHtml(user.tick_type)}
+                </div>
+                <p class="text-[13px] font-medium text-on-surface-variant dark:text-gray-500 mt-[1px] truncate">
+                    ${user.course || 'Student'}
                 </p>
             </div>
+            
         </div>
     `).join('');
 }
