@@ -247,17 +247,20 @@ function setupBlockedUsersListener() {
 }
 
 const socialIconMap = {
-    linkedin: { icon: 'fa-linkedin-in', color: 'bg-[#0A66C2]' },
-    instagram: { icon: 'fa-instagram', color: 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500' },
-    github: { icon: 'fa-github', color: 'bg-[#181717]' },
-    twitter: { icon: 'fa-x-twitter', color: 'bg-[#000000]' },
-    youtube: { icon: 'fa-youtube', color: 'bg-[#FF0000]' },
-    discord: { icon: 'fa-discord', color: 'bg-[#5865F2]' },
-    facebook: { icon: 'fa-facebook-f', color: 'bg-[#1877F2]' },
-    behance: { icon: 'fa-behance', color: 'bg-[#053EFF]' },
-    dribbble: { icon: 'fa-dribbble', color: 'bg-[#EA4C89]' },
-    website: { icon: 'fa-globe', color: 'bg-gray-500' },
-    other: { icon: 'fa-link', color: 'bg-gray-500' }
+    linkedin: { icon: 'fa-brands fa-linkedin-in', color: 'bg-[#0A66C2]' },
+    instagram: { icon: 'fa-brands fa-instagram', color: 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500' },
+    github: { icon: 'fa-brands fa-github', color: 'bg-[#181717] dark:bg-white dark:!text-black' },
+    twitter: { icon: 'fa-brands fa-x-twitter', color: 'bg-[#000000] dark:bg-white dark:!text-black' },
+    youtube: { icon: 'fa-brands fa-youtube', color: 'bg-[#FF0000]' },
+    discord: { icon: 'fa-brands fa-discord', color: 'bg-[#5865F2]' },
+    facebook: { icon: 'fa-brands fa-facebook-f', color: 'bg-[#1877F2]' },
+    whatsapp: { icon: 'fa-brands fa-whatsapp', color: 'bg-[#25D366]' },
+    snapchat: { icon: 'fa-brands fa-snapchat', color: 'bg-[#FFFC00] !text-black' }, // Snapchat needs black text
+    telegram: { icon: 'fa-brands fa-telegram', color: 'bg-[#229ED9]' },
+    spotify: { icon: 'fa-brands fa-spotify', color: 'bg-[#1DB954]' },
+    reddit: { icon: 'fa-brands fa-reddit-alien', color: 'bg-[#FF4500]' },
+    website: { icon: 'fa-solid fa-globe', color: 'bg-primary' }, // Using fa-solid fixes the broken box!
+    other: { icon: 'fa-solid fa-link', color: 'bg-gray-500' }
 };
 
 function renderSocialLinks(links, container = null) {
@@ -274,7 +277,10 @@ function renderSocialLinks(links, container = null) {
             linkEl.target = '_blank';
             linkEl.title = link.platform.charAt(0).toUpperCase() + link.platform.slice(1);
             linkEl.className = `w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white text-2xl ${platformInfo.color} transition-transform hover:scale-110 shrink-0 shadow-sm`;
-            linkEl.innerHTML = `<i class="fa-brands ${platformInfo.icon}"></i>`;
+            
+            // REMOVED the hardcoded 'fa-brands' from here so 'fa-solid' can work
+            linkEl.innerHTML = `<i class="${platformInfo.icon}"></i>`;
+            
             targetContainer.appendChild(linkEl);
         });
     }
@@ -846,22 +852,29 @@ function renderTempSocialsList() {
 
     // Platform Specific Styles for premium look
     const platformStyles = {
-        linkedin: { icon: 'fa-linkedin-in', color: 'text-[#0A66C2]' },
-        instagram: { icon: 'fa-instagram', color: 'text-pink-500' },
-        github: { icon: 'fa-github', color: 'text-on-surface dark:text-white' },
-        twitter: { icon: 'fa-x-twitter', color: 'text-on-surface dark:text-white' },
-        youtube: { icon: 'fa-youtube', color: 'text-[#FF0000]' },
-        website: { icon: 'fa-globe', color: 'text-primary' }
+        linkedin: { icon: 'fa-brands fa-linkedin-in', color: 'text-[#0A66C2]' },
+        instagram: { icon: 'fa-brands fa-instagram', color: 'text-pink-500' },
+        github: { icon: 'fa-brands fa-github', color: 'text-on-surface dark:text-white' },
+        twitter: { icon: 'fa-brands fa-x-twitter', color: 'text-on-surface dark:text-white' },
+        youtube: { icon: 'fa-brands fa-youtube', color: 'text-[#FF0000]' },
+        discord: { icon: 'fa-brands fa-discord', color: 'text-[#5865F2]' },
+        whatsapp: { icon: 'fa-brands fa-whatsapp', color: 'text-[#25D366]' },
+        snapchat: { icon: 'fa-brands fa-snapchat', color: 'text-[#FFFC00] drop-shadow-sm' },
+        telegram: { icon: 'fa-brands fa-telegram', color: 'text-[#229ED9]' },
+        spotify: { icon: 'fa-brands fa-spotify', color: 'text-[#1DB954]' },
+        reddit: { icon: 'fa-brands fa-reddit-alien', color: 'text-[#FF4500]' },
+        website: { icon: 'fa-solid fa-globe', color: 'text-primary' }
     };
 
     // Render each link as a beautiful card
     tempSocialLinks.forEach((link, index) => {
-        const style = platformStyles[link.platform] || { icon: 'fa-link', color: 'text-gray-500' };
+        // Fallback to the generic link icon if the platform isn't in the list
+        const style = platformStyles[link.platform] || { icon: 'fa-solid fa-link', color: 'text-gray-500' };
         
         list.innerHTML += `
             <div class="flex items-center gap-3 bg-surface-container-lowest dark:bg-[#1e1e1e] p-3.5 rounded-2xl border border-surface-variant/50 dark:border-neutral-800 shadow-sm animate-fadeIn">
                 <div class="w-10 h-10 rounded-full bg-surface-variant/30 dark:bg-neutral-800 flex items-center justify-center ${style.color} shrink-0">
-                    <i class="fa-brands ${style.icon} text-[18px]"></i>
+                    <i class="${style.icon} text-[18px]"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-extrabold text-[13px] text-on-surface dark:text-gray-100 uppercase tracking-wide">${link.platform}</p>
