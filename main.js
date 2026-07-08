@@ -559,24 +559,44 @@ function setupEditProfileAvatarUpload() {
 
         const preview = document.getElementById('edit-profile-avatar-preview');
         const originalSrc = preview.src;
-        preview.src = URL.createObjectURL(file); 
-        showToast('Uploading new avatar...', 'info');
+
+        // 1. Optimistic UI: Show image instantly, blur and dim it to simulate "Processing"
+        preview.src = URL.createObjectURL(file);
+        preview.style.opacity = '0.5';
+        preview.style.filter = 'blur(3px)';
+        preview.style.transition = 'all 0.3s ease';
+        showToast('Optimizing image...', 'info');
 
         try {
+            // 2. Compress the image locally so it uploads in milliseconds
+            const compressedFile = typeof compressImage === 'function' ? await compressImage(file, 500, 0.8) : file;
+
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', compressedFile);
             formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
 
+            // 3. Upload to Cloudinary
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
-            
-            await saveUserProfile({ profile_img_url: data.secure_url }, false); 
-            preview.src = data.secure_url; 
+
+            // 4. Save to Database silently in the background
+            await saveUserProfile({ profile_img_url: data.secure_url }, false);
+
+            // 5. Success! Snap the image into crystal clear focus
+            preview.src = data.secure_url;
+            preview.style.opacity = '1';
+            preview.style.filter = 'blur(0px)';
+            showToast('Profile picture updated!', 'success');
+
         } catch (error) {
             console.error('Error updating avatar:', error);
             showToast('Failed to update avatar.', 'error');
+            
+            // Revert gracefully on failure
             preview.src = originalSrc; 
+            preview.style.opacity = '1';
+            preview.style.filter = 'blur(0px)';
         } finally {
             avatarInput.value = '';
         }
@@ -634,27 +654,52 @@ window.closeProfileModals = closeProfileModals;
 
 let tempSocialLinks = [];
 
-function openEditProfileModal() {
+window.openEditProfileModal = function() {
     if (!currentUserProfile) return;
+
+    // 1. Populate the Native Select Menu and Inputs
     document.getElementById('edit-profile-name').value = currentUserProfile.full_name || '';
     document.getElementById('edit-profile-id').value = currentUserProfile.student_id || '';
     document.getElementById('edit-profile-course').value = currentUserProfile.course || '';
     document.getElementById('edit-profile-bio').value = currentUserProfile.bio || '';
     document.getElementById('edit-profile-avatar-preview').src = currentUserProfile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.full_name)}&background=e1e3e4`;
-    document.getElementById('modal-edit-profile').classList.replace('hidden', 'flex');
-}
 
-function closeEditProfileModal() {
-    document.getElementById('modal-edit-profile').classList.replace('flex', 'hidden');
-}
+    // 2. Native Slide-In Animation (Instagram Style)
+    const modal = document.getElementById('modal-edit-profile');
+    const bottomNav = document.querySelector('nav');
 
-function triggerEditAvatarUpload() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (bottomNav) bottomNav.classList.add('hidden'); // Hide the tabs while editing
+
+    // Tiny delay to allow display:flex to render before sliding
+    setTimeout(() => {
+        modal.classList.remove('translate-x-full');
+    }, 10);
+};
+
+window.closeEditProfileModal = function() {
+    const modal = document.getElementById('modal-edit-profile');
+    const bottomNav = document.querySelector('nav');
+
+    // Slide out to the right
+    modal.classList.add('translate-x-full');
+
+    // Wait for animation to finish before hiding
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        if (bottomNav) bottomNav.classList.remove('hidden'); // Bring tabs back
+    }, 300);
+};
+
+window.triggerEditAvatarUpload = function() {
     document.getElementById('edit-avatar-upload-input').click();
-}
+};
 
-async function saveUserProfile(extraUpdates = {}, closeModal = true) {
+window.saveUserProfile = async function(extraUpdates = {}, closeModal = true) {
     const btn = document.getElementById('save-profile-btn');
-    if (closeModal) { 
+    if (closeModal && btn) {
         btn.disabled = true;
         btn.innerHTML = 'Saving...';
     }
@@ -671,23 +716,25 @@ async function saveUserProfile(extraUpdates = {}, closeModal = true) {
         const { data, error } = await supabase.from('users').update(updates).eq('id', currentUserProfile.id).select().single();
         if (error) throw error;
 
-        currentUserProfile = data; 
-        populateProfileUI(currentUserProfile); 
+        currentUserProfile = data;
+        populateProfileUI(currentUserProfile);
         updateHeaderAvatar(currentUserProfile.profile_img_url, currentUserProfile.full_name);
-        showToast('Profile updated successfully!', 'success');
-        if (closeModal) closeEditProfileModal();
+
+        if (closeModal) {
+            showToast('Profile updated!', 'success');
+            closeEditProfileModal();
+        }
 
     } catch (error) {
         console.error('Error saving profile:', error);
         showToast('Failed to save profile.', 'error');
     } finally {
-        if (closeModal) {
+        if (closeModal && btn) {
             btn.disabled = false;
-            btn.innerHTML = 'Save Changes';
+            btn.innerHTML = 'Save';
         }
     }
-}
-
+};
 function openEditSocialsModal() {
     if (!currentUserProfile) return;
     tempSocialLinks = currentUserProfile.social_links ? JSON.parse(JSON.stringify(currentUserProfile.social_links)) : [];
