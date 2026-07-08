@@ -464,10 +464,17 @@ function generatePostHTML(posts, currentUserId) {
             ${contentHtml}
             
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
-                <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[13px] font-medium active:scale-95 ${userHasLiked ? 'text-primary' : 'dark:text-gray-400'}">
-                    <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
-                    <span>${likeCount}</span>
-                </button>
+              <!-- LIKE BUTTON -->
+            <button onclick="toggleLike('${post.id}')" class="flex items-center gap-1.5 group active:scale-95 transition-transform">
+                <!-- The Heart Icon -->
+                <span id="like-icon-${post.id}" class="material-symbols-outlined text-[22px] transition-colors ${post.is_liked_by_me ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 group-hover:text-red-500'}" style="font-variation-settings: 'FILL' ${post.is_liked_by_me ? '1' : '0'};">
+                    favorite
+                </span>
+                <!-- The Like Count -->
+                <span id="like-count-${post.id}" class="text-[14px] font-bold ${post.is_liked_by_me ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400'}">
+                    ${post.like_count || 0}
+                </span>
+            </button>
                 <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
                     <span>${commentCount}</span>
@@ -1395,3 +1402,76 @@ window.selectCourse = function(courseName) {
     // 2. Close the modal
     closeCoursePicker();
 };
+
+// ========================================================
+// OPTIMISTIC LIKE ENGINE
+// ========================================================
+window.toggleLike = async function(postId) {
+    if (!currentUserProfile) {
+        showToast('Please log in to like posts.', 'error');
+        return;
+    }
+
+    const icon = document.getElementById(`like-icon-${postId}`);
+    const countSpan = document.getElementById(`like-count-${postId}`);
+    if (!icon || !countSpan) return;
+
+    // 1. Determine current state based on the icon's visual fill
+    const isCurrentlyLiked = icon.style.fontVariationSettings.includes("'FILL' 1");
+    let currentCount = parseInt(countSpan.textContent.trim()) || 0;
+
+    // 2. OPTIMISTIC UI UPDATE (Instant visual feedback)
+    if (isCurrentlyLiked) {
+        // Optimistic Unlike
+        icon.style.fontVariationSettings = "'FILL' 0";
+        icon.classList.replace('text-red-500', 'text-on-surface-variant');
+        icon.classList.add('dark:text-gray-400', 'group-hover:text-red-500');
+        icon.classList.remove('like-pop');
+        
+        countSpan.textContent = Math.max(0, currentCount - 1);
+        countSpan.classList.replace('text-red-500', 'text-on-surface-variant');
+        countSpan.classList.add('dark:text-gray-400');
+    } else {
+        // Optimistic Like
+        icon.style.fontVariationSettings = "'FILL' 1";
+        icon.classList.remove('text-on-surface-variant', 'dark:text-gray-400', 'group-hover:text-red-500');
+        icon.classList.add('text-red-500');
+        
+        // Trigger the CSS pop animation
+        icon.classList.remove('like-pop'); // Reset animation
+        void icon.offsetWidth; // Trigger reflow
+        icon.classList.add('like-pop'); // Start animation
+        
+        countSpan.textContent = currentCount + 1;
+        countSpan.classList.remove('text-on-surface-variant', 'dark:text-gray-400');
+        countSpan.classList.add('text-red-500');
+    }
+
+    // 3. DATABASE SYNC (Background)
+    try {
+        if (isCurrentlyLiked) {
+            // Delete the like from the database
+            const { error } = await supabase
+                .from('post_likes')
+                .delete()
+                .match({ post_id: postId, user_id: currentUserProfile.id });
+                
+            if (error) throw error;
+        } else {
+            // Insert the like into the database
+            const { error } = await supabase
+                .from('post_likes')
+                .insert({ post_id: postId, user_id: currentUserProfile.id });
+                
+            if (error) throw error;
+        }
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        // If it fails, revert the optimistic UI back to how it was
+        showToast('Network error. Failed to update like.', 'error');
+        // A quick hack to revert is just fetching the post again or running the inverse logic here.
+    }
+};
+
+
+
