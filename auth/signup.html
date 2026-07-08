@@ -83,19 +83,11 @@
                 <input type="text" id="signup-studentid" class="input-field" placeholder="12345678" required>
             </div>
 
-            <div>
+           <div class="relative cursor-pointer" onclick="openSignupGenderPicker()">
                 <label class="input-label">Gender</label>
-                <div class="relative">
-                    <select id="signup-gender" class="input-field appearance-none pr-8" required>
-                        <option value="" disabled selected>Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    <span class="material-symbols-outlined absolute right-3 top-[14px] text-on-surface-variant pointer-events-none">expand_more</span>
-                </div>
+                <input type="text" id="signup-gender" readonly class="input-field pointer-events-none" placeholder="Select" required>
+                <span class="material-symbols-outlined absolute right-3 top-[34px] text-on-surface-variant pointer-events-none">chevron_right</span>
             </div>
-        </div>
 
         <div class="relative cursor-pointer" onclick="openSignupCoursePicker()">
             <label class="input-label">Course</label>
@@ -169,7 +161,29 @@
             </div>
         </div>
     </div>
-
+<div id="modal-signup-gender-picker" class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-md mx-auto rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] flex flex-col">
+            <button type="button" onclick="closeSignupGenderPicker()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold text-on-surface dark:text-gray-100 shrink-0 mb-4">Select Gender</h3>
+            
+            <div class="space-y-2">
+                <button type="button" onclick="selectSignupGender('Male')" class="w-full text-left px-4 py-3.5 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors border border-surface-variant/30 dark:border-neutral-800 flex items-center justify-between">
+                    Male
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">male</span>
+                </button>
+                <button type="button" onclick="selectSignupGender('Female')" class="w-full text-left px-4 py-3.5 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors border border-surface-variant/30 dark:border-neutral-800 flex items-center justify-between">
+                    Female
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">female</span>
+                </button>
+                <button type="button" onclick="selectSignupGender('Other')" class="w-full text-left px-4 py-3.5 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors border border-surface-variant/30 dark:border-neutral-800 flex items-center justify-between">
+                    Other
+                    <span class="material-symbols-outlined text-on-surface-variant text-[20px]">transgender</span>
+                </button>
+            </div>
+        </div>
+    </div>
     <script type="module" src="signup.js"></script>
     <script>
         // Set Theme on Load
