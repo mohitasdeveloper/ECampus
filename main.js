@@ -50,6 +50,66 @@ window.optimizeImageUrl = function(url, type = 'feed') {
 
     return url.replace('/upload/', `/upload/${params}/`);
 };
+
+// ========================================================
+// CLIENT-SIDE IMAGE COMPRESSOR (Lightning Fast Uploads)
+// ========================================================
+window.compressImage = function(file, maxSize = 800, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        // We only compress images. If it's a gif or something else, return original.
+        if (!file.type.match(/image.*/)) {
+            resolve(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = event => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                // Calculate new dimensions (maintain perfect aspect ratio)
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = Math.round((height *= maxSize / width));
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = Math.round((width *= maxSize / height));
+                        height = maxSize;
+                    }
+                }
+
+                // Draw the resized image to an invisible canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Compress to WebP format (Incredibly small file size, great quality)
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        reject(new Error('Canvas compression failed'));
+                        return;
+                    }
+                    // Create a brand new, tiny File object to send to the database
+                    const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                        type: 'image/webp',
+                        lastModified: Date.now()
+                    });
+                    resolve(compressedFile);
+                }, 'image/webp', quality);
+            };
+            img.onerror = error => reject(error);
+        };
+        reader.onerror = error => reject(error);
+    });
+};
 // ========================================================
 // PROFESSIONAL SKELETON LOADERS
 // ========================================================
@@ -605,8 +665,9 @@ function updateHeaderAvatar(avatarUrl, fullName) {
 }
 
 // ========================================================
-// UPLOADS & USER ACTIONS
+// UPLOADS & USER ACTIONS (Optimistic UI Engine)
 // ========================================================
+
 function setupEditProfileAvatarUpload() {
     const avatarInput = document.getElementById('edit-avatar-upload-input');
     if (!avatarInput) return;
@@ -616,45 +677,49 @@ function setupEditProfileAvatarUpload() {
         if (!file) return;
 
         const preview = document.getElementById('edit-profile-avatar-preview');
+        const mainProfileAvatar = document.getElementById('my-profile-avatar');
         const originalSrc = preview.src;
 
-        // 1. Optimistic UI: Show image instantly, blur and dim it to simulate "Processing"
-        preview.src = URL.createObjectURL(file);
+        // 1. OPTIMISTIC UI: Show instantly & blur
+        const tempUrl = URL.createObjectURL(file);
+        preview.src = tempUrl;
         preview.style.opacity = '0.5';
         preview.style.filter = 'blur(3px)';
         preview.style.transition = 'all 0.3s ease';
-        showToast('Optimizing image...', 'info');
+        if (mainProfileAvatar) mainProfileAvatar.src = tempUrl; // Sync main UI instantly
 
         try {
-            // 2. Compress the image locally so it uploads in milliseconds
-            const compressedFile = typeof compressImage === 'function' ? await compressImage(file, 500, 0.8) : file;
-
+            // 2. Upload to Cloudinary
             const formData = new FormData();
-            formData.append('file', compressedFile);
+const fileToUpload = typeof compressImage === 'function' ? await compressImage(file, 500, 0.8) : file;
+            formData.append('file', fileToUpload);
             formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
 
-            // 3. Upload to Cloudinary
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
 
-            // 4. Save to Database silently in the background
+            // 3. Save to Database
             await saveUserProfile({ profile_img_url: data.secure_url }, false);
 
-            // 5. Success! Snap the image into crystal clear focus
+            // 4. Snap to crystal clear & sync across app
             preview.src = data.secure_url;
             preview.style.opacity = '1';
             preview.style.filter = 'blur(0px)';
+            if (mainProfileAvatar) mainProfileAvatar.src = data.secure_url;
+            updateHeaderAvatar(data.secure_url, currentUserProfile.full_name);
+
             showToast('Profile picture updated!', 'success');
 
         } catch (error) {
             console.error('Error updating avatar:', error);
             showToast('Failed to update avatar.', 'error');
             
-            // Revert gracefully on failure
+            // Revert gracefully
             preview.src = originalSrc; 
             preview.style.opacity = '1';
             preview.style.filter = 'blur(0px)';
+            if (mainProfileAvatar) mainProfileAvatar.src = originalSrc;
         } finally {
             avatarInput.value = '';
         }
@@ -662,40 +727,60 @@ function setupEditProfileAvatarUpload() {
 }
 
 function setupProfileAvatarUpload() {
-    const avatarContainer = document.getElementById('profile-avatar-container');
     const avatarInput = document.getElementById('avatar-upload-input');
-    if (!avatarContainer || !avatarInput) return;
-
-    avatarContainer.addEventListener('click', () => avatarInput.click());
+    if (!avatarInput) return;
 
     avatarInput.addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        showToast('Uploading new avatar...', 'info');
-        avatarContainer.style.opacity = '0.6';
+        const preview = document.getElementById('my-profile-avatar');
+        const editPreview = document.getElementById('edit-profile-avatar-preview');
+        const originalSrc = preview.src;
+
+        // 1. OPTIMISTIC UI: Show instantly & blur
+        const tempUrl = URL.createObjectURL(file);
+        preview.src = tempUrl;
+        preview.style.opacity = '0.5';
+        preview.style.filter = 'blur(3px)';
+        preview.style.transition = 'all 0.3s ease';
+        if (editPreview) editPreview.src = tempUrl; // Sync edit modal instantly
 
         try {
+            // 2. Upload to Cloudinary
             const formData = new FormData();
-            formData.append('file', file);
+           const fileToUpload = typeof compressImage === 'function' ? await compressImage(file, 500, 0.8) : file;
+            formData.append('file', fileToUpload);
             formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
 
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
 
-            const { error } = await supabase.from('users').update({ profile_img_url: data.secure_url }).eq('auth_user_id', currentUserProfile.auth_user_id);
+            // 3. Save to Database
+            const { error } = await supabase.from('users').update({ profile_img_url: data.secure_url }).eq('id', currentUserProfile.id);
             if (error) throw error;
 
             currentUserProfile.profile_img_url = data.secure_url;
-            document.getElementById('profile-avatar-large').src = data.secure_url;
+
+            // 4. Snap to crystal clear & sync across app
+            preview.src = data.secure_url;
+            preview.style.opacity = '1';
+            preview.style.filter = 'blur(0px)';
+            if (editPreview) editPreview.src = data.secure_url;
             updateHeaderAvatar(data.secure_url, currentUserProfile.full_name);
+
             showToast('Avatar updated successfully!', 'success');
         } catch (error) {
             console.error('Error updating avatar:', error);
             showToast('Failed to update avatar. Please try again.', 'error');
+            
+            // Revert gracefully
+            preview.src = originalSrc;
+            preview.style.opacity = '1';
+            preview.style.filter = 'blur(0px)';
+            if (editPreview) editPreview.src = originalSrc;
         } finally {
-            avatarContainer.style.opacity = '1';
             avatarInput.value = ''; 
         }
     });
