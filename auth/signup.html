@@ -1,235 +1,180 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html class="light" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>Sign Up - ECampus</title>
 
-    <link rel="icon" type="image/png" href="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
-        rel="stylesheet">
-
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Courgette&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
 
     <script>
         tailwind.config = {
+            darkMode: "class",
             theme: {
                 extend: {
-                    fontFamily: {
-                        inter: ['Inter', 'sans-serif'],
-                        jakarta: ['Plus Jakarta Sans', 'sans-serif'],
-                    },
                     colors: {
-                        emerald: {
-                            500: '#10B981',
-                            600: '#059669',
-                        }
-                    }
-                },
-            },
+                        "on-surface-variant": "#3f4a3c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#f8f9fa",
+                        "primary": "#006e1c",
+                        "on-surface": "#191c1d",
+                        "surface-variant": "#e1e3e4",
+                        "error": "#ba1a1a",
+                    },
+                    fontFamily: { sans: ["Inter", "sans-serif"] }
+                }
+            }
         }
     </script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
+    <style type="text/tailwindcss">
+        @layer components {
+            .input-field {
+                @apply w-full bg-surface-variant/20 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[15px] font-medium text-on-surface dark:text-gray-100 outline-none focus:border-primary transition-colors placeholder-on-surface-variant/50 dark:placeholder-gray-500;
             }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .input-label {
+                @apply text-[11px] font-bold text-on-surface-variant dark:text-gray-400 uppercase tracking-wider mb-1.5 block ml-1;
             }
         }
     </style>
 </head>
 
-<body class="bg-white min-h-[100dvh] w-full flex flex-col items-center justify-center py-10 px-6 text-gray-900 fade-in">
+<body class="bg-surface dark:bg-[#121212] text-on-surface dark:text-gray-100 antialiased min-h-screen flex flex-col items-center pt-8 pb-12 px-5">
 
-    <div class="text-center mb-8">
-        <img src="https://i.ibb.co/394HcGWn/Eco-Birla-3-modified.png" class="w-20 h-20 mx-auto mb-3"
-            alt="EcoBirla Logo">
-
-        <h1
-            class="text-3xl font-extrabold bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 text-transparent bg-clip-text pb-1">
+    <div class="w-full max-w-md flex flex-col items-center mb-8">
+        <span style="font-family:'Courgette',cursive;" class="text-[42px] leading-none bg-gradient-to-r from-[#00C853] via-[#00A2FF] to-[#2962FF] bg-clip-text text-transparent select-none mb-2">
             ECampus
-        </h1>
-
-        <p class="text-[10px] font-bold text-slate-500 mt-1 tracking-widest uppercase">
-            A BKBNC DIGITAL INITIATIVE
-        </p>
+        </span>
+        <h1 class="text-2xl font-extrabold tracking-tight">Create an Account</h1>
+        <p class="text-sm text-on-surface-variant dark:text-gray-400 mt-1">Join your campus network</p>
     </div>
 
-    <div class="w-full max-w-[380px]">
+    <div id="auth-message" class="w-full max-w-md"></div>
 
-        <div class="mb-6 text-left">
-            <h2 class="text-2xl font-bold text-gray-900 mb-1">Create Account</h2>
-            <p class="text-sm text-gray-500 font-medium">Join the EcoCampus network today.</p>
+    <form id="signup-form" class="w-full max-w-md space-y-4">
+        
+        <div>
+            <label class="input-label">College</label>
+            <select id="signup-college" class="input-field opacity-70 appearance-none bg-gray-100 dark:bg-neutral-800" disabled>
+                </select>
         </div>
 
-        <div id="auth-message" class="text-red-500 text-sm text-center mb-4 h-5 font-bold empty:hidden"></div>
+        <div id="other-college-container" class="hidden"></div>
 
-        <form id="signup-form" class="space-y-4">
+        <div>
+            <label class="input-label">Full Name</label>
+            <input type="text" id="signup-fullname" class="input-field" placeholder="John Doe" required>
+        </div>
 
-            <div class="space-y-1.5">
-                <label for="signup-college" class="block text-sm font-bold text-gray-800 ml-1">College Name</label>
-                <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="building"
-                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                    </div>
-                    <select id="signup-college" required
-                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none text-sm">
-                        <option value="" disabled selected>Loading Colleges...</option>
+        <div>
+            <label class="input-label">College Email</label>
+            <input type="email" id="signup-email" class="input-field" placeholder="john@student.college.edu" required>
+        </div>
+
+        <div>
+            <label class="input-label">Password</label>
+            <input type="password" id="signup-password" class="input-field" placeholder="••••••••" required minlength="6">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="input-label">Student ID</label>
+                <input type="text" id="signup-studentid" class="input-field" placeholder="12345678" required>
+            </div>
+
+            <div>
+                <label class="input-label">Gender</label>
+                <div class="relative">
+                    <select id="signup-gender" class="input-field appearance-none pr-8" required>
+                        <option value="" disabled selected>Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
                     </select>
+                    <span class="material-symbols-outlined absolute right-3 top-[14px] text-on-surface-variant pointer-events-none">expand_more</span>
                 </div>
             </div>
-
-            <div id="other-college-container" class="space-y-1.5 hidden mt-2">
-                <label for="signup-college-other" class="block text-sm font-bold text-gray-800 ml-1">Type College
-                    Name</label>
-                <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="pencil"
-                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                    </div>
-                    <input type="text" id="signup-college-other" placeholder="Enter your college name"
-                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
-                </div>
-            </div>
-
-            <div class="space-y-1.5">
-                <label for="signup-fullname" class="block text-sm font-bold text-gray-800 ml-1">Full Name</label>
-                <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-lucide="user"
-                            class="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                    </div>
-                    <input type="text" id="signup-fullname" required placeholder="John Doe"
-                        class="block w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                    <label for="signup-email" class="block text-sm font-bold text-gray-800 ml-1">Email</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="mail"
-                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                        </div>
-                        <input type="email" id="signup-email" required placeholder="john@example.com"
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
-                    </div>
-                </div>
-
-                <div class="space-y-1.5">
-                    <label for="signup-password" class="block text-sm font-bold text-gray-800 ml-1">Password</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="lock"
-                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                        </div>
-                        <input type="password" id="signup-password" required placeholder="••••••••"
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                    <label for="signup-studentid" class="block text-sm font-bold text-gray-800 ml-1">Student ID</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="badge"
-                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                        </div>
-                        <input type="text" id="signup-studentid" required placeholder="e.g. 123456"
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
-                    </div>
-                </div>
-
-                <div class="space-y-1.5">
-                    <label for="signup-course" class="block text-sm font-bold text-gray-800 ml-1">Course</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="book-open"
-                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                        </div>
-                        <input type="text" id="signup-course" required placeholder="e.g. SYBCOM"
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                    <label for="signup-mobile" class="block text-sm font-bold text-gray-800 ml-1">Mobile</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="phone"
-                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                        </div>
-                        <input type="tel" id="signup-mobile" required placeholder="1234567890"
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm">
-                    </div>
-                </div>
-
-                <div class="space-y-1.5">
-                    <label for="signup-gender" class="block text-sm font-bold text-gray-800 ml-1">Gender</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="users"
-                                class="h-4 w-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
-                        </div>
-                        <select id="signup-gender" required
-                            class="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium text-sm appearance-none">
-                            <option value="" disabled selected>Select</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <button type="submit" id="signup-button"
-                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center justify-center mt-4">
-                <span class="btn-text text-base">Create Account</span>
-                <i data-lucide="loader-circle" class="w-5 h-5 animate-spin hidden ml-2"></i>
-            </button>
-
-        </form>
-
-        <div class="mt-6 text-center">
-            <p class="text-sm font-medium text-gray-600">
-                Already have an account?
-                <a href="login.html" class="text-emerald-600 hover:text-emerald-700 font-bold transition-colors">Login
-                    here</a>
-            </p>
         </div>
 
+        <div class="relative cursor-pointer" onclick="openSignupCoursePicker()">
+            <label class="input-label">Course</label>
+            <input type="text" id="signup-course" readonly class="input-field pointer-events-none" placeholder="Select your course" required>
+            <span class="material-symbols-outlined absolute right-3 top-[34px] text-on-surface-variant pointer-events-none">chevron_right</span>
+        </div>
+
+        <div>
+            <label class="input-label">Mobile Number</label>
+            <input type="tel" id="signup-mobile" class="input-field" placeholder="+91 98765 43210" required>
+        </div>
+
+        <button type="submit" id="signup-button" class="w-full bg-primary text-white py-4 rounded-xl font-bold text-[15px] active:scale-95 transition-all shadow-md shadow-primary/20 flex justify-center items-center mt-8">
+            <span class="btn-text">Create Account</span>
+            <span class="material-symbols-outlined hidden animate-spin">progress_activity</span>
+        </button>
+    </form>
+
+    <div class="mt-8 text-sm text-on-surface-variant dark:text-gray-400">
+        Already have an account? <a href="login.html" class="font-bold text-primary hover:underline">Log In</a>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="signup.js" type="module"></script>
+    <div id="modal-signup-course-picker" class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-md mx-auto rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] flex flex-col max-h-[85vh]">
+            <button type="button" onclick="closeSignupCoursePicker()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold text-on-surface dark:text-gray-100 shrink-0 mb-4">Select Course</h3>
+            
+            <div class="flex-1 overflow-y-auto pr-2 hide-scrollbar">
+                
+                <div class="mb-6">
+                    <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 sticky top-0 bg-surface dark:bg-[#1e1e1e] py-1 z-10">First Year (FY)</h4>
+                    <div class="space-y-1">
+                        <button type="button" onclick="selectSignupCourse('FY B.A')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.A</button>
+                        <button type="button" onclick="selectSignupCourse('FY B.Sc')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Sc</button>
+                        <button type="button" onclick="selectSignupCourse('FY B.Com')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com</button>
+                        <button type="button" onclick="selectSignupCourse('FY B.Com (Management Studies)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com (Management Studies)</button>
+                        <button type="button" onclick="selectSignupCourse('FY B.Com (Accounting & Finance)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com (Accounting & Finance)</button>
+                        <button type="button" onclick="selectSignupCourse('FY B.Com (Financial Markets)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Com (Financial Markets)</button>
+                        <button type="button" onclick="selectSignupCourse('FY B.Sc (Computer Science)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">FY B.Sc (Computer Science)</button>
+                    </div>
+                </div>
 
+                <div class="mb-6">
+                    <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 sticky top-0 bg-surface dark:bg-[#1e1e1e] py-1 z-10">Second Year (SY)</h4>
+                    <div class="space-y-1">
+                        <button type="button" onclick="selectSignupCourse('SY B.A.')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.A.</button>
+                        <button type="button" onclick="selectSignupCourse('SY B.Sc')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Sc</button>
+                        <button type="button" onclick="selectSignupCourse('SY B.Com')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com</button>
+                        <button type="button" onclick="selectSignupCourse('SY B.Com (Management Studies)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com (Management Studies)</button>
+                        <button type="button" onclick="selectSignupCourse('SY B.Com (Accounting & Finance)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com (Accounting & Finance)</button>
+                        <button type="button" onclick="selectSignupCourse('SY B.Com (Financial Markets)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Com (Financial Markets)</button>
+                        <button type="button" onclick="selectSignupCourse('SY B.Sc (Computer Science)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">SY B.Sc (Computer Science)</button>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 sticky top-0 bg-surface dark:bg-[#1e1e1e] py-1 z-10">Third Year (TY)</h4>
+                    <div class="space-y-1">
+                        <button type="button" onclick="selectSignupCourse('TY B.A')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.A</button>
+                        <button type="button" onclick="selectSignupCourse('TY B.Sc')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Sc</button>
+                        <button type="button" onclick="selectSignupCourse('TY B.Com')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com</button>
+                        <button type="button" onclick="selectSignupCourse('TY B.Com (Management Studies)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com (Management Studies)</button>
+                        <button type="button" onclick="selectSignupCourse('TY B.Com (Accounting & Finance)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com (Accounting & Finance)</button>
+                        <button type="button" onclick="selectSignupCourse('TY B.Com (Financial Markets)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Com (Financial Markets)</button>
+                        <button type="button" onclick="selectSignupCourse('TY B.Sc (Computer Science)')" class="w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium text-on-surface dark:text-gray-100 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 active:bg-surface-variant/50 transition-colors">TY B.Sc (Computer Science)</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="signup.js"></script>
     <script>
-        lucide.createIcons();
+        // Set Theme on Load
+        const isDarkMode = localStorage.getItem('theme') === 'dark';
+        document.documentElement.classList.toggle('dark', isDarkMode);
     </script>
 </body>
-
 </html>
