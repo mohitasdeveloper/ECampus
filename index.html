@@ -241,8 +241,8 @@
         <div id="settings-sidebar" class="fixed inset-0 z-[160] hidden justify-end transition-opacity opacity-0 bg-surface dark:bg-[#121212]">
             <div id="settings-sidebar-content" class="w-full max-w-screen-md mx-auto h-full flex flex-col transition-transform duration-300 translate-x-full shadow-2xl bg-surface dark:bg-[#121212]">
                 
-                <div class="h-16 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 safe-pt">
-                    <button onclick="closeSettingsSidebar()" class="p-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+               <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+                    <button onclick="closeSettingsSidebar()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
                         <span class="material-symbols-outlined text-[28px]">arrow_back</span>
                     </button>
                     <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Settings</h2>
@@ -918,12 +918,12 @@
 <div id="modal-notifications" class="fixed inset-0 z-[150] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
         <div class="w-full max-w-screen-md mx-auto flex flex-col h-full">
             
-            <div class="modal-header-safe flex items-center justify-between px-5 border-b border-surface-variant/40 dark:border-neutral-800 shrink-0 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl">
+           <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 flex items-center justify-between px-5 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl shrink-0">
                 <div class="flex items-center gap-1">
-                    <button onclick="closeNotifications()" class="p-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex justify-center items-center">
+                    <button onclick="closeNotifications()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex justify-center items-center">
                         <span class="material-symbols-outlined text-[24px]">arrow_back</span>
                     </button>
-                    <h2 class="text-xl font-extrabold ml-1 text-on-surface dark:text-gray-100">Activity</h2>
+                    <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Activity</h2>
                 </div>
                 <button id="mark-read-btn" class="text-[13px] font-bold text-primary px-3 py-1.5 hover:bg-primary/10 rounded-lg transition-colors cursor-pointer hidden">
                     Mark all read
@@ -948,8 +948,8 @@
         </div>
     </div>
 
-   <div id="modal-single-post" class="fixed inset-0 z-[170] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
-        <div class="modal-header-safe flex items-center px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
+  <div id="modal-single-post" class="fixed inset-0 z-[170] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
+        <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 flex items-center px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl shrink-0">
             <button onclick="closeSinglePostView()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface dark:text-gray-100">
                 <span class="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
