@@ -892,7 +892,7 @@ function playUserStories(userIndex, postIndex = 0) {
     
     const nameContainer = document.getElementById('hotpost-viewer-name');
     if (isMyStory) {
-        nameContainer.innerHTML = `Your Story`;
+        nameContainer.innerHTML = `Your Hotpost`;
     } else {
         nameContainer.innerHTML = `${userData.user.full_name} ${getTickHtmlLocal(userData.user.tick_type)}`;
     }
