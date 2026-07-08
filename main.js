@@ -1319,7 +1319,8 @@ function setupAppBackButton() {
             { id: 'modal-profile-public', close: () => window.closeProfileModals() },
             { id: 'modal-profile-private', close: () => window.closeProfileModals() },
             { id: 'modal-hotpost-camera', close: () => document.getElementById('close-hotpost-camera-btn')?.click() },
-            { id: 'modal-view-hotpost', close: () => document.getElementById('close-hotpost-viewer-btn')?.click() }
+            { id: 'modal-view-hotpost', close: () => document.getElementById('close-hotpost-viewer-btn')?.click() },
+            { id: 'modal-course-picker', close: () => window.closeCoursePicker() }
         ];
 
         // 2. Scan the DOM to see if ANY of these modals are currently open
@@ -1374,3 +1375,23 @@ function setupAppBackButton() {
         }
     });
 }
+// ========================================================
+// CUSTOM COURSE PICKER ENGINE
+// ========================================================
+window.openCoursePicker = function() {
+    const picker = document.getElementById('modal-course-picker');
+    picker.classList.replace('hidden', 'flex');
+};
+
+window.closeCoursePicker = function() {
+    const picker = document.getElementById('modal-course-picker');
+    picker.classList.replace('flex', 'hidden');
+};
+
+window.selectCourse = function(courseName) {
+    // 1. Set the input value
+    document.getElementById('edit-profile-course').value = courseName;
+    
+    // 2. Close the modal
+    closeCoursePicker();
+};
