@@ -1067,6 +1067,37 @@
                 </div>
         </div>
     </div>
+
+<!-- ========================================== -->
+    <!-- NATIVE PROFILE PEEK MODAL (Long Press)     -->
+    <!-- ========================================== -->
+    <div id="modal-profile-peek" class="fixed inset-0 z-[400] bg-black/60 backdrop-blur-md hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-200">
+        <!-- Background Overlay to close -->
+        <div class="absolute inset-0 z-0" onclick="closeProfilePeek()"></div>
+        
+        <!-- The Floating Card -->
+        <div id="peek-card" class="bg-surface dark:bg-[#1e1e1e] rounded-[32px] p-6 w-full max-w-[300px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex flex-col items-center transform scale-90 transition-transform duration-300 z-10">
+            
+            <img id="peek-avatar" src="" class="w-28 h-28 rounded-full object-cover border-4 border-surface-container-lowest dark:border-neutral-800 shadow-xl mb-4">
+            
+            <h3 id="peek-name" class="text-[18px] font-extrabold text-on-surface dark:text-gray-100 flex items-center justify-center gap-1 mb-1 tracking-tight text-center">
+                Loading...
+            </h3>
+            <p id="peek-course" class="text-[12px] font-bold text-primary uppercase tracking-wider mb-6 text-center">
+                Fetching details...
+            </p>
+            
+            <div class="flex flex-col gap-3 w-full">
+                <button id="peek-view-profile-btn" class="w-full bg-primary text-white py-3.5 rounded-2xl font-bold active:scale-95 transition-transform shadow-lg shadow-primary/25 flex justify-center items-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">person</span> View Profile
+                </button>
+                <button onclick="closeProfilePeek()" class="w-full bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-3.5 rounded-2xl font-bold active:scale-95 transition-transform">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- BOTTOM NAV -->
  <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pt-3 bg-surface/80 dark:bg-[#121212]/90 backdrop-blur-2xl rounded-t-[32px] border-t border-surface-variant/40 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.2)] z-[40] safe-pb">
         
