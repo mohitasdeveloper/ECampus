@@ -144,7 +144,9 @@ function setupThemeToggle() {
 function getTickHtmlLocal(tickType) {
     if (!tickType || tickType === 'none') return '';
     const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-    return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+    
+    // Added shrink-0, increased size to 16px, and nudged -top-[1px] for perfect vertical alignment
+    return `<span class="material-symbols-outlined text-[16px] shrink-0 relative -top-[1px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
 }
 
 // ========================================================
