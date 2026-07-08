@@ -1021,6 +1021,10 @@ function switchTab(tabId) {
     if (tabId === "dashboard") header.classList.remove("hidden");
     else header.classList.add("hidden");
 
+    // FAILSAVE: Force the bottom navbar to unhide every time you switch tabs!
+    const bottomNav = document.querySelector('nav');
+    if (bottomNav) bottomNav.classList.remove('hidden');
+
     document.querySelectorAll(".nav-item").forEach(btn => {
         btn.classList.remove("bg-primary", "text-white");
         btn.classList.add("text-on-surface-variant", "dark:text-gray-400");
