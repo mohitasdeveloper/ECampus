@@ -746,24 +746,20 @@
             <div class="p-5 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface dark:bg-[#1e1e1e]">
                 <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-4">Add New Link</h4>
                 <div class="flex flex-col gap-3">
-                    <div class="flex border border-surface-variant/50 dark:border-neutral-700 rounded-xl overflow-hidden focus-within:border-primary transition-colors bg-surface-variant/10 dark:bg-neutral-900/50">
-                      <select id="add-social-platform" class="bg-transparent border-none p-3.5 text-[14px] font-bold text-on-surface dark:text-gray-100 outline-none w-1/3 border-r border-surface-variant/50 dark:border-neutral-700 focus:ring-0 cursor-pointer appearance-none">
-                            <option value="instagram">Instagram</option>
-                            <option value="snapchat">Snapchat</option>
-                            <option value="whatsapp">WhatsApp</option>
-                            <option value="linkedin">LinkedIn</option>
-                            <option value="twitter">X (Twitter)</option>
-                            <option value="spotify">Spotify</option>
-                            <option value="telegram">Telegram</option>
-                            <option value="discord">Discord</option>
-                            <option value="reddit">Reddit</option>
-                            <option value="github">GitHub</option>
-                            <option value="youtube">YouTube</option>
-                            <option value="website">Website</option>
-                        </select>
-                        <input type="url" id="add-social-url" placeholder="Paste URL here..." class="flex-1 bg-transparent border-none p-3.5 text-[14px] font-medium text-on-surface dark:text-gray-100 outline-none focus:ring-0 placeholder-on-surface-variant/50">
+                    <div onclick="openSocialPicker()" class="flex items-center justify-between bg-surface-variant/10 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 cursor-pointer hover:border-primary/50 active:scale-[0.98] transition-all">
+                        <div class="flex items-center gap-3">
+                            <div id="selected-social-icon-box" class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                                <i id="selected-social-icon" class="fa-brands fa-instagram text-[16px]"></i>
+                            </div>
+                            <span id="selected-social-name" class="font-bold text-[14px] text-on-surface dark:text-gray-100">Instagram</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">expand_more</span>
                     </div>
-                    <button onclick="addSocialLinkTemp()" class="w-full bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-3.5 rounded-xl font-bold text-[14px] flex justify-center items-center gap-1.5 active:scale-95 transition-transform mt-1">
+                    
+                    <input type="hidden" id="add-social-platform" value="instagram">
+                    <input type="text" id="add-social-url" placeholder="Username (e.g. johndoe)" class="w-full bg-surface-variant/10 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] font-medium text-on-surface dark:text-gray-100 outline-none focus:border-primary transition-colors placeholder-on-surface-variant/50">
+                    
+                    <button onclick="addSocialLinkTemp()" class="w-full bg-surface-variant/50 dark:bg-neutral-800 text-on-surface dark:text-gray-100 py-3.5 rounded-xl font-bold text-[14px] flex justify-center items-center gap-1.5 active:scale-95 transition-transform mt-1 hover:text-primary">
                         <span class="material-symbols-outlined text-[20px]">add</span> Add to Profile
                     </button>
                 </div>
@@ -1060,7 +1056,17 @@
             </div>
         </div>
     </div>
-
+<div id="modal-social-picker" class="fixed inset-0 z-[180] bg-black/60 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full max-w-screen-md mx-auto rounded-t-[32px] p-6 pb-8 relative animate-[slideUp_0.3s_ease-out] flex flex-col max-h-[85vh] shadow-[0_-10px_60px_rgba(0,0,0,0.5)]">
+            <button onclick="closeSocialPicker()" class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold text-on-surface dark:text-gray-100 shrink-0 mb-4">Select Platform</h3>
+            
+            <div id="social-picker-list" class="flex-1 overflow-y-auto pr-2 hide-scrollbar grid grid-cols-1 gap-2">
+                </div>
+        </div>
+    </div>
     <!-- BOTTOM NAV -->
  <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pt-3 bg-surface/80 dark:bg-[#121212]/90 backdrop-blur-2xl rounded-t-[32px] border-t border-surface-variant/40 dark:border-neutral-800 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.2)] z-[40] safe-pb">
         
