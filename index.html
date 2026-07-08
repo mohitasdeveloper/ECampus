@@ -302,9 +302,9 @@
     <!-- CREATE POST FULL-SCREEN VIEW -->
     <div id="view-create-post"
         class="fixed inset-0 z-[150] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-y-full">
-        <!-- Header -->
+       <!-- Header -->
         <div
-            class="h-16 flex items-center justify-between px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
+            class="modal-header-safe flex items-center justify-between px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
             <button onclick="closeCreatePostView()"
                 class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface dark:text-gray-100">
                 <span class="material-symbols-outlined text-[24px]">close</span>
@@ -918,7 +918,7 @@
 <div id="modal-notifications" class="fixed inset-0 z-[150] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
         <div class="w-full max-w-screen-md mx-auto flex flex-col h-full">
             
-            <div class="h-16 flex items-center justify-between px-5 border-b border-surface-variant/40 dark:border-neutral-800 shrink-0 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl safe-pt">
+            <div class="modal-header-safe flex items-center justify-between px-5 border-b border-surface-variant/40 dark:border-neutral-800 shrink-0 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl">
                 <div class="flex items-center gap-1">
                     <button onclick="closeNotifications()" class="p-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex justify-center items-center">
                         <span class="material-symbols-outlined text-[24px]">arrow_back</span>
@@ -948,8 +948,8 @@
         </div>
     </div>
 
-    <div id="modal-single-post" class="fixed inset-0 z-[170] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
-        <div class="h-16 flex items-center px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
+   <div id="modal-single-post" class="fixed inset-0 z-[170] bg-surface dark:bg-[#121212] hidden flex-col transition-transform duration-300 translate-x-full">
+        <div class="modal-header-safe flex items-center px-4 border-b border-surface-variant/40 dark:border-neutral-800 bg-surface/80 dark:bg-[#121212]/80 backdrop-blur-xl shrink-0">
             <button onclick="closeSinglePostView()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface dark:text-gray-100">
                 <span class="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
