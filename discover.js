@@ -141,3 +141,7 @@ function renderPopularUsers(users) {
         </div>
     `).join('');
 }
+window.refreshDiscover = () => {
+    fetchDiscoverUsers();
+    fetchPopularUsers();
+};
