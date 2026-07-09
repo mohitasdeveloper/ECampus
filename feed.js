@@ -785,3 +785,4 @@ async function submitComment(postId) {
     }
     btn.disabled = false;
 }
+window.refreshMainFeed = fetchPosts;
