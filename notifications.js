@@ -243,29 +243,44 @@ function renderNotificationItem(notif) {
 }
 
 async function handleNotificationClick(notif, element) {
+    // 1. Instantly mark as visually read
     element.classList.remove('bg-primary/5', 'dark:bg-primary/10');
     element.classList.add('bg-surface', 'dark:bg-[#121212]');
 
     if (notif.type.startsWith('post_')) {
-        window.openSinglePostView(notif.target_id);
+        closeNotifications(); // Smoothly hide the tray first
+        setTimeout(() => window.openSinglePostView(notif.target_id), 150);
     } 
     else if (notif.type.startsWith('hotpost_')) {
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { data } = await supabase.from('hotposts').select('id')
-            .eq('user_id', currentUser.id).eq('is_deleted', false).gt('created_at', twentyFourHoursAgo).limit(1);
         
-        if (data && data.length > 0) {
-            window.showMyHotposts(); 
+        // 2. Safely check if THIS specific Hotpost is still alive
+        const { data } = await supabase.from('hotposts').select('id')
+            .eq('id', notif.target_id)
+            .eq('is_deleted', false)
+            .gt('created_at', twentyFourHoursAgo)
+            .maybeSingle(); // Prevents console errors if it's expired
+        
+        if (data) {
+            // 3. Close the notification panel so the story modal takes over the screen
+            closeNotifications();
+            
+            // 4. Wait a split second for the tray to slide away, then open the Hotpost
+            setTimeout(() => {
+                if (typeof window.showMyHotposts === 'function') {
+                    window.showMyHotposts(notif.target_id); 
+                }
+            }, 150);
+            
         } else {
-            showToast('This Hotpost has expired.', 'info');
+            showToast('This Hotpost has expired or been deleted.', 'info');
         }
     } 
     else if (notif.type === 'connection_accepted') {
         closeNotifications();
-        window.viewUserProfile(notif.sender.id);
+        setTimeout(() => window.viewUserProfile(notif.sender.id), 150);
     }
 }
-
 async function handleAcceptRequest(userId, btn) {
     await handleConnectionAction(userId, 'accept', btn);
     fetchNotifications(); 
