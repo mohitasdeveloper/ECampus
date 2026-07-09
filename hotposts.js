@@ -1137,4 +1137,7 @@ async function executeDeleteHotpost() {
 
 window.openHotpostCamera = openCameraModal;
 window.openStoryDetailsModal = openActivityPanel;
-window.showMyHotposts = showMyHotposts;
+
+// Expose the correct viewer functions globally so notifications can trigger them
+window.openHotpostViewer = openHotpostViewer;
+window.showMyHotposts = () => openHotpostViewer(currentUser.id);
