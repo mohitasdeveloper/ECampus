@@ -25,6 +25,7 @@ export function initNotifications(user) {
 function setupEventListeners() {
     const notifBtn = document.getElementById('notif-btn');
     if (notifBtn) {
+        // Use cloneNode to remove old event listeners
         const newBtn = notifBtn.cloneNode(true);
         notifBtn.parentNode.replaceChild(newBtn, notifBtn);
         newBtn.addEventListener('click', openNotifications);
@@ -61,7 +62,7 @@ function setupEventListeners() {
 }
 
 // --------------------------------------------------
-// PUSH NOTIFICATIONS (Clean Production Version)
+// PUSH NOTIFICATIONS ENGINE
 // --------------------------------------------------
 async function setupPushNotifications() {
     const Cap = window.Capacitor;
@@ -77,28 +78,38 @@ async function setupPushNotifications() {
         }
         if (permStatus.receive !== 'granted') return;
 
-        // Register natively
         await PushNotifications.register();
 
+        // Handle Registration
         await PushNotifications.addListener('registration', async (token) => {
             await saveTokenToSupabase(token.value);
         });
 
+        // Handle Received Notifications
         await PushNotifications.addListener('pushNotificationReceived', (notification) => {
             showToast(`${notification.title}: ${notification.body}`, 'info');
             fetchNotifications(); 
         });
 
-        await PushNotifications.addListener('pushNotificationActionPerformed', () => {
-            openNotifications();
+        // Handle Tap (Opening app from notification)
+        await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+            const data = notification.notification.data;
+            if (data && data.type) {
+                // Save to localStorage for the Pending Route Engine in main.js
+                localStorage.setItem('pending_notification_route', JSON.stringify(data));
+                window.location.reload(); // Force refresh to trigger the route engine
+            } else {
+                openNotifications();
+            }
         });
 
     } catch (err) {
-        console.error("Push Notifications skipped:", err);
+        console.error("Push Notifications init failed:", err);
     }
 }
 
 async function saveTokenToSupabase(token) {
+    if (!currentUser) return;
     try {
         await supabase.from('users').update({ fcm_token: token }).eq('id', currentUser.id);
     } catch (err) {
@@ -119,10 +130,10 @@ export function openNotifications() {
     setTimeout(() => modal.classList.remove('translate-x-full'), 10);
     
     fetchNotifications();
+    markAllAsReadSilent(); 
 
     const badge = document.getElementById('notif-badge');
     if (badge) badge.classList.add('hidden');
-    markAllAsReadSilent(); 
 }
 
 export function closeNotifications() {
@@ -143,20 +154,25 @@ function switchNotifTab(tabName) {
 
     ['all', 'requests'].forEach(t => {
         const btn = document.getElementById(`notif-tab-${t}`);
-        btn.classList.remove('border-primary', 'text-primary');
-        btn.classList.add('border-transparent', 'text-on-surface-variant', 'dark:text-gray-400');
+        if(btn) {
+            btn.classList.remove('border-primary', 'text-primary');
+            btn.classList.add('border-transparent', 'text-on-surface-variant', 'dark:text-gray-400');
+        }
     });
 
     const activeBtn = document.getElementById(`notif-tab-${tabName}`);
-    activeBtn.classList.add('border-primary', 'text-primary');
-    activeBtn.classList.remove('border-transparent', 'text-on-surface-variant', 'dark:text-gray-400');
+    if(activeBtn) {
+        activeBtn.classList.add('border-primary', 'text-primary');
+        activeBtn.classList.remove('border-transparent', 'text-on-surface-variant', 'dark:text-gray-400');
+    }
 }
 
 async function fetchNotifications() {
+    if (!currentUser) return;
     try {
         const { data, error } = await supabase
             .from('notifications')
-            .select('id, type, message, target_id, is_read, created_at, sender:sender_id(id, full_name, profile_img_url)')
+            .select('id, type, message, target_id, sender_id, is_read, created_at, sender:sender_id(id, full_name, profile_img_url)')
             .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -168,21 +184,16 @@ async function fetchNotifications() {
         const general = data.filter(n => n.type !== 'connection_request');
 
         renderList('notifications-list-all', general, "No recent activity.");
-        renderList('notifications-list-requests', requests, "No pending connection requests.");
+        renderList('notifications-list-requests', requests, "No pending requests.");
 
-        const modal = document.getElementById('modal-notifications');
-        if (modal && modal.classList.contains('hidden')) {
-            const unreadCount = data.filter(n => !n.is_read).length;
-            const badge = document.getElementById('notif-badge');
-            if (badge) badge.classList.toggle('hidden', unreadCount === 0);
-        }
+        const unreadCount = data.filter(n => !n.is_read).length;
+        const badge = document.getElementById('notif-badge');
+        if (badge) badge.classList.toggle('hidden', unreadCount === 0);
 
         const reqBadge = document.getElementById('requests-badge');
-        if (requests.length > 0) {
+        if (reqBadge) {
             reqBadge.textContent = requests.length;
-            reqBadge.classList.remove('hidden');
-        } else {
-            reqBadge.classList.add('hidden');
+            reqBadge.classList.toggle('hidden', requests.length === 0);
         }
 
     } catch (error) {
@@ -201,7 +212,7 @@ function renderList(containerId, data, emptyMessage) {
 }
 
 function renderNotificationItem(notif) {
-    const sender = notif.sender;
+    const sender = notif.sender || { full_name: 'Unknown User', profile_img_url: '' };
     const ui = iconMap[notif.type] || { icon: 'notifications', color: 'text-gray-500', bg: 'bg-gray-100' };
     const isUnread = !notif.is_read ? 'bg-primary/5 dark:bg-primary/10' : 'bg-surface dark:bg-[#121212]';
 
@@ -209,9 +220,9 @@ function renderNotificationItem(notif) {
     let actionButtons = '';
 
     if (notif.type === 'post_like') textContent = 'liked your post.';
-    else if (notif.type === 'post_comment') textContent = `commented: "<span class="text-on-surface-variant italic">${notif.message}</span>"`;
+    else if (notif.type === 'post_comment') textContent = `commented: "<span class="text-on-surface-variant italic">${notif.message || ''}</span>"`;
     else if (notif.type === 'hotpost_like') textContent = 'liked your Hotpost.';
-    else if (notif.type === 'hotpost_reply') textContent = `replied to your Hotpost: "<span class="text-on-surface-variant italic">${notif.message}</span>"`;
+    else if (notif.type === 'hotpost_reply') textContent = `replied to your Hotpost: "<span class="text-on-surface-variant italic">${notif.message || ''}</span>"`;
     else if (notif.type === 'connection_accepted') textContent = 'accepted your connection request.';
     else if (notif.type === 'connection_request') {
         textContent = 'sent you a connection request.';
@@ -243,49 +254,26 @@ function renderNotificationItem(notif) {
 }
 
 async function handleNotificationClick(notif, element) {
-    // 1. Instantly mark as visually read
     element.classList.remove('bg-primary/5', 'dark:bg-primary/10');
     element.classList.add('bg-surface', 'dark:bg-[#121212]');
 
     if (notif.type.startsWith('post_')) {
-        closeNotifications(); // Smoothly hide the tray first
+        closeNotifications();
         setTimeout(() => window.openSinglePostView(notif.target_id), 150);
     } 
     else if (notif.type.startsWith('hotpost_')) {
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        
-        // 1. Safely check if you have ANY active Hotposts left to show
-        const { data } = await supabase.from('hotposts').select('id')
-            .eq('user_id', currentUser.id)
-            .eq('is_deleted', false)
-            .gt('created_at', twentyFourHoursAgo)
-            .limit(1);
-        
-        if (data && data.length > 0) {
-            // 2. Smoothly close the notifications tray first
-            closeNotifications();
-            
-            // 3. Wait 150ms for the tray to slide out, then open your Hotpost
-            setTimeout(() => {
-                // Call it safely without forcing an argument that might break it
-                if (typeof window.showMyHotposts === 'function') {
-                    window.showMyHotposts(); 
-                } else if (typeof window.openHotpostViewer === 'function') {
-                    window.openHotpostViewer(currentUser.id); // Fallback alternative
-                } else {
-                    showToast('Viewer function not linked. Check hotposts.js', 'error');
-                }
-            }, 150);
-            
-        } else {
-            showToast('This Hotpost has expired or been deleted.', 'info');
-        }
-    }
-    else if (notif.type === 'connection_accepted') {
         closeNotifications();
-        setTimeout(() => window.viewUserProfile(notif.sender.id), 150);
+        setTimeout(() => {
+            if (typeof window.showMyHotposts === 'function') window.showMyHotposts();
+            else if (typeof window.openHotpostViewer === 'function') window.openHotpostViewer(currentUser.id);
+        }, 150);
+    }
+    else if (notif.type === 'connection_accepted' || notif.type === 'connection_request') {
+        closeNotifications();
+        setTimeout(() => window.viewUserProfile(notif.sender_id), 150);
     }
 }
+
 async function handleAcceptRequest(userId, btn) {
     await handleConnectionAction(userId, 'accept', btn);
     fetchNotifications(); 
@@ -297,6 +285,7 @@ async function handleDeclineRequest(userId, btn) {
 }
 
 async function markAllAsReadSilent() {
+    if (!currentUser) return;
     try {
         await supabase.from('notifications').update({ is_read: true })
             .eq('user_id', currentUser.id).eq('is_read', false);
