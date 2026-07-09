@@ -1141,3 +1141,4 @@ window.openStoryDetailsModal = openActivityPanel;
 // Expose the correct viewer functions globally so notifications can trigger them
 window.openHotpostViewer = openHotpostViewer;
 window.showMyHotposts = () => openHotpostViewer(currentUser.id);
+window.refreshHotposts = fetchHotposts;
