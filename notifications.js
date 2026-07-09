@@ -254,28 +254,33 @@ async function handleNotificationClick(notif, element) {
     else if (notif.type.startsWith('hotpost_')) {
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
-        // 2. Safely check if THIS specific Hotpost is still alive
+        // 1. Safely check if you have ANY active Hotposts left to show
         const { data } = await supabase.from('hotposts').select('id')
-            .eq('id', notif.target_id)
+            .eq('user_id', currentUser.id)
             .eq('is_deleted', false)
             .gt('created_at', twentyFourHoursAgo)
-            .maybeSingle(); // Prevents console errors if it's expired
+            .limit(1);
         
-        if (data) {
-            // 3. Close the notification panel so the story modal takes over the screen
+        if (data && data.length > 0) {
+            // 2. Smoothly close the notifications tray first
             closeNotifications();
             
-            // 4. Wait a split second for the tray to slide away, then open the Hotpost
+            // 3. Wait 150ms for the tray to slide out, then open your Hotpost
             setTimeout(() => {
+                // Call it safely without forcing an argument that might break it
                 if (typeof window.showMyHotposts === 'function') {
-                    window.showMyHotposts(notif.target_id); 
+                    window.showMyHotposts(); 
+                } else if (typeof window.openHotpostViewer === 'function') {
+                    window.openHotpostViewer(currentUser.id); // Fallback alternative
+                } else {
+                    showToast('Viewer function not linked. Check hotposts.js', 'error');
                 }
             }, 150);
             
         } else {
             showToast('This Hotpost has expired or been deleted.', 'info');
         }
-    } 
+    }
     else if (notif.type === 'connection_accepted') {
         closeNotifications();
         setTimeout(() => window.viewUserProfile(notif.sender.id), 150);
