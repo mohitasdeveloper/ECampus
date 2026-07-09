@@ -1137,3 +1137,4 @@ async function executeDeleteHotpost() {
 
 window.openHotpostCamera = openCameraModal;
 window.openStoryDetailsModal = openActivityPanel;
+window.showMyHotposts = showMyHotposts;
