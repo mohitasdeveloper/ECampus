@@ -48,3 +48,4 @@ function renderUpdates(updates) {
         </div>
     `).join('');
 }
+window.refreshUpdates = fetchUpdates;
