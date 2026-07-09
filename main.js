@@ -14,49 +14,164 @@ let currentUserProfile = null;
 // SPLASH SCREEN MANAGER
 // ========================================================
 window.addEventListener('load', () => {
-    // We add a tiny 600ms delay to make it feel deliberate and premium,
-    // ensuring all database content is injected and fonts are perfectly rendered.
     setTimeout(() => {
         const splash = document.getElementById('app-splash-screen');
         if (splash) {
-            // Fade it out
             splash.style.opacity = '0';
-            
-            // Re-enable scrolling on the main body
             document.body.classList.remove('overflow-hidden');
-            
-            // Remove it completely from the DOM after the fade animation finishes
             setTimeout(() => {
                 splash.remove();
             }, 500); 
         }
     }, 600); 
 });
+
+// ========================================================
+// CONTEXT-AWARE PULL-TO-REFRESH ENGINE
+// ========================================================
+function initPullToRefresh() {
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    let isRefreshing = false;
+    const threshold = 120; // Distance to trigger refresh
+    const ptrContainer = document.getElementById('ptr-container');
+    const ptrSpinner = document.getElementById('ptr-spinner');
+    const ptrText = document.getElementById('ptr-text');
+
+    if (!ptrContainer) return;
+
+    document.addEventListener('touchstart', (e) => {
+        // 1. Only allow PTR if scrolled to the absolute top
+        if (window.scrollY > 5) return; 
+        
+        // 2. Prevent PTR if ANY full-screen modal or camera is open
+        const hasOpenModal = Array.from(document.querySelectorAll('[id^="modal-"]')).some(m => !m.classList.contains('hidden') && !m.classList.contains('translate-x-full') && !m.classList.contains('translate-y-full') && !m.classList.contains('opacity-0'));
+        const hasOpenView = Array.from(document.querySelectorAll('[id^="view-create-post"]')).some(m => !m.classList.contains('hidden') && !m.classList.contains('translate-y-full'));
+        
+        if (hasOpenModal || hasOpenView) return;
+
+        startY = e.touches[0].clientY;
+        isDragging = true;
+        
+        ptrContainer.style.transition = 'none';
+        ptrSpinner.classList.remove('ptr-loading-icon');
+        ptrText.textContent = "Pull to refresh";
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging || isRefreshing) return;
+        
+        currentY = e.touches[0].clientY;
+        const pullDistance = currentY - startY;
+
+        // If pulling downwards
+        if (pullDistance > 0) {
+            document.body.classList.add('ptr-dragging-active');
+            
+            // Apply physics resistance
+            const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
+            
+            ptrContainer.style.transform = `translate(-50%, calc(-150% + ${visualDistance}px))`;
+            ptrContainer.style.opacity = Math.min(visualDistance / threshold, 1);
+            ptrSpinner.style.transform = `rotate(${visualDistance * 2}deg)`; // Spin on drag
+
+            if (visualDistance >= threshold) {
+                ptrText.textContent = "Release to refresh";
+                // Gentle native haptic bump
+                if (window.navigator.vibrate && ptrText.dataset.vibrated !== 'true') {
+                    window.navigator.vibrate(10);
+                    ptrText.dataset.vibrated = 'true';
+                }
+            } else {
+                ptrText.textContent = "Pull to refresh";
+                ptrText.dataset.vibrated = 'false';
+            }
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', async () => {
+        if (!isDragging) return;
+        isDragging = false;
+        document.body.classList.remove('ptr-dragging-active');
+        
+        const pullDistance = currentY - startY;
+        const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
+
+        ptrContainer.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+        if (visualDistance >= threshold && !isRefreshing) {
+            isRefreshing = true;
+            ptrContainer.style.transform = `translate(-50%, 20px)`; 
+            ptrSpinner.classList.add('ptr-loading-icon');
+            ptrText.textContent = "Refreshing...";
+
+            // Find Active Tab & Execute Correct Refresh Function
+            await executeContextualRefresh();
+
+            // Hide after refresh completes
+            ptrContainer.style.transform = `translate(-50%, -150%)`;
+            ptrContainer.style.opacity = '0';
+            setTimeout(() => {
+                isRefreshing = false;
+                ptrSpinner.classList.remove('ptr-loading-icon');
+            }, 300);
+
+        } else {
+            // Snap back if they didn't pull far enough
+            ptrContainer.style.transform = `translate(-50%, -150%)`;
+            ptrContainer.style.opacity = '0';
+        }
+    }, { passive: true });
+}
+
+async function executeContextualRefresh() {
+    const activeTab = document.querySelector('.tab-content:not(.hidden)');
+    if (!activeTab) return;
+
+    try {
+        if (activeTab.id === 'view-dashboard') {
+            if (typeof window.refreshMainFeed === 'function') await window.refreshMainFeed();
+            if (typeof window.refreshHotposts === 'function') await window.refreshHotposts();
+        } 
+        else if (activeTab.id === 'view-search') {
+            if (typeof window.refreshDiscover === 'function') await window.refreshDiscover();
+        }
+        else if (activeTab.id === 'view-updates') {
+            if (typeof window.refreshUpdates === 'function') await window.refreshUpdates();
+        }
+        else if (activeTab.id === 'view-profile') {
+            if (typeof window.fetchMyProfileFeed === 'function' && currentUserProfile) {
+                await window.fetchMyProfileFeed(currentUserProfile.id);
+            }
+        }
+        // Force minimum loading time so animation looks deliberate
+        await new Promise(res => setTimeout(res, 600));
+    } catch (e) {
+        console.error("Contextual Refresh Error:", e);
+    }
+}
+
+
 // ========================================================
 // IMAGE OPTIMIZATION ENGINE
 // ========================================================
 window.optimizeImageUrl = function(url, type = 'feed') {
     if (!url || !url.includes('cloudinary.com')) return url;
-    if (url.includes('/upload/q_auto')) return url; // Prevent double injection
+    if (url.includes('/upload/q_auto')) return url; 
     
-    // Aggressive compression parameters
-    let params = 'q_auto,f_auto,w_800'; // Standard Feed Image (Max 800px width)
-    
-    if (type === 'avatar') {
-        params = 'q_auto:eco,f_auto,w_150,h_150,c_fill'; // Tiny heavily compressed avatars
-    } else if (type === 'hotpost') {
-        params = 'q_auto:eco,f_auto,w_600'; // Ultra-compressed Hotposts for instant viewing
-    }
+    let params = 'q_auto,f_auto,w_800'; 
+    if (type === 'avatar') params = 'q_auto:eco,f_auto,w_150,h_150,c_fill'; 
+    else if (type === 'hotpost') params = 'q_auto:eco,f_auto,w_600'; 
 
     return url.replace('/upload/', `/upload/${params}/`);
 };
 
 // ========================================================
-// CLIENT-SIDE IMAGE COMPRESSOR (Lightning Fast Uploads)
+// CLIENT-SIDE IMAGE COMPRESSOR
 // ========================================================
 window.compressImage = function(file, maxSize = 800, quality = 0.8) {
     return new Promise((resolve, reject) => {
-        // We only compress images. If it's a gif or something else, return original.
         if (!file.type.match(/image.*/)) {
             resolve(file);
             return;
@@ -68,7 +183,6 @@ window.compressImage = function(file, maxSize = 800, quality = 0.8) {
             const img = new Image();
             img.src = event.target.result;
             img.onload = () => {
-                // Calculate new dimensions (maintain perfect aspect ratio)
                 let width = img.width;
                 let height = img.height;
 
@@ -84,20 +198,17 @@ window.compressImage = function(file, maxSize = 800, quality = 0.8) {
                     }
                 }
 
-                // Draw the resized image to an invisible canvas
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Compress to WebP format (Incredibly small file size, great quality)
                 canvas.toBlob(blob => {
                     if (!blob) {
                         reject(new Error('Canvas compression failed'));
                         return;
                     }
-                    // Create a brand new, tiny File object to send to the database
                     const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
                         type: 'image/webp',
                         lastModified: Date.now()
@@ -110,6 +221,7 @@ window.compressImage = function(file, maxSize = 800, quality = 0.8) {
         reader.onerror = error => reject(error);
     });
 };
+
 // ========================================================
 // PROFESSIONAL SKELETON LOADERS
 // ========================================================
@@ -192,22 +304,50 @@ function initializeApp(profile) {
     document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
     setupBlockedUsersListener();
 
-    // Turn on Native Android Back Button Router
     setupAppBackButton();
+    initPullToRefresh(); 
 
-    switchTab('dashboard');
+    // ------------------------------------------------------------------
+    // COLD START PENDING ROUTE SYSTEM (Push Notification Deep-Linking)
+    // ------------------------------------------------------------------
+    const pendingRoute = localStorage.getItem('pending_notification_route');
+    if (pendingRoute) {
+        localStorage.removeItem('pending_notification_route');
+        try {
+            const routeData = JSON.parse(pendingRoute);
+            
+            if (routeData.type.startsWith('post_')) {
+                // Keep Dashboard running in background, but slide Post View over it
+                switchTab('dashboard'); 
+                setTimeout(() => window.openSinglePostView(routeData.target_id), 300);
+            } 
+            else if (routeData.type === 'connection_accepted' || routeData.type === 'connection_request') {
+                switchTab('dashboard');
+                setTimeout(() => window.viewUserProfile(routeData.sender_id), 300);
+            } 
+            else if (routeData.type.startsWith('hotpost_')) {
+                switchTab('dashboard');
+                setTimeout(() => {
+                    if (typeof window.showMyHotposts === 'function') window.showMyHotposts();
+                    else if (typeof window.openHotpostViewer === 'function') window.openHotpostViewer(profile.id);
+                }, 300);
+            } else {
+                switchTab('dashboard');
+            }
+        } catch(e) {
+            console.error("Route parsing error", e);
+            switchTab('dashboard');
+        }
+    } else {
+        switchTab('dashboard'); // Normal App Boot
+    }
 }
 
-// Native Status Bar Integration (Theme Aware)
 async function updateNativeStatusBar(isDark) {
     try {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             const { StatusBar, Style } = await import('@capacitor/status-bar');
-            
-            // Match the exact background colors of the app
             const bgColor = isDark ? '#121212' : '#f8f9fa';
-            
-            // Style.Dark = Light text (for dark mode) | Style.Light = Dark text (for light mode)
             const textStyle = isDark ? Style.Dark : Style.Light; 
             
             await StatusBar.setOverlaysWebView({ overlay: false });
@@ -215,7 +355,7 @@ async function updateNativeStatusBar(isDark) {
             await StatusBar.setStyle({ style: textStyle });
         }
     } catch (error) {
-        console.warn('Status bar configuration bypassed (not installed or web environment).');
+        console.warn('Status bar configuration bypassed.');
     }
 }
 
@@ -226,7 +366,7 @@ function setupThemeToggle() {
     const isDarkMode = localStorage.getItem('theme') === 'dark';
     document.documentElement.classList.toggle('dark', isDarkMode);
     themeToggle.checked = isDarkMode;
-    updateNativeStatusBar(isDarkMode); // Initialize on boot
+    updateNativeStatusBar(isDarkMode); 
 
     themeToggle.addEventListener('change', () => {
         if (themeToggle.checked) {
@@ -244,8 +384,6 @@ function setupThemeToggle() {
 function getTickHtmlLocal(tickType) {
     if (!tickType || tickType === 'none') return '';
     const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-    
-    // Added shrink-0, increased size to 16px, and nudged -top-[1px] for perfect vertical alignment
     return `<span class="material-symbols-outlined text-[16px] shrink-0 relative -top-[1px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
 }
 
@@ -257,7 +395,6 @@ function setupMoreMenuListener() {
     const moreBtn = document.getElementById('public-profile-more-btn');
 
     if (moreMenu) {
-        // 1. Handle clicking INSIDE the menu to trigger actions
         moreMenu.addEventListener('click', (e) => {
             const button = e.target.closest('button');
             if (!button) return;
@@ -279,10 +416,8 @@ function setupMoreMenuListener() {
         });
     }
 
-    // 2. Handle clicking OUTSIDE the menu to close it automatically
     document.addEventListener('click', (e) => {
         if (moreMenu && !moreMenu.classList.contains('hidden')) {
-            // Check if the tap happened outside the menu AND outside the '...' button
             if (moreBtn && !moreBtn.contains(e.target) && !moreMenu.contains(e.target)) {
                 moreMenu.classList.add('hidden');
             }
@@ -315,11 +450,11 @@ const socialIconMap = {
     discord: { icon: 'fa-brands fa-discord', color: 'bg-[#5865F2]' },
     facebook: { icon: 'fa-brands fa-facebook-f', color: 'bg-[#1877F2]' },
     whatsapp: { icon: 'fa-brands fa-whatsapp', color: 'bg-[#25D366]' },
-    snapchat: { icon: 'fa-brands fa-snapchat', color: 'bg-[#FFFC00] !text-black' }, // Snapchat needs black text
+    snapchat: { icon: 'fa-brands fa-snapchat', color: 'bg-[#FFFC00] !text-black' }, 
     telegram: { icon: 'fa-brands fa-telegram', color: 'bg-[#229ED9]' },
     spotify: { icon: 'fa-brands fa-spotify', color: 'bg-[#1DB954]' },
     reddit: { icon: 'fa-brands fa-reddit-alien', color: 'bg-[#FF4500]' },
-    website: { icon: 'fa-solid fa-globe', color: 'bg-primary' }, // Using fa-solid fixes the broken box!
+    website: { icon: 'fa-solid fa-globe', color: 'bg-primary' }, 
     other: { icon: 'fa-solid fa-link', color: 'bg-gray-500' }
 };
 
@@ -337,10 +472,7 @@ function renderSocialLinks(links, container = null) {
             linkEl.target = '_blank';
             linkEl.title = link.platform.charAt(0).toUpperCase() + link.platform.slice(1);
             linkEl.className = `w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white text-2xl ${platformInfo.color} transition-transform hover:scale-110 shrink-0 shadow-sm`;
-            
-            // REMOVED the hardcoded 'fa-brands' from here so 'fa-solid' can work
             linkEl.innerHTML = `<i class="${platformInfo.icon}"></i>`;
-            
             targetContainer.appendChild(linkEl);
         });
     }
@@ -357,7 +489,6 @@ function renderSocialLinks(links, container = null) {
 function populateProfileUI(profile) {
     if (!profile) return;
     
-    // Header Name & Verified Tick
     const headerNameEl = document.getElementById('my-profile-header-name');
     if (headerNameEl) headerNameEl.textContent = profile.full_name;
     
@@ -373,43 +504,38 @@ function populateProfileUI(profile) {
         }
     }
     
-    // Stats Row
     const avatarEl = document.getElementById('my-profile-avatar');
     if (avatarEl) avatarEl.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     
     const connCountEl = document.getElementById('my-profile-connection-count');
     if (connCountEl) connCountEl.textContent = profile.connection_count || 0;
     
-    // Bio Section
     const courseEl = document.getElementById('my-profile-course');
     if (courseEl) courseEl.textContent = profile.course || 'Student';
     
     const bioEl = document.getElementById('my-profile-bio');
     if (bioEl) bioEl.textContent = profile.bio || 'No bio yet. Click "Edit Profile" to add one!';
     
-    // Feed avatar
     const feedInputAvatar = document.getElementById('feed-input-avatar');
     if (feedInputAvatar) feedInputAvatar.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     
-    // Socials & Privacy
     renderSocialLinks(profile.social_links, document.getElementById('my-profile-social-links'));
     const privacyToggle = document.getElementById('privacy-toggle-switch');
     if (privacyToggle) privacyToggle.checked = profile.is_private || false;
 
-    // Fetch this user's personal full feed
     if (typeof fetchMyProfileFeed === 'function') {
         fetchMyProfileFeed(profile.id);
     }
 }
 
 // ========================================================
-// PROFILE FEED RENDER ENGINE (Matches Main Feed)
+// PROFILE FEED RENDER ENGINE
 // ========================================================
-async function fetchMyProfileFeed(userId) {
+window.fetchMyProfileFeed = async function(userId) {
     const feedContainer = document.getElementById('my-profile-feed');
     if(!feedContainer) return;
 
-    feedContainer.innerHTML = FEED_SKELETON; // Inject Skeleton
+    feedContainer.innerHTML = FEED_SKELETON; 
     
     try {
         const { data: posts, error } = await supabase
@@ -439,7 +565,6 @@ async function fetchMyProfileFeed(userId) {
             return;
         }
 
-        // Render full interactive cards EXACTLY like feed.js
         feedContainer.innerHTML = generatePostHTML(posts, currentUserProfile.id);
 
     } catch (err) {
@@ -448,7 +573,6 @@ async function fetchMyProfileFeed(userId) {
     }
 }
 
-// Universal Feed HTML Generator (Used for My Profile & Public Profile)
 function generatePostHTML(posts, currentUserId) {
     return posts.map(post => {
         const user = post.users;
@@ -462,17 +586,14 @@ function generatePostHTML(posts, currentUserId) {
         let contentHtml = '';
         const verifiedBadge = getTickHtmlLocal(user.tick_type);
         
-        // 1. Optimize Avatar URL & add Lazy Loading & Profile Click Handler
         const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         const optimizedAvatar = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
         
         const headerIcon = `<img loading="lazy" onclick="openPublicProfile('${user.id}')" src="${optimizedAvatar}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
-        // Text Post
         if (post.post_type === 'text') {
             contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
         } 
-        // Image Post (OPTIMIZED + LAZY LOAD)
         else if (post.post_type === 'image') {
             const optimizedMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.media_url, 'feed') : post.media_url;
             contentHtml = `
@@ -482,7 +603,6 @@ function generatePostHTML(posts, currentUserId) {
                 </div>
             `;
         }
-        // Event Post (OPTIMIZED + LAZY LOAD)
         else if (post.post_type === 'event') {
             const optimizedEventMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.event_image_url, 'feed') : post.event_image_url;
             const eventImgHtml = post.event_image_url ? `<img loading="lazy" src="${optimizedEventMedia}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
@@ -508,7 +628,6 @@ function generatePostHTML(posts, currentUserId) {
                 </div>
             `;
         }
-        // Poll Post (Unchanged)
         else if (post.post_type === 'poll') {
             const votes = post.post_poll_votes || [];
             const totalVotes = votes.length;
@@ -576,7 +695,6 @@ function generatePostHTML(posts, currentUserId) {
             ${contentHtml}
             
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
-            <!-- LIKE BUTTON -->
             <button onclick="toggleLike('${post.id}')" class="flex items-center gap-1.5 group active:scale-95 transition-transform">
                 <span id="like-icon-${post.id}" class="material-symbols-outlined text-[22px] transition-colors ${post.is_liked_by_me ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 group-hover:text-red-500'}" style="font-variation-settings: 'FILL' ${post.is_liked_by_me ? '1' : '0'};">
                     favorite
@@ -585,7 +703,6 @@ function generatePostHTML(posts, currentUserId) {
                     ${post.like_count || 0}
                 </span>
             </button>
-                <!-- COMMENT BUTTON -->
                 <button onclick="openCommentsModal('${post.id}')" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
                     <span id="comment-count-${post.id}">${commentCount}</span>
@@ -665,7 +782,7 @@ function updateHeaderAvatar(avatarUrl, fullName) {
 }
 
 // ========================================================
-// UPLOADS & USER ACTIONS (Optimistic UI Engine)
+// UPLOADS & USER ACTIONS 
 // ========================================================
 
 function setupEditProfileAvatarUpload() {
@@ -680,18 +797,16 @@ function setupEditProfileAvatarUpload() {
         const mainProfileAvatar = document.getElementById('my-profile-avatar');
         const originalSrc = preview.src;
 
-        // 1. OPTIMISTIC UI: Show instantly & blur
         const tempUrl = URL.createObjectURL(file);
         preview.src = tempUrl;
         preview.style.opacity = '0.5';
         preview.style.filter = 'blur(3px)';
         preview.style.transition = 'all 0.3s ease';
-        if (mainProfileAvatar) mainProfileAvatar.src = tempUrl; // Sync main UI instantly
+        if (mainProfileAvatar) mainProfileAvatar.src = tempUrl;
 
         try {
-            // 2. Upload to Cloudinary
             const formData = new FormData();
-const fileToUpload = typeof compressImage === 'function' ? await compressImage(file, 500, 0.8) : file;
+            const fileToUpload = typeof compressImage === 'function' ? await compressImage(file, 500, 0.8) : file;
             formData.append('file', fileToUpload);
             formData.append('upload_preset', CLOUDINARY_AVATARS_PRESET);
 
@@ -699,10 +814,8 @@ const fileToUpload = typeof compressImage === 'function' ? await compressImage(f
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
 
-            // 3. Save to Database
             await saveUserProfile({ profile_img_url: data.secure_url }, false);
 
-            // 4. Snap to crystal clear & sync across app
             preview.src = data.secure_url;
             preview.style.opacity = '1';
             preview.style.filter = 'blur(0px)';
@@ -714,8 +827,6 @@ const fileToUpload = typeof compressImage === 'function' ? await compressImage(f
         } catch (error) {
             console.error('Error updating avatar:', error);
             showToast('Failed to update avatar.', 'error');
-            
-            // Revert gracefully
             preview.src = originalSrc; 
             preview.style.opacity = '1';
             preview.style.filter = 'blur(0px)';
@@ -738,16 +849,14 @@ function setupProfileAvatarUpload() {
         const editPreview = document.getElementById('edit-profile-avatar-preview');
         const originalSrc = preview.src;
 
-        // 1. OPTIMISTIC UI: Show instantly & blur
         const tempUrl = URL.createObjectURL(file);
         preview.src = tempUrl;
         preview.style.opacity = '0.5';
         preview.style.filter = 'blur(3px)';
         preview.style.transition = 'all 0.3s ease';
-        if (editPreview) editPreview.src = tempUrl; // Sync edit modal instantly
+        if (editPreview) editPreview.src = tempUrl;
 
         try {
-            // 2. Upload to Cloudinary
             const formData = new FormData();
            const fileToUpload = typeof compressImage === 'function' ? await compressImage(file, 500, 0.8) : file;
             formData.append('file', fileToUpload);
@@ -757,13 +866,11 @@ function setupProfileAvatarUpload() {
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
 
-            // 3. Save to Database
             const { error } = await supabase.from('users').update({ profile_img_url: data.secure_url }).eq('id', currentUserProfile.id);
             if (error) throw error;
 
             currentUserProfile.profile_img_url = data.secure_url;
 
-            // 4. Snap to crystal clear & sync across app
             preview.src = data.secure_url;
             preview.style.opacity = '1';
             preview.style.filter = 'blur(0px)';
@@ -774,8 +881,6 @@ function setupProfileAvatarUpload() {
         } catch (error) {
             console.error('Error updating avatar:', error);
             showToast('Failed to update avatar. Please try again.', 'error');
-            
-            // Revert gracefully
             preview.src = originalSrc;
             preview.style.opacity = '1';
             preview.style.filter = 'blur(0px)';
@@ -800,22 +905,19 @@ let tempSocialLinks = [];
 window.openEditProfileModal = function() {
     if (!currentUserProfile) return;
 
-    // 1. Populate the Native Select Menu and Inputs
     document.getElementById('edit-profile-name').value = currentUserProfile.full_name || '';
     document.getElementById('edit-profile-id').value = currentUserProfile.student_id || '';
     document.getElementById('edit-profile-course').value = currentUserProfile.course || '';
     document.getElementById('edit-profile-bio').value = currentUserProfile.bio || '';
     document.getElementById('edit-profile-avatar-preview').src = currentUserProfile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.full_name)}&background=e1e3e4`;
 
-    // 2. Native Slide-In Animation (Instagram Style)
     const modal = document.getElementById('modal-edit-profile');
     const bottomNav = document.querySelector('nav');
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-    if (bottomNav) bottomNav.classList.add('hidden'); // Hide the tabs while editing
+    if (bottomNav) bottomNav.classList.add('hidden'); 
 
-    // Tiny delay to allow display:flex to render before sliding
     setTimeout(() => {
         modal.classList.remove('translate-x-full');
     }, 10);
@@ -825,14 +927,12 @@ window.closeEditProfileModal = function() {
     const modal = document.getElementById('modal-edit-profile');
     const bottomNav = document.querySelector('nav');
 
-    // Slide out to the right
     modal.classList.add('translate-x-full');
 
-    // Wait for animation to finish before hiding
     setTimeout(() => {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        if (bottomNav) bottomNav.classList.remove('hidden'); // Bring tabs back
+        if (bottomNav) bottomNav.classList.remove('hidden'); 
     }, 300);
 };
 
@@ -884,17 +984,14 @@ window.saveUserProfile = async function(extraUpdates = {}, closeModal = true) {
 function openEditSocialsModal() {
     if (!currentUserProfile) return;
     
-    // 1. SAFETY FIX: Force the database output to be a valid Array to prevent the .forEach crash
     let links = currentUserProfile.social_links;
     if (typeof links === 'string') {
         try { links = JSON.parse(links); } catch(e) { links = []; }
     }
     tempSocialLinks = Array.isArray(links) ? JSON.parse(JSON.stringify(links)) : [];
     
-    // 2. Render the list
     renderTempSocialsList();
     
-    // 3. Native Slide-in Animation
     const modal = document.getElementById('modal-edit-socials');
     const bottomNav = document.querySelector('nav');
     
@@ -911,7 +1008,6 @@ function closeSocialsModal() {
     const modal = document.getElementById('modal-edit-socials');
     const bottomNav = document.querySelector('nav');
     
-    // Slide out to the right
     modal.classList.add('translate-x-full');
     
     setTimeout(() => {
@@ -925,7 +1021,6 @@ function renderTempSocialsList() {
     const list = document.getElementById('modal-socials-list');
     list.innerHTML = '';
     
-    // Empty State UI
     if (!Array.isArray(tempSocialLinks) || tempSocialLinks.length === 0) {
         list.innerHTML = `
             <div class="py-10 flex flex-col items-center justify-center opacity-40 text-on-surface-variant">
@@ -935,7 +1030,6 @@ function renderTempSocialsList() {
         return;
     }
 
-    // Platform Specific Styles for premium look
     const platformStyles = {
         linkedin: { icon: 'fa-brands fa-linkedin-in', color: 'text-[#0A66C2]' },
         instagram: { icon: 'fa-brands fa-instagram', color: 'text-pink-500' },
@@ -951,9 +1045,7 @@ function renderTempSocialsList() {
         website: { icon: 'fa-solid fa-globe', color: 'text-primary' }
     };
 
-    // Render each link as a beautiful card
     tempSocialLinks.forEach((link, index) => {
-        // Fallback to the generic link icon if the platform isn't in the list
         const style = platformStyles[link.platform] || { icon: 'fa-solid fa-link', color: 'text-gray-500' };
         
         list.innerHTML += `
@@ -982,31 +1074,19 @@ function addSocialLinkTemp() {
         return;
     }
 
-    // Grab the configuration we set up in Step 3
     const config = socialPlatformsConfig[platformId];
     let finalUrl = val;
 
-    // ==========================================
-    // SMART URL CONSTRUCTION ENGINE
-    // ==========================================
-    // If the user didn't paste a full website link, we build it securely for them!
     if (!val.startsWith('http://') && !val.startsWith('https://')) {
-        
-        // 1. Strip '@' if user added it manually (e.g., they typed @johndoe for Instagram)
         if (val.startsWith('@') && platformId !== 'youtube') {
             val = val.substring(1);
         }
-        
-        // 2. Auto-add '@' for YouTube handles if missing
         if (platformId === 'youtube' && !val.startsWith('@') && !val.includes('/')) {
             val = '@' + val;
         }
-
-        // 3. Combine the platform's secure prefix with their username/number
         finalUrl = config.prefix + val;
     }
 
-    // Save to temporary list
     const existingLinkIndex = tempSocialLinks.findIndex(link => link.platform === platformId);
     if (existingLinkIndex > -1) {
         tempSocialLinks[existingLinkIndex].url = finalUrl;
@@ -1014,7 +1094,6 @@ function addSocialLinkTemp() {
         tempSocialLinks.push({ platform: platformId, url: finalUrl });
     }
     
-    // Update the UI
     renderTempSocialsList();
     document.getElementById('add-social-url').value = '';
 }
@@ -1052,7 +1131,6 @@ window.saveSocialLinks = saveSocialLinks;
 // PUBLIC/PRIVATE PROFILE VIEWS 
 // ========================================================
 async function viewUserProfile(userId) {
-    // 🚀 SAFETY CHECK: Stop accidental clicks if user was long-pressing!
     if (window.isLongPressing) return; 
 
     const moreMenu = document.getElementById('public-profile-more-menu');
@@ -1086,16 +1164,13 @@ async function viewUserProfile(userId) {
 
     const isConnected = connection?.status === 'accepted';
 
-    // Helper to safely render the verified tick
     const getTickHtmlLocal = (tickType) => {
         if (!tickType || tickType === 'none') return '';
         const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
         return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
     };
 
-    // Routing Logic
     if (user.is_private && !isConnected) {
-        // Render Private View
         document.getElementById('private-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('private-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
@@ -1112,7 +1187,6 @@ async function viewUserProfile(userId) {
 
         openProfileModal('private');
     } else {
-        // Render Public View
         document.getElementById('public-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('public-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('public-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
@@ -1125,7 +1199,7 @@ async function viewUserProfile(userId) {
         openProfileModal('public');
 
         const profileFeedContainer = document.getElementById('public-profile-feed');
-        profileFeedContainer.innerHTML = FEED_SKELETON; // Show loading shimmer
+        profileFeedContainer.innerHTML = FEED_SKELETON; 
 
         try {
             const { data: posts, error: postsError } = await supabase
@@ -1153,7 +1227,6 @@ async function viewUserProfile(userId) {
                 return;
             }
 
-            // Maps and injects all post cards
             profileFeedContainer.innerHTML = generatePostHTML(posts, currentUserProfile.id);
 
         } catch (postsErr) {
@@ -1320,7 +1393,6 @@ function switchTab(tabId) {
     if (tabId === "dashboard") header.classList.remove("hidden");
     else header.classList.add("hidden");
 
-    // FAILSAVE: Force the bottom navbar to unhide every time you switch tabs!
     const bottomNav = document.querySelector('nav');
     if (bottomNav) bottomNav.classList.remove('hidden');
 
@@ -1377,7 +1449,7 @@ async function openConnectionsModal() {
     if (!modal || !list) return;
 
     modal.classList.replace('hidden', 'flex');
-    list.innerHTML = LIST_SKELETON; // Inject Loading Skeleton
+    list.innerHTML = LIST_SKELETON; 
 
     try {
         const { data, error } = await supabase
@@ -1425,7 +1497,7 @@ async function openBlockedUsersModal() {
     if (!modal || !list) return;
 
     modal.classList.replace('hidden', 'flex');
-    list.innerHTML = LIST_SKELETON; // Inject Loading Skeleton
+    list.innerHTML = LIST_SKELETON; 
 
     try {
         const { data, error } = await supabase
@@ -1482,7 +1554,7 @@ window.openSinglePostView = async function(postId) {
     if (bottomNav) bottomNav.classList.add('hidden');
     setTimeout(() => modal.classList.remove('translate-x-full'), 10);
     
-    container.innerHTML = FEED_SKELETON; // Inject Skeleton
+    container.innerHTML = FEED_SKELETON; 
     
     try {
         const { data: posts, error } = await supabase
@@ -1534,9 +1606,7 @@ window.closeSinglePostView = function() {
 // ========================================================
 function setupAppBackButton() {
     
-    // The core logic that checks layers from Top to Bottom
     const checkAndCloseTopLayer = () => {
-        // 1. Define the hierarchy from top-most (z-index) to bottom
         const modalHierarchy = [
             { id: 'modal-confirm-action', close: () => document.getElementById('confirm-action-no')?.click() },
             { id: 'modal-action-sheet', close: () => window.closeActionSheet() },
@@ -1560,36 +1630,31 @@ function setupAppBackButton() {
             { id: 'modal-course-picker', close: () => window.closeCoursePicker() }
         ];
 
-        // 2. Scan the DOM to see if ANY of these modals are currently open
         for (const modal of modalHierarchy) {
             const el = document.getElementById(modal.id);
-            // If the modal exists and DOES NOT have the 'hidden' class, it means it's open!
             if (el && !el.classList.contains('hidden')) {
                 modal.close(); 
-                return true; // We closed a modal! Stop checking.
+                return true; 
             }
         }
 
-        // 3. If no modals are open, check if we are on a different tab (Search, Profile, etc.)
         const dashboardView = document.getElementById('view-dashboard');
         if (dashboardView && dashboardView.classList.contains('hidden')) {
-            if (window.switchTab) window.switchTab('dashboard'); // Route back to Feed
-            return true; // We switched tabs! Stop checking.
+            if (window.switchTab) window.switchTab('dashboard'); 
+            return true; 
         }
 
-        return false; // Nothing to close! We are on the Feed with no modals. Let native back proceed.
+        return false; 
     };
 
-    // --- A. NATIVE CAPACITOR APP INTEGRATION ---
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         try {
-            // FIX: Using the global Plugins object avoids Vanilla JS import crashes!
             const App = window.Capacitor.Plugins.App;
             if (App) {
                 App.addListener('backButton', () => {
                     const handled = checkAndCloseTopLayer();
                     if (!handled) {
-                        App.exitApp(); // Safely exit the app if we are on the Home screen
+                        App.exitApp(); 
                     }
                 });
             }
@@ -1598,18 +1663,13 @@ function setupAppBackButton() {
         }
     } 
     
-    // --- B. WEB BROWSER FALLBACK (For PWA / Testing) ---
-    // Push an initial state so the browser has a history entry to pop
     window.history.pushState({ app_active: true }, "");
     
     window.addEventListener('popstate', () => {
         const handled = checkAndCloseTopLayer();
         if (handled) {
-            // If we closed a modal, push a new state so the user can press back again for the next layer
             window.history.pushState({ app_active: true }, "");
-        } else {
-            // If nothing was handled, it will just navigate back natively (exiting the PWA/tab)
-        }
+        } 
     });
 }
 // ========================================================
@@ -1626,10 +1686,7 @@ window.closeCoursePicker = function() {
 };
 
 window.selectCourse = function(courseName) {
-    // 1. Set the input value
     document.getElementById('edit-profile-course').value = courseName;
-    
-    // 2. Close the modal
     closeCoursePicker();
 };
 
@@ -1646,13 +1703,10 @@ window.toggleLike = async function(postId) {
     const countSpan = document.getElementById(`like-count-${postId}`);
     if (!icon || !countSpan) return;
 
-    // 1. Determine current state based on the icon's visual fill
     const isCurrentlyLiked = icon.style.fontVariationSettings.includes("'FILL' 1");
     let currentCount = parseInt(countSpan.textContent.trim()) || 0;
 
-    // 2. OPTIMISTIC UI UPDATE (Instant visual feedback)
     if (isCurrentlyLiked) {
-        // Optimistic Unlike
         icon.style.fontVariationSettings = "'FILL' 0";
         icon.classList.replace('text-red-500', 'text-on-surface-variant');
         icon.classList.add('dark:text-gray-400', 'group-hover:text-red-500');
@@ -1662,25 +1716,21 @@ window.toggleLike = async function(postId) {
         countSpan.classList.replace('text-red-500', 'text-on-surface-variant');
         countSpan.classList.add('dark:text-gray-400');
     } else {
-        // Optimistic Like
         icon.style.fontVariationSettings = "'FILL' 1";
         icon.classList.remove('text-on-surface-variant', 'dark:text-gray-400', 'group-hover:text-red-500');
         icon.classList.add('text-red-500');
         
-        // Trigger the CSS pop animation
-        icon.classList.remove('like-pop'); // Reset animation
-        void icon.offsetWidth; // Trigger reflow
-        icon.classList.add('like-pop'); // Start animation
+        icon.classList.remove('like-pop'); 
+        void icon.offsetWidth; 
+        icon.classList.add('like-pop'); 
         
         countSpan.textContent = currentCount + 1;
         countSpan.classList.remove('text-on-surface-variant', 'dark:text-gray-400');
         countSpan.classList.add('text-red-500');
     }
 
-    // 3. DATABASE SYNC (Background)
     try {
         if (isCurrentlyLiked) {
-            // Delete the like from the database
             const { error } = await supabase
                 .from('post_likes')
                 .delete()
@@ -1688,7 +1738,6 @@ window.toggleLike = async function(postId) {
                 
             if (error) throw error;
         } else {
-            // Insert the like into the database
             const { error } = await supabase
                 .from('post_likes')
                 .insert({ post_id: postId, user_id: currentUserProfile.id });
@@ -1697,9 +1746,7 @@ window.toggleLike = async function(postId) {
         }
     } catch (error) {
         console.error('Error toggling like:', error);
-        // If it fails, revert the optimistic UI back to how it was
         showToast('Network error. Failed to update like.', 'error');
-        // A quick hack to revert is just fetching the post again or running the inverse logic here.
     }
 };
 // ========================================================
@@ -1724,7 +1771,6 @@ window.openSocialPicker = function() {
     const list = document.getElementById('social-picker-list');
     list.innerHTML = '';
     
-    // Generate the beautiful native list dynamically
     Object.keys(socialPlatformsConfig).forEach(key => {
         const config = socialPlatformsConfig[key];
         list.innerHTML += `
@@ -1747,13 +1793,11 @@ window.closeSocialPicker = function() {
 window.selectSocialPlatform = function(id) {
     const config = socialPlatformsConfig[id];
     
-    // Update Trigger UI
     document.getElementById('add-social-platform').value = id;
     document.getElementById('selected-social-name').textContent = config.name;
     document.getElementById('selected-social-icon').className = config.icon + ' text-[16px]';
     document.getElementById('selected-social-icon-box').className = `w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${config.color}`;
     
-    // Update Input UI Dynamically
     const input = document.getElementById('add-social-url');
     input.type = config.type;
     input.placeholder = config.placeholder;
@@ -1767,20 +1811,17 @@ window.selectSocialPlatform = function(id) {
 // NATIVE LONG-PRESS ENGINE (Profile Peek)
 // ========================================================
 let longPressTimer;
-window.isLongPressing = false; // Global flag to stop accidental clicks
+window.isLongPressing = false; 
 
-// Listen for touches globally across the app
 document.addEventListener('touchstart', handleTouchStart, { passive: true });
 document.addEventListener('touchend', handleTouchEnd);
 document.addEventListener('touchmove', handleTouchMove, { passive: true });
 
-// Fallbacks for Desktop/Mouse testing
 document.addEventListener('mousedown', handleTouchStart);
 document.addEventListener('mouseup', handleTouchEnd);
 document.addEventListener('mousemove', handleTouchMove);
 
 function handleTouchStart(e) {
-    // Check if the user is touching a profile picture
     const target = e.target.closest('.profile-link');
     if (!target) return;
     
@@ -1789,40 +1830,30 @@ function handleTouchStart(e) {
 
     window.isLongPressing = false;
     
-    // Start the 400ms timer
     longPressTimer = setTimeout(() => {
         window.isLongPressing = true;
-        
-        // Native Haptic Vibration (Makes it feel incredibly premium on Android)
         if (navigator.vibrate) navigator.vibrate(50);
-        
         openProfilePeek(userId, target);
     }, 400); 
 }
 
 function handleTouchMove() {
-    // If the user scrolls their finger, cancel the long press
     clearTimeout(longPressTimer);
 }
 
 function handleTouchEnd(e) {
     clearTimeout(longPressTimer);
     
-    // If a long press successfully happened, prevent the normal click event
     if (window.isLongPressing) {
         if (e.cancelable) e.preventDefault();
-        
-        // Reset the flag after a tiny delay so normal taps work again
         setTimeout(() => { window.isLongPressing = false; }, 300);
     }
 }
 
-// Logic to populate and show the Peek card
 window.openProfilePeek = async function(userId, imgEl) {
     const modal = document.getElementById('modal-profile-peek');
     const card = document.getElementById('peek-card');
     
-    // Instantly show the image they clicked on for zero load time
     if (imgEl && imgEl.tagName === 'IMG') {
         document.getElementById('peek-avatar').src = imgEl.src;
     }
@@ -1830,14 +1861,12 @@ window.openProfilePeek = async function(userId, imgEl) {
     document.getElementById('peek-name').innerHTML = 'Loading...';
     document.getElementById('peek-course').textContent = 'Fetching details...';
     
-    // Animate In
     modal.classList.replace('hidden', 'flex');
     setTimeout(() => {
         modal.classList.remove('opacity-0');
         card.classList.remove('scale-90');
     }, 10);
 
-    // Fetch user details in the background
     try {
         const { data: user, error } = await supabase.from('users').select('full_name, profile_img_url, course, tick_type').eq('id', userId).single();
         if (error) throw error;
@@ -1849,10 +1878,9 @@ window.openProfilePeek = async function(userId, imgEl) {
         document.getElementById('peek-name').innerHTML = `${user.full_name} ${verifiedBadge}`;
         document.getElementById('peek-course').textContent = user.course || 'Campus Member';
         
-       // Setup the "View Profile" button
         document.getElementById('peek-view-profile-btn').onclick = () => {
             closeProfilePeek();
-            setTimeout(() => viewUserProfile(userId), 200); // 👈 Fixed function name here!
+            setTimeout(() => viewUserProfile(userId), 200); 
         };
     } catch (err) {
         document.getElementById('peek-name').textContent = 'User Details Unavailable';
@@ -1864,7 +1892,6 @@ window.closeProfilePeek = function() {
     const modal = document.getElementById('modal-profile-peek');
     const card = document.getElementById('peek-card');
     
-    // Animate Out
     modal.classList.add('opacity-0');
     card.classList.add('scale-90');
     
