@@ -258,8 +258,9 @@ async function fetchPosts(isRefresh = false) {
                 post_likes(user_id),
                 post_comments(count)
             `)
+            .eq('is_deleted', false) // 🚀 CRITICAL FIX: Hide deleted posts!
             .order('created_at', { ascending: false })
-            .range(from, to); // 🚀 Supabase Pagination command!
+            .range(from, to);
 
         if (error) throw error;
 
