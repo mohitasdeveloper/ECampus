@@ -407,7 +407,7 @@ function renderPosts(posts) {
         </div>
         `;
     }).join('');
-
+}
 
             const expiryText = isExpired ? 'Poll ended' : (post.poll_expires_at ? `Ends ${timeAgo(post.poll_expires_at)}` : 'Ongoing');
             const typeText = post.poll_is_multiple_choice ? 'Multiple choice' : 'Single choice';
