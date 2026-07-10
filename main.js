@@ -36,70 +36,78 @@ window.addEventListener('load', () => {
 });
 
 // ========================================================
-// AUTO-INJECTING PULL-TO-REFRESH ENGINE (Ultimate Fix)
+// AUTO-INJECTING, UNIVERSAL PULL-TO-REFRESH ENGINE
 // ========================================================
 function initPullToRefresh() {
     if (window.isPTRInitialized) return;
     window.isPTRInitialized = true;
 
-    // 1. DYNAMICALLY INJECT CSS TO KILL NATIVE ANDROID REFRESH
+    // 1. DYNAMICALLY INJECT CSS & UI BUBBLE
     const style = document.createElement('style');
     style.innerHTML = `
-        html, body {
-            overscroll-behavior-y: none !important;
-            overscroll-behavior-x: none !important;
+        /* This class temporarily kills native browser refresh while dragging */
+        body.ptr-active { overscroll-behavior-y: none !important; touch-action: none; }
+        
+        #ptr-container {
+            position: fixed; top: 0; left: 50%; z-index: 999999;
+            transform: translate(-50%, -150px);
+            display: flex; align-items: center; gap: 8px;
+            background: var(--bg-surface, #ffffff);
+            padding: 10px 22px; border-radius: 99px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            opacity: 0; pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
         }
+        html.dark #ptr-container { background: #1e1e1e; border: 1px solid rgba(255,255,255,0.1); }
+        #ptr-spinner { font-size: 22px; color: #10B981; transition: transform 0s; }
+        #ptr-text { font-size: 14px; font-weight: bold; color: #111827; }
+        html.dark #ptr-text { color: #f9fafb; }
     `;
     document.head.appendChild(style);
 
-    // 2. DYNAMICALLY INJECT THE BUBBLE (Guarantees perfect placement)
     const ptrContainer = document.createElement('div');
     ptrContainer.id = 'ptr-container';
-    ptrContainer.className = 'fixed top-0 left-1/2 -translate-x-1/2 z-[9999] flex items-center justify-center gap-2 bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/50 dark:border-neutral-800 shadow-[0_10px_40px_rgba(0,0,0,0.3)] rounded-full px-5 py-2.5 opacity-0 pointer-events-none';
-    ptrContainer.style.transform = 'translateY(-100px)'; // Hidden safely off-screen
-    ptrContainer.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s';
-
     ptrContainer.innerHTML = `
-        <span id="ptr-spinner" class="material-symbols-outlined text-primary text-[22px] transition-transform duration-75">refresh</span>
-        <span id="ptr-text" class="text-[13.5px] font-bold text-on-surface dark:text-gray-100 tracking-wide">Pull to refresh</span>
+        <span id="ptr-spinner" class="material-symbols-outlined">refresh</span>
+        <span id="ptr-text">Pull to refresh</span>
     `;
     document.body.appendChild(ptrContainer);
 
-    // 3. THE TOUCH ENGINE
-    let startY = 0;
-    let currentY = 0;
-    let isDragging = false;
-    let isRefreshing = false;
+    let startY = 0, currentY = 0;
+    let isDragging = false, isRefreshing = false;
+    let scrollTarget = null;
     const threshold = 100;
 
     const spinner = document.getElementById('ptr-spinner');
     const text = document.getElementById('ptr-text');
 
-    // Deep Scroll Scanner: Finds if we are at the top, even if scrolling inside a custom div
-    const getTrueScrollTop = (targetNode) => {
-        let node = targetNode;
+    // 2. DEEP SCROLL SCANNER: Accurately finds the true scroll position
+    const getScrollContainer = (el) => {
+        let node = el;
         while (node && node !== document.body && node !== document.documentElement) {
-            if (node.scrollTop > 0) return node.scrollTop;
+            const style = window.getComputedStyle(node);
+            if (style.overflowY === 'auto' || style.overflowY === 'scroll') return node;
             node = node.parentElement;
         }
-        return window.scrollY || document.documentElement.scrollTop || 0;
+        return document.documentElement;
     };
 
     document.addEventListener('touchstart', (e) => {
-        if (isRefreshing || getTrueScrollTop(e.target) > 5) return;
+        if (isRefreshing) return;
+
+        scrollTarget = getScrollContainer(e.target);
+        const scrollTop = scrollTarget === document.documentElement ? window.scrollY : scrollTarget.scrollTop;
         
-        // Prevent PTR if any full-screen modal or camera is open
-        const modals = document.querySelectorAll('[id^="modal-"], [id^="view-"]');
-        for (let m of modals) {
-            if (!m.classList.contains('hidden') && !m.classList.contains('translate-x-full') && !m.classList.contains('translate-y-full')) return;
-        }
+        if (scrollTop > 5) return; // Must be at the absolute top of the feed
+
+        // Block if any modal is open
+        if (document.querySelector('[id^="modal-"]:not(.hidden):not(.translate-x-full):not(.translate-y-full)')) return;
+        if (document.querySelector('[id^="view-create-post"]:not(.hidden):not(.translate-y-full)')) return;
 
         startY = e.touches[0].clientY;
         isDragging = true;
-        
         ptrContainer.style.transition = 'none';
         spinner.classList.remove('animate-spin');
-        text.textContent = "Pull to refresh";
     }, { passive: true });
 
     document.addEventListener('touchmove', (e) => {
@@ -108,17 +116,22 @@ function initPullToRefresh() {
         currentY = e.touches[0].clientY;
         const pullDistance = currentY - startY;
 
-        // If pulling down while at the top of the feed
-        if (pullDistance > 0 && getTrueScrollTop(e.target) <= 5) {
-            if (e.cancelable) e.preventDefault(); // Locks the native Android screen!
+        if (pullDistance < 0) { // If user scrolls upwards, cancel drag
+            isDragging = false;
+            document.body.classList.remove('ptr-active');
+            return;
+        }
+
+        const scrollTop = scrollTarget === document.documentElement ? window.scrollY : scrollTarget.scrollTop;
+
+        if (pullDistance > 0 && scrollTop <= 5) {
+            document.body.classList.add('ptr-active'); // Locks native browser refresh
+            if (e.cancelable) e.preventDefault(); // Prevents screen bounce
+
+            const visualDistance = Math.min(pullDistance * 0.45, threshold + 30);
             
-            const visualDistance = Math.min(pullDistance * 0.45, threshold + 40);
-            
-            // Move bubble down onto the screen safely
-            ptrContainer.style.transform = `translateY(${visualDistance - 100}px)`;
             ptrContainer.style.opacity = Math.min(visualDistance / 60, 1).toString();
-            
-            // Rotate spinner based on thumb drag
+            ptrContainer.style.transform = `translate(-50%, ${visualDistance - 80}px)`;
             spinner.style.transform = `rotate(${visualDistance * 3}deg)`;
 
             if (visualDistance >= threshold) {
@@ -132,48 +145,41 @@ function initPullToRefresh() {
                 text.dataset.vibrated = 'false';
             }
         }
-    }, { passive: false });
+    }, { passive: false }); // MUST be false to allow preventDefault()
 
     const endDrag = async () => {
         if (!isDragging) return;
         isDragging = false;
-        
-        const pullDistance = currentY - startY;
-        const visualDistance = Math.min(pullDistance * 0.45, threshold + 40);
+        document.body.classList.remove('ptr-active');
 
-        ptrContainer.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s';
+        const pullDistance = currentY - startY;
+        const visualDistance = Math.min(pullDistance * 0.45, threshold + 30);
+
+        ptrContainer.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
 
         if (visualDistance >= threshold && !isRefreshing) {
             isRefreshing = true;
             
-            // Snap to loading position
-            ptrContainer.style.transform = `translateY(30px)`; 
-            
-            // CRITICAL FIX: Erase the thumb rotation math so Tailwind's spin animation can take over
-            spinner.style.transform = ''; 
+            ptrContainer.style.transform = `translate(-50%, 40px)`;
+            spinner.style.transform = ''; // Clear inline rotation
             spinner.classList.add('animate-spin');
-            
             text.textContent = "Refreshing...";
 
-            // Run the refresh
             if (typeof window.executeContextualRefresh === 'function') {
                 await window.executeContextualRefresh();
             } else {
                 await new Promise(r => setTimeout(r, 1000));
             }
 
-            // Hide bubble after completion
-            ptrContainer.style.transform = `translateY(-100px)`;
+            ptrContainer.style.transform = `translate(-50%, -150px)`;
             ptrContainer.style.opacity = '0';
-            
             setTimeout(() => {
                 isRefreshing = false;
                 spinner.classList.remove('animate-spin');
             }, 300);
 
         } else {
-            // Did not pull far enough, hide bubble
-            ptrContainer.style.transform = `translateY(-100px)`;
+            ptrContainer.style.transform = `translate(-50%, -150px)`;
             ptrContainer.style.opacity = '0';
         }
     };
@@ -182,17 +188,32 @@ function initPullToRefresh() {
     document.addEventListener('touchcancel', endDrag, { passive: true });
 }
 
-// Global Routing Function
-window.executeContextualRefresh = async function() {
+async function executeContextualRefresh() {
+    const activeTab = document.querySelector('.tab-content:not(.hidden)');
+    if (!activeTab) return;
+
     try {
-        if (typeof window.refreshMainFeed === 'function') {
-            await window.refreshMainFeed(); 
+        if (activeTab.id === 'view-dashboard') {
+            if (typeof window.refreshMainFeed === 'function') await window.refreshMainFeed();
+            if (typeof window.refreshHotposts === 'function') await window.refreshHotposts();
+        } 
+        else if (activeTab.id === 'view-search') {
+            if (typeof window.refreshDiscover === 'function') await window.refreshDiscover();
         }
-        await new Promise(r => setTimeout(r, 600)); // Artificial delay for premium UI feel
+        else if (activeTab.id === 'view-updates') {
+            if (typeof window.refreshUpdates === 'function') await window.refreshUpdates();
+        }
+        else if (activeTab.id === 'view-profile') {
+            if (typeof window.fetchMyProfileFeed === 'function' && currentUserProfile) {
+                await window.fetchMyProfileFeed(currentUserProfile.id);
+            }
+        }
+        // Force minimum loading time so animation looks deliberate
+        await new Promise(res => setTimeout(res, 800));
     } catch (e) {
-        console.error("Refresh failed", e);
+        console.error("Contextual Refresh Error:", e);
     }
-};
+}
 
 // ========================================================
 // IMAGE OPTIMIZATION ENGINE
