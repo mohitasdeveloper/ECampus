@@ -36,10 +36,9 @@ window.addEventListener('load', () => {
 });
 
 // ========================================================
-// CONTEXT-AWARE PULL-TO-REFRESH ENGINE
+// CONTEXT-AWARE PULL-TO-REFRESH ENGINE (Ultimate Native Fix)
 // ========================================================
 function initPullToRefresh() {
-    // Prevent double initialization
     if (window.isPTRInitialized) return;
     window.isPTRInitialized = true;
 
@@ -47,7 +46,8 @@ function initPullToRefresh() {
     let currentY = 0;
     let isDragging = false;
     let isRefreshing = false;
-    const threshold = 120; // Distance to trigger refresh
+    let isValidPull = false; // Tracks if the swipe started purely downwards
+    const threshold = 120; 
     const ptrContainer = document.getElementById('ptr-container');
     const ptrSpinner = document.getElementById('ptr-spinner');
     const ptrText = document.getElementById('ptr-text');
@@ -55,10 +55,10 @@ function initPullToRefresh() {
     if (!ptrContainer) return;
 
     document.addEventListener('touchstart', (e) => {
-        // 1. Only allow PTR if scrolled to the absolute top
+        // Must be at the absolute top of the feed
         if (window.scrollY > 5) return; 
         
-        // 2. Prevent PTR if ANY full-screen modal or camera is open
+        // Prevent PTR if any full-screen modal or camera is open
         const hasOpenModal = Array.from(document.querySelectorAll('[id^="modal-"]')).some(m => !m.classList.contains('hidden') && !m.classList.contains('translate-x-full') && !m.classList.contains('translate-y-full') && !m.classList.contains('opacity-0'));
         const hasOpenView = Array.from(document.querySelectorAll('[id^="view-create-post"]')).some(m => !m.classList.contains('hidden') && !m.classList.contains('translate-y-full'));
         
@@ -66,37 +66,38 @@ function initPullToRefresh() {
 
         startY = e.touches[0].clientY;
         isDragging = true;
+        isValidPull = true; // Assume valid until proven otherwise
         
         ptrContainer.style.transition = 'none';
-        ptrSpinner.classList.remove('animate-spin'); // Changed to native Tailwind spin
+        ptrSpinner.classList.remove('animate-spin');
         ptrText.textContent = "Pull to refresh";
     }, { passive: true });
 
-    // CRITICAL FIX: passive must be false here so we can block the native browser refresh
     document.addEventListener('touchmove', (e) => {
         if (!isDragging || isRefreshing) return;
         
         currentY = e.touches[0].clientY;
         const pullDistance = currentY - startY;
 
-        // If pulling downwards while at the absolute top of the page
-        if (pullDistance > 0 && window.scrollY <= 5) {
-            
-            // Block Chrome/Safari's native pull-to-refresh from taking over
-            if (e.cancelable) e.preventDefault(); 
+        // 1. Android Bug Fix: If user slightly scrolls UP first, cancel the pull gesture entirely!
+        if (pullDistance < 0) {
+            isValidPull = false;
+            return;
+        }
+
+        // 2. Lock the screen and pull down
+        if (isValidPull && pullDistance > 0 && window.scrollY <= 5) {
+            if (e.cancelable) e.preventDefault(); // Lock the screen natively!
             
             document.body.classList.add('ptr-dragging-active');
             
-            // Apply physics resistance
             const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
-            
             ptrContainer.style.transform = `translate(-50%, calc(-150% + ${visualDistance}px))`;
             ptrContainer.style.opacity = Math.min(visualDistance / threshold, 1).toString();
-            ptrSpinner.style.transform = `rotate(${visualDistance * 2}deg)`; // Spin on drag
+            ptrSpinner.style.transform = `rotate(${visualDistance * 2}deg)`;
 
             if (visualDistance >= threshold) {
                 ptrText.textContent = "Release to refresh";
-                // Gentle native haptic bump
                 if (window.navigator.vibrate && ptrText.dataset.vibrated !== 'true') {
                     window.navigator.vibrate(10);
                     ptrText.dataset.vibrated = 'true';
@@ -106,7 +107,44 @@ function initPullToRefresh() {
                 ptrText.dataset.vibrated = 'false';
             }
         }
-    }, { passive: false }); // FIXED
+    }, { passive: false }); 
+
+    const finishDrag = async () => {
+        if (!isDragging) return;
+        isDragging = false;
+        isValidPull = false;
+        document.body.classList.remove('ptr-dragging-active');
+        
+        const pullDistance = currentY - startY;
+        const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
+
+        ptrContainer.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+        if (visualDistance >= threshold && !isRefreshing) {
+            isRefreshing = true;
+            ptrContainer.style.transform = `translate(-50%, 20px)`; 
+            ptrSpinner.classList.add('animate-spin');
+            ptrText.textContent = "Refreshing...";
+
+            await executeContextualRefresh();
+
+            ptrContainer.style.transform = `translate(-50%, -150%)`;
+            ptrContainer.style.opacity = '0';
+            setTimeout(() => {
+                isRefreshing = false;
+                ptrSpinner.classList.remove('animate-spin');
+            }, 300);
+
+        } else {
+            ptrContainer.style.transform = `translate(-50%, -150%)`;
+            ptrContainer.style.opacity = '0';
+        }
+    };
+
+    // 3. Android Bug Fix: Bind to touchcancel as well so the UI never gets stuck!
+    document.addEventListener('touchend', finishDrag, { passive: true });
+    document.addEventListener('touchcancel', finishDrag, { passive: true });
+}
 
     document.addEventListener('touchend', async () => {
         if (!isDragging) return;
