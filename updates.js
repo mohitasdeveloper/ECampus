@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
 
 export function initUpdates() {
-    fetchUpdates();
+   
 }
 
 async function fetchUpdates() {
