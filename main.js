@@ -36,159 +36,150 @@ window.addEventListener('load', () => {
 });
 
 // ========================================================
-// AUTO-INJECTING, UNIVERSAL PULL-TO-REFRESH ENGINE
+// BULLETPROOF PULL-TO-REFRESH ENGINE
 // ========================================================
 function initPullToRefresh() {
-    if (window.isPTRInitialized) return;
-    window.isPTRInitialized = true;
+    if (window._ptrActive) return;
+    window._ptrActive = true;
 
     // 1. DYNAMICALLY INJECT CSS & UI BUBBLE
     const style = document.createElement('style');
     style.innerHTML = `
-        /* This class temporarily kills native browser refresh while dragging */
-        body.ptr-active { overscroll-behavior-y: none !important; touch-action: none; }
+        /* Force kill native browser overscroll completely */
+        html, body { overscroll-behavior: none !important; }
         
-        #ptr-container {
-            position: fixed; top: 0; left: 50%; z-index: 999999;
+        #smart-ptr {
+            position: fixed; top: 0; left: 50%; z-index: 2147483647; /* Maximum z-index */
             transform: translate(-50%, -150px);
             display: flex; align-items: center; gap: 8px;
-            background: var(--bg-surface, #ffffff);
-            padding: 10px 22px; border-radius: 99px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            opacity: 0; pointer-events: none;
+            background: #ffffff; padding: 10px 20px;
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            opacity: 0; pointer-events: none;
         }
-        html.dark #ptr-container { background: #1e1e1e; border: 1px solid rgba(255,255,255,0.1); }
-        #ptr-spinner { font-size: 22px; color: #10B981; transition: transform 0s; }
-        #ptr-text { font-size: 14px; font-weight: bold; color: #111827; }
-        html.dark #ptr-text { color: #f9fafb; }
+        html.dark #smart-ptr { background: #1e1e1e; border: 1px solid rgba(255,255,255,0.1); }
+        #smart-ptr-icon { color: #10B981; font-size: 24px; transition: transform 0.1s; }
+        #smart-ptr-text { font-size: 14px; font-weight: 700; color: #000; }
+        html.dark #smart-ptr-text { color: #fff; }
+        .ptr-spin { animation: ptrSpin 1s linear infinite; }
+        @keyframes ptrSpin { 100% { transform: rotate(360deg); } }
     `;
     document.head.appendChild(style);
 
     const ptrContainer = document.createElement('div');
-    ptrContainer.id = 'ptr-container';
+    ptrContainer.id = 'smart-ptr';
     ptrContainer.innerHTML = `
-        <span id="ptr-spinner" class="material-symbols-outlined">refresh</span>
-        <span id="ptr-text">Pull to refresh</span>
+        <span id="smart-ptr-icon" class="material-symbols-outlined">refresh</span>
+        <span id="smart-ptr-text">Pull to refresh</span>
     `;
     document.body.appendChild(ptrContainer);
 
-    let startY = 0, currentY = 0;
-    let isDragging = false, isRefreshing = false;
-    let scrollTarget = null;
-    const threshold = 100;
+    const icon = document.getElementById('smart-ptr-icon');
+    const text = document.getElementById('smart-ptr-text');
 
-    const spinner = document.getElementById('ptr-spinner');
-    const text = document.getElementById('ptr-text');
+    let startY = 0;
+    let isDragging = false;
+    let isRefreshing = false;
+    let lastVisualDist = 0;
+    const triggerPoint = 80;
 
-    // 2. DEEP SCROLL SCANNER: Accurately finds the true scroll position
-    const getScrollContainer = (el) => {
-        let node = el;
-        while (node && node !== document.body && node !== document.documentElement) {
-            const style = window.getComputedStyle(node);
-            if (style.overflowY === 'auto' || style.overflowY === 'scroll') return node;
-            node = node.parentElement;
+    // 2. ULTRA-SAFE TOP DETECTOR
+    // This accurately climbs the DOM to ensure you are at the absolute top of the feed!
+    function isAtAbsoluteTop(node) {
+        let current = node;
+        while (current && current !== document.body && current !== document.documentElement) {
+            if (current.scrollTop > 2) return false; 
+            current = current.parentNode;
         }
-        return document.documentElement;
-    };
+        if ((window.scrollY || document.documentElement.scrollTop) > 2) return false;
+        return true;
+    }
 
     document.addEventListener('touchstart', (e) => {
         if (isRefreshing) return;
-
-        scrollTarget = getScrollContainer(e.target);
-        const scrollTop = scrollTarget === document.documentElement ? window.scrollY : scrollTarget.scrollTop;
         
-        if (scrollTop > 5) return; // Must be at the absolute top of the feed
+        // Block if swiping on a modal or camera
+        if (e.target.closest('[id^="modal-"]:not(.hidden), [id^="view-create-post"]:not(.hidden)')) return;
 
-        // Block if any modal is open
-        if (document.querySelector('[id^="modal-"]:not(.hidden):not(.translate-x-full):not(.translate-y-full)')) return;
-        if (document.querySelector('[id^="view-create-post"]:not(.hidden):not(.translate-y-full)')) return;
-
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        ptrContainer.style.transition = 'none';
-        spinner.classList.remove('animate-spin');
+        if (isAtAbsoluteTop(e.target)) {
+            startY = e.touches[0].clientY;
+            isDragging = true;
+            lastVisualDist = 0;
+            ptrContainer.style.transition = 'none'; 
+            icon.classList.remove('ptr-spin');
+        }
     }, { passive: true });
 
     document.addEventListener('touchmove', (e) => {
         if (!isDragging || isRefreshing) return;
-        
-        currentY = e.touches[0].clientY;
-        const pullDistance = currentY - startY;
 
-        if (pullDistance < 0) { // If user scrolls upwards, cancel drag
-            isDragging = false;
-            document.body.classList.remove('ptr-active');
+        const distance = e.touches[0].clientY - startY;
+
+        if (distance < 0) {
+            isDragging = false; // Cancel drag if they scroll upwards
             return;
         }
 
-        const scrollTop = scrollTarget === document.documentElement ? window.scrollY : scrollTarget.scrollTop;
+        if (distance > 0 && isAtAbsoluteTop(e.target)) {
+            if (e.cancelable) e.preventDefault(); // 🛑 KILLS NATIVE BROWSER SCROLL
 
-        if (pullDistance > 0 && scrollTop <= 5) {
-            document.body.classList.add('ptr-active'); // Locks native browser refresh
-            if (e.cancelable) e.preventDefault(); // Prevents screen bounce
-
-            const visualDistance = Math.min(pullDistance * 0.45, threshold + 30);
+            lastVisualDist = distance * 0.45;
             
-            ptrContainer.style.opacity = Math.min(visualDistance / 60, 1).toString();
-            ptrContainer.style.transform = `translate(-50%, ${visualDistance - 80}px)`;
-            spinner.style.transform = `rotate(${visualDistance * 3}deg)`;
+            ptrContainer.style.opacity = '1';
+            ptrContainer.style.transform = `translate(-50%, ${Math.min(lastVisualDist, triggerPoint + 20)}px)`;
+            icon.style.transform = `rotate(${lastVisualDist * 3}deg)`;
 
-            if (visualDistance >= threshold) {
-                text.textContent = "Release to refresh";
+            if (lastVisualDist >= triggerPoint) {
+                text.innerText = "Release to refresh";
                 if (navigator.vibrate && text.dataset.vibrated !== 'true') {
-                    navigator.vibrate(15);
+                    navigator.vibrate(10);
                     text.dataset.vibrated = 'true';
                 }
             } else {
-                text.textContent = "Pull to refresh";
+                text.innerText = "Pull to refresh";
                 text.dataset.vibrated = 'false';
             }
         }
-    }, { passive: false }); // MUST be false to allow preventDefault()
+    }, { passive: false }); // 🛑 MUST BE FALSE FOR PREVENT DEFAULT TO WORK
 
-    const endDrag = async () => {
+    const handleTouchEnd = async () => {
         if (!isDragging) return;
         isDragging = false;
-        document.body.classList.remove('ptr-active');
-
-        const pullDistance = currentY - startY;
-        const visualDistance = Math.min(pullDistance * 0.45, threshold + 30);
 
         ptrContainer.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
-
-        if (visualDistance >= threshold && !isRefreshing) {
+        
+        if (lastVisualDist >= triggerPoint && !isRefreshing) {
             isRefreshing = true;
             
-            ptrContainer.style.transform = `translate(-50%, 40px)`;
-            spinner.style.transform = ''; // Clear inline rotation
-            spinner.classList.add('animate-spin');
-            text.textContent = "Refreshing...";
+            // Snap to loading position
+            ptrContainer.style.transform = `translate(-50%, 60px)`;
+            text.innerText = "Refreshing...";
+            icon.style.transform = '';
+            icon.classList.add('ptr-spin');
 
-            if (typeof window.executeContextualRefresh === 'function') {
-                await window.executeContextualRefresh();
-            } else {
-                await new Promise(r => setTimeout(r, 1000));
-            }
+            try {
+                if (window.executeContextualRefresh) await window.executeContextualRefresh();
+            } catch(e) { console.error(e); }
 
+            // Hide bubble after loading completes
+            isRefreshing = false;
             ptrContainer.style.transform = `translate(-50%, -150px)`;
             ptrContainer.style.opacity = '0';
-            setTimeout(() => {
-                isRefreshing = false;
-                spinner.classList.remove('animate-spin');
-            }, 300);
+            setTimeout(() => icon.classList.remove('ptr-spin'), 300);
 
         } else {
+            // Did not pull far enough, cancel
             ptrContainer.style.transform = `translate(-50%, -150px)`;
             ptrContainer.style.opacity = '0';
         }
+        lastVisualDist = 0;
     };
 
-    document.addEventListener('touchend', endDrag, { passive: true });
-    document.addEventListener('touchcancel', endDrag, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 }
 
-async function executeContextualRefresh() {
+window.executeContextualRefresh = async function() {
     const activeTab = document.querySelector('.tab-content:not(.hidden)');
     if (!activeTab) return;
 
@@ -204,16 +195,15 @@ async function executeContextualRefresh() {
             if (typeof window.refreshUpdates === 'function') await window.refreshUpdates();
         }
         else if (activeTab.id === 'view-profile') {
-            if (typeof window.fetchMyProfileFeed === 'function' && currentUserProfile) {
+            if (typeof window.fetchMyProfileFeed === 'function' && typeof currentUserProfile !== 'undefined') {
                 await window.fetchMyProfileFeed(currentUserProfile.id);
             }
         }
-        // Force minimum loading time so animation looks deliberate
-        await new Promise(res => setTimeout(res, 800));
+        await new Promise(res => setTimeout(res, 800)); // Minimum time for visual effect
     } catch (e) {
         console.error("Contextual Refresh Error:", e);
     }
-}
+};
 
 // ========================================================
 // IMAGE OPTIMIZATION ENGINE
