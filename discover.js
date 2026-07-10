@@ -6,9 +6,7 @@ let currentUser = null;
 
 export function initDiscover(user) {
     currentUser = user;
-    fetchDiscoverUsers();
-    fetchPopularUsers();
-
+    
     const connectHandler = (e) => {
         const connectBtn = e.target.closest('.connect-btn');
         if (connectBtn && !connectBtn.disabled) {
