@@ -1377,7 +1377,7 @@ function renderProfileActions(user, connection) {
     }
 }
 
-export async function handleConnectionAction(targetUserId, action, btn) {
+window.handleConnectionAction = async function(targetUserId, action, btn) {
     const originalText = btn ? btn.innerHTML : '';
     if (btn) {
         btn.disabled = true;
@@ -1408,7 +1408,7 @@ export async function handleConnectionAction(targetUserId, action, btn) {
             btn.innerHTML = originalText;
         }
     }
-}
+};
 
 function getSuccessMessage(result) {
     const messages = { request_sent: 'Connection request sent!', accepted: 'Connection accepted!', cancelled: 'Request cancelled.', declined: 'Request declined.', unfriended: 'Connection removed.', blocked: 'User blocked.', unblocked: 'User unblocked.' };
@@ -1461,45 +1461,47 @@ async function submitReport() {
 window.viewUserProfile = viewUserProfile;
 
 // ==========================================
-// LAZY-LOADING TAB ROUTER
+// LAZY-LOADING TAB ROUTER (Anti-Crash Fix)
 // ==========================================
-window.switchTab = function(tabId) {
-    // 1. Hide all tabs, show target
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById(tabId).classList.remove('hidden');
+function switchTab(tabId) {
+    document.querySelectorAll(".tab-content").forEach(tab => tab.classList.add("hidden"));
+    
+    const activeView = document.getElementById(`view-${tabId}`);
+    if (activeView) activeView.classList.remove("hidden");
 
-    // 2. Update Nav Bar UI
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        const icon = btn.querySelector('span:first-child');
-        btn.classList.remove('text-primary');
-        btn.classList.add('text-on-surface-variant', 'dark:text-gray-400');
-        if(icon) icon.style.fontVariationSettings = "'FILL' 0";
+    const header = document.querySelector("header");
+    if (tabId === "dashboard") header.classList.remove("hidden");
+    else header.classList.add("hidden");
+
+    const bottomNav = document.querySelector('nav');
+    if (bottomNav) bottomNav.classList.remove('hidden');
+
+    document.querySelectorAll(".nav-item").forEach(btn => {
+        btn.classList.remove("bg-primary", "text-white");
+        btn.classList.add("text-on-surface-variant", "dark:text-gray-400");
+        const icon = btn.querySelector(".material-symbols-outlined");
+        if (icon) icon.style.fontVariationSettings = "'FILL' 0";
     });
 
-    const activeBtn = document.querySelector(`.nav-btn[onclick="switchTab('${tabId}')"]`);
+    const activeBtn = document.getElementById(`nav-${tabId}`);
     if (activeBtn) {
-        const activeIcon = activeBtn.querySelector('span:first-child');
-        activeBtn.classList.remove('text-on-surface-variant', 'dark:text-gray-400');
-        activeBtn.classList.add('text-primary');
-        if (activeIcon) activeIcon.style.fontVariationSettings = "'FILL' 1";
+        activeBtn.classList.remove("text-on-surface-variant", "dark:text-gray-400");
+        activeBtn.classList.add("bg-primary", "text-white");
+        const icon = activeBtn.querySelector(".material-symbols-outlined");
+        if (icon) icon.style.fontVariationSettings = "'FILL' 1";
     }
 
-    // 3. 🚀 THE LAZY LOADER ENGINE
-    // Checks if the tab has been opened before. If not, fetches the data!
-    if (!window.loadedTabs.has(tabId)) {
-        window.loadedTabs.add(tabId);
-        
-        if (tabId === 'view-search' && typeof window.refreshDiscover === 'function') {
-            window.refreshDiscover();
-        } 
-        else if (tabId === 'view-updates' && typeof window.refreshUpdates === 'function') {
-            window.refreshUpdates();
-        } 
-        else if (tabId === 'view-profile' && typeof window.fetchMyProfileFeed === 'function' && typeof currentUserProfile !== 'undefined') {
-            window.fetchMyProfileFeed(currentUserProfile.id);
-        }
+    window.scrollTo({ top: 0, behavior: "instant" });
+
+    // 🚀 THE LAZY LOADER ENGINE
+    if (window.loadedTabs && !window.loadedTabs.has(`view-${tabId}`)) {
+        window.loadedTabs.add(`view-${tabId}`);
+        if (tabId === 'search' && typeof window.refreshDiscover === 'function') window.refreshDiscover();
+        else if (tabId === 'updates' && typeof window.refreshUpdates === 'function') window.refreshUpdates();
+        else if (tabId === 'profile' && typeof window.fetchMyProfileFeed === 'function' && typeof currentUserProfile !== 'undefined') window.fetchMyProfileFeed(currentUserProfile.id);
     }
-};
+}
+window.switchTab = switchTab; // Expose globally without crashing
 
 function openProfileModal(type) {
     const modal = document.getElementById(`modal-profile-${type}`);
