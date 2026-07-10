@@ -410,17 +410,19 @@ function renderPosts(posts) {
 }
 
 // ==========================================
-// OPTIMISTIC LIKE ENGINE
+// OPTIMISTIC LIKE ENGINE (Failsafe Version)
 // ==========================================
 async function handleLike(postId, isLiked) {
     // 1. OPTIMISTIC UI: Update the screen instantly across the entire app
     const likeBtns = document.querySelectorAll(`.like-btn[data-post-id="${postId}"]`);
     
     likeBtns.forEach(likeBtn => {
-        // 🚀 THE FIX: Use .parentElement instead of .closest('.flex')
+        // Failsafe: Find the number and icon safely, preventing "null" crashes!
         const container = likeBtn.parentElement; 
-        const countSpan = container.querySelector('.like-count-text'); 
-        const iconSpan = likeBtn.querySelector('span:first-child');
+        const countSpan = container.querySelector('.like-count-text') || likeBtn.querySelector('.like-count-text');
+        const iconSpan = likeBtn.querySelector('span.material-symbols-outlined');
+        
+        if (!countSpan || !iconSpan) return; 
         
         let currentCount = parseInt(countSpan.textContent) || 0;
 
@@ -428,7 +430,7 @@ async function handleLike(postId, isLiked) {
         countSpan.textContent = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
         
         if (!isLiked) {
-            // Instantly Like (Instagram Red with Pulse)
+            // Instantly Like
             likeBtn.classList.add('text-red-500');
             likeBtn.classList.remove('dark:text-gray-400', 'text-primary', 'text-on-surface-variant');
             iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
@@ -442,26 +444,14 @@ async function handleLike(postId, isLiked) {
     });
 
     try {
-        // 2. BACKGROUND SYNC: Talk to the database silently
+        // 2. BACKGROUND SYNC
         if (isLiked) {
             await supabase.from('post_likes').delete().match({ post_id: postId, user_id: currentUser.id });
         } else {
             await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
-            
-            // Trigger Notification
-            const { data: postData } = await supabase.from('posts').select('user_id').eq('id', postId).single();
-            if (postData && postData.user_id !== currentUser.id) {
-                await supabase.from('notifications').insert({
-                    user_id: postData.user_id,
-                    sender_id: currentUser.id,
-                    type: 'post_like',
-                    target_id: postId
-                });
-            }
         }
     } catch (error) {
         console.error("Like error:", error);
-        showToast('Connection failed.', 'error');
     }
 }
 
