@@ -227,44 +227,92 @@ async function submitPost() {
 // FETCHING & RENDERING POSTS
 // ==========================================
 
-async function fetchPosts() {
-    const container = document.getElementById('feed-posts-container');
-    if (!container) return;
-    
-    // Inject the Skeleton Loader
-    container.innerHTML = FEED_SKELETON;
+// ==========================================
+// INFINITE SCROLL & PAGINATION ENGINE
+// ==========================================
+let currentFeedPage = 0;
+const POSTS_PER_PAGE = 7; // Optimized for mobile viewport
+let isFetchingFeed = false;
+let hasMorePosts = true;
+
+window.refreshMainFeed = async function() {
+    currentFeedPage = 0;
+    hasMorePosts = true;
+    document.getElementById('feed-posts-container').innerHTML = FEED_SKELETON;
+    await fetchPosts(true);
+};
+
+async function fetchPosts(isRefresh = false) {
+    if (isFetchingFeed || (!hasMorePosts && !isRefresh)) return;
+    isFetchingFeed = true;
+
+    const from = currentFeedPage * POSTS_PER_PAGE;
+    const to = from + POSTS_PER_PAGE - 1;
 
     try {
         const { data, error } = await supabase
             .from('posts')
             .select(`
                 *,
-                users ( id, full_name, profile_img_url, role, tick_type ),
-                post_likes ( user_id ),
-                post_comments ( count ),
-                post_poll_votes ( user_id, option_index )
+                users(id, full_name, profile_img_url, tick_type),
+                post_likes(user_id),
+                post_comments(count)
             `)
-            .eq('is_deleted', false)
             .order('created_at', { ascending: false })
-            .limit(30);
+            .range(from, to); // 🚀 Supabase Pagination command!
 
         if (error) throw error;
-        renderPosts(data);
+
+        if (data.length < POSTS_PER_PAGE) {
+            hasMorePosts = false;
+        }
+
+        renderPosts(data, isRefresh);
+        currentFeedPage++;
+        
+        if (hasMorePosts) setupIntersectionObserver();
 
     } catch (error) {
-        console.error('Error fetching feed posts:', error);
-        container.innerHTML = `<p class="text-sm italic text-center py-4 text-error">Failed to load feed.</p>`;
+        console.error('Error fetching posts:', error);
+        if (isRefresh) document.getElementById('feed-posts-container').innerHTML = `<p class="text-center py-10 text-error">Failed to load feed.</p>`;
+    } finally {
+        isFetchingFeed = false;
     }
 }
 
-function renderPosts(posts) {
+function setupIntersectionObserver() {
     const container = document.getElementById('feed-posts-container');
-    if (posts.length === 0) {
+    
+    // Remove old sentinel
+    let sentinel = document.getElementById('feed-bottom-sentinel');
+    if (sentinel) sentinel.remove();
+
+    // Create new sentinel loader
+    sentinel = document.createElement('div');
+    sentinel.id = 'feed-bottom-sentinel';
+    sentinel.className = 'w-full py-8 flex justify-center';
+    sentinel.innerHTML = `<span class="material-symbols-outlined animate-spin text-primary text-[28px]">progress_activity</span>`;
+    container.appendChild(sentinel);
+
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+            observer.disconnect(); // Stop observing old sentinel
+            fetchPosts(false); // Fetch next page!
+        }
+    }, { rootMargin: '400px' }); // Start fetching 400px BEFORE they hit the bottom
+
+    observer.observe(sentinel);
+}
+
+function renderPosts(posts, isRefresh = false) {
+    const container = document.getElementById('feed-posts-container');
+    
+    if (posts.length === 0 && isRefresh) {
         container.innerHTML = `<div class="py-12 flex flex-col items-center justify-center opacity-40"><span class="material-symbols-outlined text-[42px] mb-2">menu_book</span><p class="text-sm font-medium text-on-surface-variant">The feed is empty.</p></div>`;
         return;
     }
 
-    container.innerHTML = posts.map(post => {
+    const htmlString = posts.map(post => {
         const user = post.users;
         if (!user) return '';
 
@@ -276,21 +324,27 @@ function renderPosts(posts) {
         let contentHtml = '';
         const verifiedBadge = getTickHtml(user.tick_type);
         
-        const headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
+        // 🚀 Compress images via new Cloudinary global function
+        const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+        const optimizedAvatar = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
+        
+        const headerIcon = `<img loading="lazy" src="${optimizedAvatar}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
         if (post.post_type === 'text') {
             contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
         } 
         else if (post.post_type === 'image') {
+            const optimizedMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.media_url, 'feed') : post.media_url;
             contentHtml = `
                 <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
                 <div class="w-full mb-4 rounded-2xl overflow-hidden border border-surface-variant/50 dark:border-neutral-800 shadow-inner bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center">
-                    <img src="${post.media_url}" class="w-full h-auto max-h-[80vh] object-contain">
+                    <img loading="lazy" src="${optimizedMedia}" class="w-full h-auto max-h-[80vh] object-contain">
                 </div>
             `;
         }
         else if (post.post_type === 'event') {
-            const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
+            const optimizedEventMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.event_image_url, 'feed') : post.event_image_url;
+            const eventImgHtml = post.event_image_url ? `<img loading="lazy" src="${optimizedEventMedia}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
             const btnText = post.event_button_text || 'View Link';
             const registerHtml = post.event_register_url ? `<a href="${post.event_register_url}" target="_blank" class="block w-full mt-4 bg-secondary text-white text-center py-2.5 rounded-xl text-[13px] font-bold active:scale-95 transition-transform shadow-md shadow-secondary/20">${btnText}</a>` : '';
             const dateStr = post.event_date ? new Date(post.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'TBA';
@@ -403,6 +457,13 @@ function renderPosts(posts) {
         </div>
         `;
     }).join('');
+
+    if (isRefresh) {
+        container.innerHTML = htmlString;
+    } else {
+        // 🚀 Safely append to the bottom without destroying the page
+        container.insertAdjacentHTML('beforeend', htmlString);
+    }
 }
 
 // ==========================================
