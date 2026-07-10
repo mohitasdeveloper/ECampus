@@ -278,11 +278,9 @@ function renderPosts(posts) {
         
         const headerIcon = `<img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
-        // Text Post
         if (post.post_type === 'text') {
             contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
         } 
-        // Image Post
         else if (post.post_type === 'image') {
             contentHtml = `
                 <p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-3 px-1 whitespace-pre-wrap">${post.content}</p>
@@ -291,7 +289,6 @@ function renderPosts(posts) {
                 </div>
             `;
         }
-        // Event Post
         else if (post.post_type === 'event') {
             const eventImgHtml = post.event_image_url ? `<img src="${post.event_image_url}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
             const btnText = post.event_button_text || 'View Link';
@@ -316,7 +313,6 @@ function renderPosts(posts) {
                 </div>
             `;
         }
-        // Poll Post
         else if (post.post_type === 'poll') {
             const votes = post.post_poll_votes || [];
             const totalVotes = votes.length;
@@ -386,7 +382,8 @@ function renderPosts(posts) {
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
                 
                 <div class="flex items-center gap-1.5">
-                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center text-on-surface-variant transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'dark:text-gray-400 hover:text-red-500'}">
+                    <!-- Cleaned classes! -->
+                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 hover:text-red-500'}">
                         <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
                     </button>
                     <span onclick="event.stopPropagation(); window.openLikesModal('${post.id}')" class="like-count-text text-[13px] font-bold cursor-pointer hover:underline text-on-surface-variant dark:text-gray-400 active:opacity-70 px-1 py-0.5">
@@ -410,38 +407,35 @@ function renderPosts(posts) {
 }
 
 // ==========================================
-// OPTIMISTIC LIKE ENGINE (Bulletproof Version)
+// OPTIMISTIC LIKE ENGINE (Ultimate Failsafe)
 // ==========================================
 async function handleLike(postId, isLiked) {
+    if (!currentUser) return; // Prevents crash if user is not fully loaded
     const nextLikedState = !isLiked;
 
-    // 1. OPTIMISTIC UI: Update instantly across the entire app
+    // 1. OPTIMISTIC UI: Instantly update everywhere
     const likeBtns = document.querySelectorAll(`.like-btn[data-post-id="${postId}"]`);
     
     likeBtns.forEach(likeBtn => {
         likeBtn.dataset.liked = nextLikedState.toString();
 
-        // Safely find the number counter without crashing
+        // Safely find the elements
         const container = likeBtn.parentElement; 
         const countSpan = container ? container.querySelector('.like-count-text') : null;
         const iconSpan = likeBtn.querySelector('.material-symbols-outlined');
         
+        // Update Number
         if (countSpan) {
-            let currentCount = parseInt(countSpan.textContent) || 0;
+            let currentCount = parseInt(countSpan.textContent.trim()) || 0;
             countSpan.textContent = nextLikedState ? currentCount + 1 : Math.max(0, currentCount - 1);
         }
         
+        // Update Heart Icon (Completely overwrites classes to prevent CSS glitches!)
         if (iconSpan) {
             if (nextLikedState) {
-                // Instantly Like
-                likeBtn.classList.add('text-red-500');
-                likeBtn.classList.remove('dark:text-gray-400', 'text-primary', 'text-on-surface-variant');
-                iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
+                likeBtn.className = "like-btn flex items-center justify-center transition-colors active:scale-95 text-red-500";
             } else {
-                // Instantly Unlike
-                likeBtn.classList.remove('text-red-500', 'text-primary');
-                likeBtn.classList.add('dark:text-gray-400', 'text-on-surface-variant');
-                iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
+                likeBtn.className = "like-btn flex items-center justify-center transition-colors active:scale-95 text-on-surface-variant dark:text-gray-400 hover:text-red-500";
             }
             iconSpan.style.fontVariationSettings = `'FILL' ${nextLikedState ? 1 : 0}`;
         }
