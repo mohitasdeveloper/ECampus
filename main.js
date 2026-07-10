@@ -36,29 +36,46 @@ window.addEventListener('load', () => {
 });
 
 // ========================================================
-// AGGRESSIVE PULL-TO-REFRESH ENGINE (WebView Master Fix)
+// AUTO-INJECTING PULL-TO-REFRESH ENGINE (Ultimate Fix)
 // ========================================================
 function initPullToRefresh() {
     if (window.isPTRInitialized) return;
     window.isPTRInitialized = true;
 
-    // Force kill native Android overscroll at the document level
-    document.body.style.overscrollBehavior = 'none';
-    document.documentElement.style.overscrollBehavior = 'none';
+    // 1. DYNAMICALLY INJECT CSS TO KILL NATIVE ANDROID REFRESH
+    const style = document.createElement('style');
+    style.innerHTML = `
+        html, body {
+            overscroll-behavior-y: none !important;
+            overscroll-behavior-x: none !important;
+        }
+    `;
+    document.head.appendChild(style);
 
+    // 2. DYNAMICALLY INJECT THE BUBBLE (Guarantees perfect placement)
+    const ptrContainer = document.createElement('div');
+    ptrContainer.id = 'ptr-container';
+    ptrContainer.className = 'fixed top-0 left-1/2 -translate-x-1/2 z-[9999] flex items-center justify-center gap-2 bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/50 dark:border-neutral-800 shadow-[0_10px_40px_rgba(0,0,0,0.3)] rounded-full px-5 py-2.5 opacity-0 pointer-events-none';
+    ptrContainer.style.transform = 'translateY(-100px)'; // Hidden safely off-screen
+    ptrContainer.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s';
+
+    ptrContainer.innerHTML = `
+        <span id="ptr-spinner" class="material-symbols-outlined text-primary text-[22px] transition-transform duration-75">refresh</span>
+        <span id="ptr-text" class="text-[13.5px] font-bold text-on-surface dark:text-gray-100 tracking-wide">Pull to refresh</span>
+    `;
+    document.body.appendChild(ptrContainer);
+
+    // 3. THE TOUCH ENGINE
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
     let isRefreshing = false;
     const threshold = 100;
-    
-    const ptrContainer = document.getElementById('ptr-container');
-    const ptrSpinner = document.getElementById('ptr-spinner');
-    const ptrText = document.getElementById('ptr-text');
 
-    if (!ptrContainer) return;
+    const spinner = document.getElementById('ptr-spinner');
+    const text = document.getElementById('ptr-text');
 
-    // DEEP SCROLL SCANNER: Finds the true scroll position even if scrolling inside a div
+    // Deep Scroll Scanner: Finds if we are at the top, even if scrolling inside a custom div
     const getTrueScrollTop = (targetNode) => {
         let node = targetNode;
         while (node && node !== document.body && node !== document.documentElement) {
@@ -68,27 +85,22 @@ function initPullToRefresh() {
         return window.scrollY || document.documentElement.scrollTop || 0;
     };
 
-    // Use CAPTURE PHASE to guarantee we intercept the touch before the browser ignores it
-    const eventOptions = { passive: false, capture: true };
-
     document.addEventListener('touchstart', (e) => {
-        if (isRefreshing) return;
+        if (isRefreshing || getTrueScrollTop(e.target) > 5) return;
         
-        // 1. Check if we are at the absolute top of whatever is scrolling
-        if (getTrueScrollTop(e.target) > 5) return;
-        
-        // 2. Block if any full-screen modal is open
-        const hasOpenModal = document.querySelector('[id^="modal-"]:not(.hidden):not(.translate-x-full):not(.translate-y-full)');
-        const hasOpenView = document.querySelector('[id^="view-create-post"]:not(.hidden):not(.translate-y-full)');
-        if (hasOpenModal || hasOpenView) return;
+        // Prevent PTR if any full-screen modal or camera is open
+        const modals = document.querySelectorAll('[id^="modal-"], [id^="view-"]');
+        for (let m of modals) {
+            if (!m.classList.contains('hidden') && !m.classList.contains('translate-x-full') && !m.classList.contains('translate-y-full')) return;
+        }
 
         startY = e.touches[0].clientY;
         isDragging = true;
         
         ptrContainer.style.transition = 'none';
-        ptrSpinner.classList.remove('animate-spin');
-        ptrText.textContent = "Pull to refresh";
-    }, { passive: true, capture: true });
+        spinner.classList.remove('animate-spin');
+        text.textContent = "Pull to refresh";
+    }, { passive: true });
 
     document.addEventListener('touchmove', (e) => {
         if (!isDragging || isRefreshing) return;
@@ -96,77 +108,78 @@ function initPullToRefresh() {
         currentY = e.touches[0].clientY;
         const pullDistance = currentY - startY;
 
-        // Abort if scrolling upwards
-        if (pullDistance < 0) {
-            isDragging = false;
-            return;
-        }
-
         // If pulling down while at the top of the feed
         if (pullDistance > 0 && getTrueScrollTop(e.target) <= 5) {
-            if (e.cancelable) e.preventDefault(); // LOCK NATIVE SCREEN
+            if (e.cancelable) e.preventDefault(); // Locks the native Android screen!
             
-            const visualDistance = Math.min(pullDistance * 0.4, threshold + 30);
+            const visualDistance = Math.min(pullDistance * 0.45, threshold + 40);
             
-            // Move from -100px (hidden) down into the screen safely
-            ptrContainer.style.transform = `translate(-50%, ${-100 + visualDistance}px)`;
+            // Move bubble down onto the screen safely
+            ptrContainer.style.transform = `translateY(${visualDistance - 100}px)`;
             ptrContainer.style.opacity = Math.min(visualDistance / 60, 1).toString();
-            ptrSpinner.style.transform = `rotate(${visualDistance * 3}deg)`;
+            
+            // Rotate spinner based on thumb drag
+            spinner.style.transform = `rotate(${visualDistance * 3}deg)`;
 
             if (visualDistance >= threshold) {
-                ptrText.textContent = "Release to refresh";
-                if (window.navigator.vibrate && ptrText.dataset.vibrated !== 'true') {
-                    window.navigator.vibrate(15);
-                    ptrText.dataset.vibrated = 'true';
+                text.textContent = "Release to refresh";
+                if (navigator.vibrate && text.dataset.vibrated !== 'true') {
+                    navigator.vibrate(15);
+                    text.dataset.vibrated = 'true';
                 }
             } else {
-                ptrText.textContent = "Pull to refresh";
-                ptrText.dataset.vibrated = 'false';
+                text.textContent = "Pull to refresh";
+                text.dataset.vibrated = 'false';
             }
         }
-    }, eventOptions); 
+    }, { passive: false });
 
     const endDrag = async () => {
         if (!isDragging) return;
         isDragging = false;
         
         const pullDistance = currentY - startY;
-        const visualDistance = Math.min(pullDistance * 0.4, threshold + 30);
+        const visualDistance = Math.min(pullDistance * 0.45, threshold + 40);
 
-        ptrContainer.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        ptrContainer.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s';
 
         if (visualDistance >= threshold && !isRefreshing) {
             isRefreshing = true;
             
-            // Snap the bubble to rest nicely just below the top of the screen
-            ptrContainer.style.transform = `translate(-50%, 30px)`; 
-            ptrSpinner.classList.add('animate-spin');
-            ptrText.textContent = "Refreshing...";
+            // Snap to loading position
+            ptrContainer.style.transform = `translateY(30px)`; 
+            
+            // CRITICAL FIX: Erase the thumb rotation math so Tailwind's spin animation can take over
+            spinner.style.transform = ''; 
+            spinner.classList.add('animate-spin');
+            
+            text.textContent = "Refreshing...";
 
             // Run the refresh
             if (typeof window.executeContextualRefresh === 'function') {
                 await window.executeContextualRefresh();
             } else {
-                await new Promise(r => setTimeout(r, 800));
+                await new Promise(r => setTimeout(r, 1000));
             }
 
-            // Hide bubble
-            ptrContainer.style.transform = `translate(-50%, -100px)`;
+            // Hide bubble after completion
+            ptrContainer.style.transform = `translateY(-100px)`;
             ptrContainer.style.opacity = '0';
+            
             setTimeout(() => {
                 isRefreshing = false;
-                ptrSpinner.classList.remove('animate-spin');
+                spinner.classList.remove('animate-spin');
             }, 300);
 
         } else {
-            // Did not pull far enough, snap back and hide
-            ptrContainer.style.transform = `translate(-50%, -100px)`;
+            // Did not pull far enough, hide bubble
+            ptrContainer.style.transform = `translateY(-100px)`;
             ptrContainer.style.opacity = '0';
         }
     };
 
-    document.addEventListener('touchend', endDrag, { passive: true, capture: true });
-    document.addEventListener('touchcancel', endDrag, { passive: true, capture: true });
+    document.addEventListener('touchend', endDrag, { passive: true });
+    document.addEventListener('touchcancel', endDrag, { passive: true });
 }
 
 // Global Routing Function
@@ -180,34 +193,6 @@ window.executeContextualRefresh = async function() {
         console.error("Refresh failed", e);
     }
 };
-
-async function executeContextualRefresh() {
-    const activeTab = document.querySelector('.tab-content:not(.hidden)');
-    if (!activeTab) return;
-
-    try {
-        if (activeTab.id === 'view-dashboard') {
-            if (typeof window.refreshMainFeed === 'function') await window.refreshMainFeed();
-            if (typeof window.refreshHotposts === 'function') await window.refreshHotposts();
-        } 
-        else if (activeTab.id === 'view-search') {
-            if (typeof window.refreshDiscover === 'function') await window.refreshDiscover();
-        }
-        else if (activeTab.id === 'view-updates') {
-            if (typeof window.refreshUpdates === 'function') await window.refreshUpdates();
-        }
-        else if (activeTab.id === 'view-profile') {
-            if (typeof window.fetchMyProfileFeed === 'function' && currentUserProfile) {
-                await window.fetchMyProfileFeed(currentUserProfile.id);
-            }
-        }
-        // Force minimum loading time so animation looks deliberate
-        await new Promise(res => setTimeout(res, 600));
-    } catch (e) {
-        console.error("Contextual Refresh Error:", e);
-    }
-}
-
 
 // ========================================================
 // IMAGE OPTIMIZATION ENGINE
