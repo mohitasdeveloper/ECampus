@@ -39,6 +39,10 @@ window.addEventListener('load', () => {
 // CONTEXT-AWARE PULL-TO-REFRESH ENGINE
 // ========================================================
 function initPullToRefresh() {
+    // Prevent double initialization
+    if (window.isPTRInitialized) return;
+    window.isPTRInitialized = true;
+
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
@@ -64,25 +68,30 @@ function initPullToRefresh() {
         isDragging = true;
         
         ptrContainer.style.transition = 'none';
-        ptrSpinner.classList.remove('ptr-loading-icon');
+        ptrSpinner.classList.remove('animate-spin'); // Changed to native Tailwind spin
         ptrText.textContent = "Pull to refresh";
     }, { passive: true });
 
+    // CRITICAL FIX: passive must be false here so we can block the native browser refresh
     document.addEventListener('touchmove', (e) => {
         if (!isDragging || isRefreshing) return;
         
         currentY = e.touches[0].clientY;
         const pullDistance = currentY - startY;
 
-        // If pulling downwards
-        if (pullDistance > 0) {
+        // If pulling downwards while at the absolute top of the page
+        if (pullDistance > 0 && window.scrollY <= 5) {
+            
+            // Block Chrome/Safari's native pull-to-refresh from taking over
+            if (e.cancelable) e.preventDefault(); 
+            
             document.body.classList.add('ptr-dragging-active');
             
             // Apply physics resistance
             const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
             
             ptrContainer.style.transform = `translate(-50%, calc(-150% + ${visualDistance}px))`;
-            ptrContainer.style.opacity = Math.min(visualDistance / threshold, 1);
+            ptrContainer.style.opacity = Math.min(visualDistance / threshold, 1).toString();
             ptrSpinner.style.transform = `rotate(${visualDistance * 2}deg)`; // Spin on drag
 
             if (visualDistance >= threshold) {
@@ -97,7 +106,7 @@ function initPullToRefresh() {
                 ptrText.dataset.vibrated = 'false';
             }
         }
-    }, { passive: true });
+    }, { passive: false }); // FIXED
 
     document.addEventListener('touchend', async () => {
         if (!isDragging) return;
@@ -112,7 +121,7 @@ function initPullToRefresh() {
         if (visualDistance >= threshold && !isRefreshing) {
             isRefreshing = true;
             ptrContainer.style.transform = `translate(-50%, 20px)`; 
-            ptrSpinner.classList.add('ptr-loading-icon');
+            ptrSpinner.classList.add('animate-spin'); // Changed to native Tailwind spin
             ptrText.textContent = "Refreshing...";
 
             // Find Active Tab & Execute Correct Refresh Function
@@ -123,7 +132,7 @@ function initPullToRefresh() {
             ptrContainer.style.opacity = '0';
             setTimeout(() => {
                 isRefreshing = false;
-                ptrSpinner.classList.remove('ptr-loading-icon');
+                ptrSpinner.classList.remove('animate-spin');
             }, 300);
 
         } else {
