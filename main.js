@@ -9,16 +9,25 @@ import { initUpdates } from './updates.js';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_AVATARS_PRESET } from './config.js';
 
 let currentUserProfile = null;
-
-// ========================================================
-// SPLASH SCREEN MANAGER
-// ========================================================
 window.addEventListener('load', () => {
+    // 1. Initialize the Pull-to-Refresh Engine
+    // This allows the user to drag down to refresh the feed
+    if (typeof initPullToRefresh === 'function') {
+        initPullToRefresh();
+    }
+
+    // 2. Splash Screen Logic
+    // This removes the loading screen after the app is ready
     setTimeout(() => {
         const splash = document.getElementById('app-splash-screen');
         if (splash) {
+            // Fade it out
             splash.style.opacity = '0';
+            
+            // Re-enable scrolling on the main body
             document.body.classList.remove('overflow-hidden');
+            
+            // Remove it completely from the DOM after the fade animation finishes
             setTimeout(() => {
                 splash.remove();
             }, 500); 
