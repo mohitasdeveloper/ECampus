@@ -384,58 +384,84 @@ function renderPosts(posts) {
             ${contentHtml}
             
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
-                <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[13px] font-medium active:scale-95 ${userHasLiked ? 'text-primary' : 'dark:text-gray-400'}">
-                    <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
-                    <span>${likeCount}</span>
-                </button>
-                <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
-                    <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
-                    <span>${commentCount}</span>
-                </button>
+                
+                <div class="flex items-center gap-1.5">
+                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center text-on-surface-variant transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'dark:text-gray-400 hover:text-red-500'}">
+                        <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
+                    </button>
+                    <span onclick="openLikesModal('${post.id}')" class="like-count-text text-[13px] font-bold cursor-pointer hover:underline text-on-surface-variant dark:text-gray-400 active:opacity-70">
+                        ${likeCount}
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
+                    </button>
+                    <span class="text-[13px] font-bold text-on-surface-variant dark:text-gray-400">
+                        ${commentCount}
+                    </span>
+                </div>
+
             </div>
-        </div>
         `;
     }).join('');
 }
 
 // ==========================================
-// INTERACTIONS & ACTIONS
+// OPTIMISTIC LIKE ENGINE
 // ==========================================
-
 async function handleLike(postId, isLiked) {
-    // Because we use document.body, this updates all matching like buttons dynamically (Feed + Profile)
+    // 1. OPTIMISTIC UI: Update the screen instantly across the entire app
     const likeBtns = document.querySelectorAll(`.like-btn[data-post-id="${postId}"]`);
-    if (!likeBtns || likeBtns.length === 0) return;
     
     likeBtns.forEach(likeBtn => {
-        const countSpan = likeBtn.querySelector('span:last-child');
+        const container = likeBtn.closest('.flex');
+        const countSpan = container.querySelector('.like-count-text'); // Targets the new separate number
         const iconSpan = likeBtn.querySelector('span:first-child');
-        const currentCount = parseInt(countSpan.textContent);
+        
+        let currentCount = parseInt(countSpan.textContent) || 0;
 
         likeBtn.dataset.liked = (!isLiked).toString();
-        countSpan.textContent = isLiked ? currentCount - 1 : currentCount + 1;
+        countSpan.textContent = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
         
-        if(!isLiked) {
-            likeBtn.classList.add('text-primary');
-            likeBtn.classList.remove('dark:text-gray-400');
+        if (!isLiked) {
+            // Instantly Like (Instagram Red with Pulse)
+            likeBtn.classList.add('text-red-500');
+            likeBtn.classList.remove('dark:text-gray-400', 'text-primary', 'text-on-surface-variant');
+            iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
         } else {
-            likeBtn.classList.remove('text-primary');
-            likeBtn.classList.add('dark:text-gray-400');
+            // Instantly Unlike
+            likeBtn.classList.remove('text-red-500', 'text-primary');
+            likeBtn.classList.add('dark:text-gray-400', 'text-on-surface-variant');
+            iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
         }
         iconSpan.style.fontVariationSettings = `'FILL' ${!isLiked ? 1 : 0}`;
     });
 
     try {
+        // 2. BACKGROUND SYNC: Talk to the database silently
         if (isLiked) {
             await supabase.from('post_likes').delete().match({ post_id: postId, user_id: currentUser.id });
         } else {
             await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
+            
+            // Trigger Notification
+            const { data: postData } = await supabase.from('posts').select('user_id').eq('id', postId).single();
+            if (postData && postData.user_id !== currentUser.id) {
+                await supabase.from('notifications').insert({
+                    user_id: postData.user_id,
+                    sender_id: currentUser.id,
+                    type: 'post_like',
+                    target_id: postId
+                });
+            }
         }
     } catch (error) {
         console.error("Like error:", error);
+        showToast('Connection failed.', 'error');
     }
 }
-
 async function handlePollVote(postId, optionIndex, isMultipleChoice) {
     if (isVoting) return; 
     isVoting = true;
@@ -786,3 +812,85 @@ async function submitComment(postId) {
     btn.disabled = false;
 }
 window.refreshMainFeed = fetchPosts;
+// ========================================================
+// INSTAGRAM-STYLE LIKES LIST 
+// ========================================================
+window.openLikesModal = async function(postId) {
+    const modal = document.getElementById('modal-likes-list');
+    const card = document.getElementById('likes-modal-card');
+    const container = document.getElementById('likes-list-container');
+    
+    if (!modal) {
+        console.error("modal-likes-list HTML is missing from index.html!");
+        return;
+    }
+
+    // 1. Animate Modal In
+    modal.classList.replace('hidden', 'flex');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        card.classList.remove('translate-y-full');
+    }, 10);
+
+    // 2. Show Native Shimmer Loader while fetching
+    container.innerHTML = `
+        <div class="flex items-center gap-3 p-3 animate-pulse">
+            <div class="w-11 h-11 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
+            <div class="flex-1 space-y-2">
+                <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded w-1/3"></div>
+                <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded w-1/4"></div>
+            </div>
+        </div>`.repeat(5);
+
+    try {
+        // 3. Fetch all users who liked this specific post
+        const { data: likes, error } = await supabase
+            .from('post_likes')
+            .select('users(id, full_name, profile_img_url, tick_type)')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (likes.length === 0) {
+            container.innerHTML = `<div class="py-12 flex flex-col items-center opacity-50"><span class="material-symbols-outlined text-4xl mb-2">favorite</span><p class="text-sm font-bold">No likes yet.</p></div>`;
+            return;
+        }
+
+        // 4. Render the list
+        const getTick = (type) => {
+            if (!type || type === 'none') return '';
+            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary' };
+            return `<span class="material-symbols-outlined text-[14px] ${colors[type.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+        };
+
+        container.innerHTML = likes.map(like => {
+            const u = like.users;
+            const avatar = u.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=e1e3e4`;
+            
+            return `
+                <div class="flex items-center justify-between p-3 hover:bg-surface-variant/20 dark:hover:bg-neutral-800/50 rounded-2xl transition-colors active:scale-[0.98]">
+                    <div class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onclick="closeLikesModal(); setTimeout(() => viewUserProfile('${u.id}'), 200);">
+                        <img src="${avatar}" class="w-11 h-11 rounded-full object-cover border border-surface-variant/50 dark:border-neutral-800 shadow-sm shrink-0">
+                        <div class="flex-1 min-w-0 truncate">
+                            <p class="text-[14.5px] font-extrabold text-on-surface dark:text-gray-100 flex items-center gap-1">${u.full_name} ${getTick(u.tick_type)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Likes fetch error:", err);
+        container.innerHTML = `<div class="py-10 text-center text-error text-sm font-bold">Failed to load likes.</div>`;
+    }
+};
+
+window.closeLikesModal = function() {
+    const modal = document.getElementById('modal-likes-list');
+    const card = document.getElementById('likes-modal-card');
+    
+    modal.classList.add('opacity-0');
+    card.classList.add('translate-y-full');
+    setTimeout(() => { modal.classList.replace('flex', 'hidden'); }, 300); 
+};
