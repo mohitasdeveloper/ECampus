@@ -36,18 +36,23 @@ window.addEventListener('load', () => {
 });
 
 // ========================================================
-// CONTEXT-AWARE PULL-TO-REFRESH ENGINE (Ultimate Native Fix)
+// CONTEXT-AWARE PULL-TO-REFRESH ENGINE (Ultimate Fix)
 // ========================================================
 function initPullToRefresh() {
     if (window.isPTRInitialized) return;
     window.isPTRInitialized = true;
 
+    // 1. FORCE KILL NATIVE ANDROID/CHROME PAGE RELOAD
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overscrollBehavior = 'none';
+
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
     let isRefreshing = false;
-    let isValidPull = false; // Tracks if the swipe started purely downwards
-    const threshold = 120; 
+    let isValidPull = false;
+    const threshold = 90; // Optimized for mobile thumbs
+    
     const ptrContainer = document.getElementById('ptr-container');
     const ptrSpinner = document.getElementById('ptr-spinner');
     const ptrText = document.getElementById('ptr-text');
@@ -55,18 +60,15 @@ function initPullToRefresh() {
     if (!ptrContainer) return;
 
     document.addEventListener('touchstart', (e) => {
-        // Must be at the absolute top of the feed
-        if (window.scrollY > 5) return; 
+        if (window.scrollY > 10) return; // Allow small 10px margin for Android
         
-        // Prevent PTR if any full-screen modal or camera is open
-        const hasOpenModal = Array.from(document.querySelectorAll('[id^="modal-"]')).some(m => !m.classList.contains('hidden') && !m.classList.contains('translate-x-full') && !m.classList.contains('translate-y-full') && !m.classList.contains('opacity-0'));
-        const hasOpenView = Array.from(document.querySelectorAll('[id^="view-create-post"]')).some(m => !m.classList.contains('hidden') && !m.classList.contains('translate-y-full'));
-        
-        if (hasOpenModal || hasOpenView) return;
+        // Block if a modal is open
+        const hasOpenModal = Array.from(document.querySelectorAll('[id^="modal-"]')).some(m => !m.classList.contains('hidden') && window.getComputedStyle(m).display !== 'none');
+        if (hasOpenModal) return;
 
         startY = e.touches[0].clientY;
         isDragging = true;
-        isValidPull = true; // Assume valid until proven otherwise
+        isValidPull = true; 
         
         ptrContainer.style.transition = 'none';
         ptrSpinner.classList.remove('animate-spin');
@@ -79,27 +81,25 @@ function initPullToRefresh() {
         currentY = e.touches[0].clientY;
         const pullDistance = currentY - startY;
 
-        // 1. Android Bug Fix: If user slightly scrolls UP first, cancel the pull gesture entirely!
         if (pullDistance < 0) {
             isValidPull = false;
             return;
         }
 
-        // 2. Lock the screen and pull down
-        if (isValidPull && pullDistance > 0 && window.scrollY <= 5) {
-            if (e.cancelable) e.preventDefault(); // Lock the screen natively!
-            
-            document.body.classList.add('ptr-dragging-active');
+        if (isValidPull && pullDistance > 0 && window.scrollY <= 10) {
+            if (e.cancelable) e.preventDefault(); // Lock the native screen!
             
             const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
-            ptrContainer.style.transform = `translate(-50%, calc(-150% + ${visualDistance}px))`;
-            ptrContainer.style.opacity = Math.min(visualDistance / threshold, 1).toString();
-            ptrSpinner.style.transform = `rotate(${visualDistance * 2}deg)`;
+            
+            // Transform down (clears Android status bar safely)
+            ptrContainer.style.transform = `translate(-50%, calc(env(safe-area-inset-top, 20px) + ${visualDistance}px))`;
+            ptrContainer.style.opacity = Math.min(visualDistance / (threshold * 0.8), 1).toString();
+            ptrSpinner.style.transform = `rotate(${visualDistance * 3}deg)`; // Spin while pulling
 
             if (visualDistance >= threshold) {
                 ptrText.textContent = "Release to refresh";
                 if (window.navigator.vibrate && ptrText.dataset.vibrated !== 'true') {
-                    window.navigator.vibrate(10);
+                    window.navigator.vibrate(15);
                     ptrText.dataset.vibrated = 'true';
                 }
             } else {
@@ -113,7 +113,6 @@ function initPullToRefresh() {
         if (!isDragging) return;
         isDragging = false;
         isValidPull = false;
-        document.body.classList.remove('ptr-dragging-active');
         
         const pullDistance = currentY - startY;
         const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
@@ -122,50 +121,20 @@ function initPullToRefresh() {
 
         if (visualDistance >= threshold && !isRefreshing) {
             isRefreshing = true;
-            ptrContainer.style.transform = `translate(-50%, 20px)`; 
+            
+            // Lock the bubble on screen while loading
+            ptrContainer.style.transform = `translate(-50%, calc(env(safe-area-inset-top, 20px) + 30px))`; 
             ptrSpinner.classList.add('animate-spin');
             ptrText.textContent = "Refreshing...";
 
-            await executeContextualRefresh();
+            // Execute actual refresh logic
+            if (typeof window.executeContextualRefresh === 'function') {
+                await window.executeContextualRefresh();
+            } else {
+                await new Promise(r => setTimeout(r, 1000)); // Fallback delay
+            }
 
-            ptrContainer.style.transform = `translate(-50%, -150%)`;
-            ptrContainer.style.opacity = '0';
-            setTimeout(() => {
-                isRefreshing = false;
-                ptrSpinner.classList.remove('animate-spin');
-            }, 300);
-
-        } else {
-            ptrContainer.style.transform = `translate(-50%, -150%)`;
-            ptrContainer.style.opacity = '0';
-        }
-    };
-
-    // 3. Android Bug Fix: Bind to touchcancel as well so the UI never gets stuck!
-    document.addEventListener('touchend', finishDrag, { passive: true });
-    document.addEventListener('touchcancel', finishDrag, { passive: true });
-}
-
-    document.addEventListener('touchend', async () => {
-        if (!isDragging) return;
-        isDragging = false;
-        document.body.classList.remove('ptr-dragging-active');
-        
-        const pullDistance = currentY - startY;
-        const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
-
-        ptrContainer.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-
-        if (visualDistance >= threshold && !isRefreshing) {
-            isRefreshing = true;
-            ptrContainer.style.transform = `translate(-50%, 20px)`; 
-            ptrSpinner.classList.add('animate-spin'); // Changed to native Tailwind spin
-            ptrText.textContent = "Refreshing...";
-
-            // Find Active Tab & Execute Correct Refresh Function
-            await executeContextualRefresh();
-
-            // Hide after refresh completes
+            // Hide the bubble
             ptrContainer.style.transform = `translate(-50%, -150%)`;
             ptrContainer.style.opacity = '0';
             setTimeout(() => {
@@ -178,7 +147,24 @@ function initPullToRefresh() {
             ptrContainer.style.transform = `translate(-50%, -150%)`;
             ptrContainer.style.opacity = '0';
         }
-    }, { passive: true });
+    };
+
+    document.addEventListener('touchend', finishDrag, { passive: true });
+    document.addEventListener('touchcancel', finishDrag, { passive: true });
+}
+
+// Global Routing Function to execute the refresh
+window.executeContextualRefresh = async function() {
+    try {
+        if (typeof window.refreshMainFeed === 'function') {
+            await window.refreshMainFeed(); 
+        }
+        // Add a tiny 600ms artificial delay to make the spinner feel satisfying & native
+        await new Promise(r => setTimeout(r, 600));
+    } catch (e) {
+        console.error("Refresh failed", e);
+    }
+};
 
 
 async function executeContextualRefresh() {
