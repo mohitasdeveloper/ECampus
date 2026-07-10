@@ -36,22 +36,21 @@ window.addEventListener('load', () => {
 });
 
 // ========================================================
-// CONTEXT-AWARE PULL-TO-REFRESH ENGINE (Ultimate Fix)
+// AGGRESSIVE PULL-TO-REFRESH ENGINE (WebView Master Fix)
 // ========================================================
 function initPullToRefresh() {
     if (window.isPTRInitialized) return;
     window.isPTRInitialized = true;
 
-    // 1. FORCE KILL NATIVE ANDROID/CHROME PAGE RELOAD
-    document.documentElement.style.overscrollBehavior = 'none';
+    // Force kill native Android overscroll at the document level
     document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overscrollBehavior = 'none';
 
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
     let isRefreshing = false;
-    let isValidPull = false;
-    const threshold = 90; // Optimized for mobile thumbs
+    const threshold = 100;
     
     const ptrContainer = document.getElementById('ptr-container');
     const ptrSpinner = document.getElementById('ptr-spinner');
@@ -59,21 +58,37 @@ function initPullToRefresh() {
 
     if (!ptrContainer) return;
 
+    // DEEP SCROLL SCANNER: Finds the true scroll position even if scrolling inside a div
+    const getTrueScrollTop = (targetNode) => {
+        let node = targetNode;
+        while (node && node !== document.body && node !== document.documentElement) {
+            if (node.scrollTop > 0) return node.scrollTop;
+            node = node.parentElement;
+        }
+        return window.scrollY || document.documentElement.scrollTop || 0;
+    };
+
+    // Use CAPTURE PHASE to guarantee we intercept the touch before the browser ignores it
+    const eventOptions = { passive: false, capture: true };
+
     document.addEventListener('touchstart', (e) => {
-        if (window.scrollY > 10) return; // Allow small 10px margin for Android
+        if (isRefreshing) return;
         
-        // Block if a modal is open
-        const hasOpenModal = Array.from(document.querySelectorAll('[id^="modal-"]')).some(m => !m.classList.contains('hidden') && window.getComputedStyle(m).display !== 'none');
-        if (hasOpenModal) return;
+        // 1. Check if we are at the absolute top of whatever is scrolling
+        if (getTrueScrollTop(e.target) > 5) return;
+        
+        // 2. Block if any full-screen modal is open
+        const hasOpenModal = document.querySelector('[id^="modal-"]:not(.hidden):not(.translate-x-full):not(.translate-y-full)');
+        const hasOpenView = document.querySelector('[id^="view-create-post"]:not(.hidden):not(.translate-y-full)');
+        if (hasOpenModal || hasOpenView) return;
 
         startY = e.touches[0].clientY;
         isDragging = true;
-        isValidPull = true; 
         
         ptrContainer.style.transition = 'none';
         ptrSpinner.classList.remove('animate-spin');
         ptrText.textContent = "Pull to refresh";
-    }, { passive: true });
+    }, { passive: true, capture: true });
 
     document.addEventListener('touchmove', (e) => {
         if (!isDragging || isRefreshing) return;
@@ -81,20 +96,22 @@ function initPullToRefresh() {
         currentY = e.touches[0].clientY;
         const pullDistance = currentY - startY;
 
+        // Abort if scrolling upwards
         if (pullDistance < 0) {
-            isValidPull = false;
+            isDragging = false;
             return;
         }
 
-        if (isValidPull && pullDistance > 0 && window.scrollY <= 10) {
-            if (e.cancelable) e.preventDefault(); // Lock the native screen!
+        // If pulling down while at the top of the feed
+        if (pullDistance > 0 && getTrueScrollTop(e.target) <= 5) {
+            if (e.cancelable) e.preventDefault(); // LOCK NATIVE SCREEN
             
-            const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
+            const visualDistance = Math.min(pullDistance * 0.4, threshold + 30);
             
-            // Transform down (clears Android status bar safely)
-            ptrContainer.style.transform = `translate(-50%, calc(env(safe-area-inset-top, 20px) + ${visualDistance}px))`;
-            ptrContainer.style.opacity = Math.min(visualDistance / (threshold * 0.8), 1).toString();
-            ptrSpinner.style.transform = `rotate(${visualDistance * 3}deg)`; // Spin while pulling
+            // Move from -100px (hidden) down into the screen safely
+            ptrContainer.style.transform = `translate(-50%, ${-100 + visualDistance}px)`;
+            ptrContainer.style.opacity = Math.min(visualDistance / 60, 1).toString();
+            ptrSpinner.style.transform = `rotate(${visualDistance * 3}deg)`;
 
             if (visualDistance >= threshold) {
                 ptrText.textContent = "Release to refresh";
@@ -107,35 +124,34 @@ function initPullToRefresh() {
                 ptrText.dataset.vibrated = 'false';
             }
         }
-    }, { passive: false }); 
+    }, eventOptions); 
 
-    const finishDrag = async () => {
+    const endDrag = async () => {
         if (!isDragging) return;
         isDragging = false;
-        isValidPull = false;
         
         const pullDistance = currentY - startY;
-        const visualDistance = Math.min(pullDistance * 0.4, threshold + 20);
+        const visualDistance = Math.min(pullDistance * 0.4, threshold + 30);
 
         ptrContainer.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
         if (visualDistance >= threshold && !isRefreshing) {
             isRefreshing = true;
             
-            // Lock the bubble on screen while loading
-            ptrContainer.style.transform = `translate(-50%, calc(env(safe-area-inset-top, 20px) + 30px))`; 
+            // Snap the bubble to rest nicely just below the top of the screen
+            ptrContainer.style.transform = `translate(-50%, 30px)`; 
             ptrSpinner.classList.add('animate-spin');
             ptrText.textContent = "Refreshing...";
 
-            // Execute actual refresh logic
+            // Run the refresh
             if (typeof window.executeContextualRefresh === 'function') {
                 await window.executeContextualRefresh();
             } else {
-                await new Promise(r => setTimeout(r, 1000)); // Fallback delay
+                await new Promise(r => setTimeout(r, 800));
             }
 
-            // Hide the bubble
-            ptrContainer.style.transform = `translate(-50%, -150%)`;
+            // Hide bubble
+            ptrContainer.style.transform = `translate(-50%, -100px)`;
             ptrContainer.style.opacity = '0';
             setTimeout(() => {
                 isRefreshing = false;
@@ -143,29 +159,27 @@ function initPullToRefresh() {
             }, 300);
 
         } else {
-            // Snap back if they didn't pull far enough
-            ptrContainer.style.transform = `translate(-50%, -150%)`;
+            // Did not pull far enough, snap back and hide
+            ptrContainer.style.transform = `translate(-50%, -100px)`;
             ptrContainer.style.opacity = '0';
         }
     };
 
-    document.addEventListener('touchend', finishDrag, { passive: true });
-    document.addEventListener('touchcancel', finishDrag, { passive: true });
+    document.addEventListener('touchend', endDrag, { passive: true, capture: true });
+    document.addEventListener('touchcancel', endDrag, { passive: true, capture: true });
 }
 
-// Global Routing Function to execute the refresh
+// Global Routing Function
 window.executeContextualRefresh = async function() {
     try {
         if (typeof window.refreshMainFeed === 'function') {
             await window.refreshMainFeed(); 
         }
-        // Add a tiny 600ms artificial delay to make the spinner feel satisfying & native
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 600)); // Artificial delay for premium UI feel
     } catch (e) {
         console.error("Refresh failed", e);
     }
 };
-
 
 async function executeContextualRefresh() {
     const activeTab = document.querySelector('.tab-content:not(.hidden)');
