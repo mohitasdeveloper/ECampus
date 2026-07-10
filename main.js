@@ -179,7 +179,7 @@ function initPullToRefresh() {
             ptrContainer.style.opacity = '0';
         }
     }, { passive: true });
-}
+
 
 async function executeContextualRefresh() {
     const activeTab = document.querySelector('.tab-content:not(.hidden)');
