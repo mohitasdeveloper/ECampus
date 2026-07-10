@@ -382,8 +382,7 @@ function renderPosts(posts) {
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
                 
                 <div class="flex items-center gap-1.5">
-                    <!-- Cleaned classes! -->
-                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 hover:text-red-500'}">
+                    <button onclick="window.handleLike('${post.id}', this)" data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 hover:text-red-500'}">
                         <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
                     </button>
                     <span onclick="event.stopPropagation(); window.openLikesModal('${post.id}')" class="like-count-text text-[13px] font-bold cursor-pointer hover:underline text-on-surface-variant dark:text-gray-400 active:opacity-70 px-1 py-0.5">
@@ -407,10 +406,13 @@ function renderPosts(posts) {
 }
 
 // ==========================================
-// OPTIMISTIC LIKE ENGINE (Ultimate Failsafe)
+// OPTIMISTIC LIKE ENGINE (Global & Failsafe)
 // ==========================================
-async function handleLike(postId, isLiked) {
-    if (!currentUser) return; // Prevents crash if user is not fully loaded
+window.handleLike = async function(postId, btnElement) {
+    if (!currentUser) return; 
+    
+    // Read current state directly from the button that was clicked
+    const isLiked = btnElement.dataset.liked === 'true';
     const nextLikedState = !isLiked;
 
     // 1. OPTIMISTIC UI: Instantly update everywhere
@@ -424,31 +426,33 @@ async function handleLike(postId, isLiked) {
         const countSpan = container ? container.querySelector('.like-count-text') : null;
         const iconSpan = likeBtn.querySelector('.material-symbols-outlined');
         
-        // Update Number
+        // Update Number instantly
         if (countSpan) {
             let currentCount = parseInt(countSpan.textContent.trim()) || 0;
             countSpan.textContent = nextLikedState ? currentCount + 1 : Math.max(0, currentCount - 1);
         }
         
-        // Update Heart Icon (Completely overwrites classes to prevent CSS glitches!)
+        // Update Heart Icon instantly (Overwrites classes to prevent CSS conflicts)
         if (iconSpan) {
             if (nextLikedState) {
                 likeBtn.className = "like-btn flex items-center justify-center transition-colors active:scale-95 text-red-500";
+                iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
             } else {
                 likeBtn.className = "like-btn flex items-center justify-center transition-colors active:scale-95 text-on-surface-variant dark:text-gray-400 hover:text-red-500";
+                iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
             }
             iconSpan.style.fontVariationSettings = `'FILL' ${nextLikedState ? 1 : 0}`;
         }
     });
 
     try {
-        // 2. BACKGROUND SYNC
+        // 2. BACKGROUND SYNC (Talk to database silently)
         if (!nextLikedState) {
             await supabase.from('post_likes').delete().match({ post_id: postId, user_id: currentUser.id });
         } else {
             await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
             
-            // Trigger Notification
+            // Trigger Notification silently
             const { data: postData } = await supabase.from('posts').select('user_id').eq('id', postId).single();
             if (postData && postData.user_id !== currentUser.id) {
                 await supabase.from('notifications').insert({
@@ -462,7 +466,7 @@ async function handleLike(postId, isLiked) {
     } catch (error) {
         console.error("Like error:", error);
     }
-}
+};
 
 async function handlePollVote(postId, optionIndex, isMultipleChoice) {
     if (isVoting) return; 
