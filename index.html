@@ -6,11 +6,17 @@
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>ECampus</title>
 <!-- 🚀 ADD THIS TO PREVENT THE WHITE FLASH -->
-    <script>
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  <script>
+        const isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        if (isDark) {
             document.documentElement.classList.add('dark');
+            // Force instantly paint dark background
+            document.write('<style>body, #app-splash-screen { background-color: #121212 !important; }</style>');
         } else {
             document.documentElement.classList.remove('dark');
+            // Force instantly paint light background
+            document.write('<style>body, #app-splash-screen { background-color: #ffffff !important; }</style>');
         }
     </script>
     <link rel="stylesheet" href="style.css">
