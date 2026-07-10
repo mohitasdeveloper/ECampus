@@ -643,11 +643,9 @@ function generatePostHTML(posts, currentUserId) {
         
         const headerIcon = `<img loading="lazy" onclick="openPublicProfile('${user.id}')" src="${optimizedAvatar}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
-        // Text Post
         if (post.post_type === 'text') {
             contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
         } 
-        // Image Post
         else if (post.post_type === 'image') {
             const optimizedMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.media_url, 'feed') : post.media_url;
             contentHtml = `
@@ -657,7 +655,6 @@ function generatePostHTML(posts, currentUserId) {
                 </div>
             `;
         }
-        // Event Post
         else if (post.post_type === 'event') {
             const optimizedEventMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.event_image_url, 'feed') : post.event_image_url;
             const eventImgHtml = post.event_image_url ? `<img loading="lazy" src="${optimizedEventMedia}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
@@ -683,7 +680,6 @@ function generatePostHTML(posts, currentUserId) {
                 </div>
             `;
         }
-        // Poll Post
         else if (post.post_type === 'poll') {
             const votes = post.post_poll_votes || [];
             const totalVotes = votes.length;
@@ -753,7 +749,8 @@ function generatePostHTML(posts, currentUserId) {
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
                 
                 <div class="flex items-center gap-1.5">
-                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center text-on-surface-variant transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'dark:text-gray-400 hover:text-red-500'}">
+                    <!-- Cleaned classes! -->
+                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 hover:text-red-500'}">
                         <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
                     </button>
                     <span onclick="event.stopPropagation(); window.openLikesModal('${post.id}')" class="like-count-text text-[13px] font-bold cursor-pointer hover:underline text-on-surface-variant dark:text-gray-400 active:opacity-70 px-1 py-0.5">
