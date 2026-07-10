@@ -35,6 +35,25 @@ window.addEventListener('load', () => {
     }, 600); 
 });
 
+// ==========================================
+// GLOBAL CLOUDINARY COMPRESSION ENGINE
+// ==========================================
+window.loadedTabs = new Set(['view-dashboard']); // Feed is loaded by default on boot
+
+window.optimizeImageUrl = function(url, type = 'feed') {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    
+    const parts = url.split('/upload/');
+    if (parts.length !== 2) return url;
+
+    // Avatar gets square crop, Feed gets width limit. Both get heavy compression (q_auto:eco)
+    const transformations = type === 'avatar' 
+        ? 'q_auto:eco,f_auto,c_fill,w_150,h_150' 
+        : 'q_auto:eco,f_auto,c_limit,w_1080';
+    
+    return `${parts[0]}/upload/${transformations}/${parts[1]}`;
+};
+
 // ========================================================
 // BULLETPROOF PULL-TO-REFRESH ENGINE
 // ========================================================
