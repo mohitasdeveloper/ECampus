@@ -1,7 +1,4 @@
-import { supabase } from './supabase.js';
-import { showToast } from './ui.js';
-import { timeAgo } from './utils.js';
-import { handleConnectionAction } from './main.js';
+
 
 let currentUser = null;
 let allNotifications = [];
@@ -308,12 +305,12 @@ async function handleNotificationClick(notif, element) {
 }
 
 async function handleAcceptRequest(userId, btn) {
-    await handleConnectionAction(userId, 'accept', btn);
+    await window.handleConnectionAction(userId, 'accept', btn); // Added window.
     fetchNotifications(); 
 }
 
 async function handleDeclineRequest(userId, btn) {
-    await handleConnectionAction(userId, 'decline', btn);
+    await window.handleConnectionAction(userId, 'decline', btn); // Added window.
     fetchNotifications(); 
 }
 
