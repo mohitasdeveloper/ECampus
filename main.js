@@ -643,9 +643,11 @@ function generatePostHTML(posts, currentUserId) {
         
         const headerIcon = `<img loading="lazy" onclick="openPublicProfile('${user.id}')" src="${optimizedAvatar}" data-user-id="${user.id}" class="profile-link w-10 h-10 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
+        // Text Post
         if (post.post_type === 'text') {
             contentHtml = `<p class="text-[14px] text-on-surface dark:text-gray-100 leading-relaxed mb-4 px-1 whitespace-pre-wrap">${post.content}</p>`;
         } 
+        // Image Post
         else if (post.post_type === 'image') {
             const optimizedMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.media_url, 'feed') : post.media_url;
             contentHtml = `
@@ -655,6 +657,7 @@ function generatePostHTML(posts, currentUserId) {
                 </div>
             `;
         }
+        // Event Post
         else if (post.post_type === 'event') {
             const optimizedEventMedia = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.event_image_url, 'feed') : post.event_image_url;
             const eventImgHtml = post.event_image_url ? `<img loading="lazy" src="${optimizedEventMedia}" class="w-full h-auto max-h-[60vh] object-contain bg-black/5 dark:bg-white/5 border-b border-secondary/20">` : '';
@@ -680,6 +683,7 @@ function generatePostHTML(posts, currentUserId) {
                 </div>
             `;
         }
+        // Poll Post
         else if (post.post_type === 'poll') {
             const votes = post.post_poll_votes || [];
             const totalVotes = votes.length;
@@ -747,24 +751,30 @@ function generatePostHTML(posts, currentUserId) {
             ${contentHtml}
             
             <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
-            <button onclick="toggleLike('${post.id}')" class="flex items-center gap-1.5 group active:scale-95 transition-transform">
-                <span id="like-icon-${post.id}" class="material-symbols-outlined text-[22px] transition-colors ${post.is_liked_by_me ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400 group-hover:text-red-500'}" style="font-variation-settings: 'FILL' ${post.is_liked_by_me ? '1' : '0'};">
-                    favorite
-                </span>
-                <span id="like-count-${post.id}" class="text-[14px] font-bold ${post.is_liked_by_me ? 'text-red-500' : 'text-on-surface-variant dark:text-gray-400'}">
-                    ${post.like_count || 0}
-                </span>
-            </button>
-                <button onclick="openCommentsModal('${post.id}')" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
-                    <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
-                    <span id="comment-count-${post.id}">${commentCount}</span>
-                </button>
+                
+                <div class="flex items-center gap-1.5">
+                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center text-on-surface-variant transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'dark:text-gray-400 hover:text-red-500'}">
+                        <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
+                    </button>
+                    <span onclick="event.stopPropagation(); window.openLikesModal('${post.id}')" class="like-count-text text-[13px] font-bold cursor-pointer hover:underline text-on-surface-variant dark:text-gray-400 active:opacity-70 px-1 py-0.5">
+                        ${likeCount}
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
+                    </button>
+                    <span class="text-[13px] font-bold text-on-surface-variant dark:text-gray-400">
+                        ${commentCount}
+                    </span>
+                </div>
+
             </div>
         </div>
         `;
     }).join('');
 }
-
 
 // ========================================================
 // SIDEBAR & SETTINGS
@@ -1742,65 +1752,6 @@ window.selectCourse = function(courseName) {
     closeCoursePicker();
 };
 
-// ========================================================
-// OPTIMISTIC LIKE ENGINE
-// ========================================================
-window.toggleLike = async function(postId) {
-    if (!currentUserProfile) {
-        showToast('Please log in to like posts.', 'error');
-        return;
-    }
-
-    const icon = document.getElementById(`like-icon-${postId}`);
-    const countSpan = document.getElementById(`like-count-${postId}`);
-    if (!icon || !countSpan) return;
-
-    const isCurrentlyLiked = icon.style.fontVariationSettings.includes("'FILL' 1");
-    let currentCount = parseInt(countSpan.textContent.trim()) || 0;
-
-    if (isCurrentlyLiked) {
-        icon.style.fontVariationSettings = "'FILL' 0";
-        icon.classList.replace('text-red-500', 'text-on-surface-variant');
-        icon.classList.add('dark:text-gray-400', 'group-hover:text-red-500');
-        icon.classList.remove('like-pop');
-        
-        countSpan.textContent = Math.max(0, currentCount - 1);
-        countSpan.classList.replace('text-red-500', 'text-on-surface-variant');
-        countSpan.classList.add('dark:text-gray-400');
-    } else {
-        icon.style.fontVariationSettings = "'FILL' 1";
-        icon.classList.remove('text-on-surface-variant', 'dark:text-gray-400', 'group-hover:text-red-500');
-        icon.classList.add('text-red-500');
-        
-        icon.classList.remove('like-pop'); 
-        void icon.offsetWidth; 
-        icon.classList.add('like-pop'); 
-        
-        countSpan.textContent = currentCount + 1;
-        countSpan.classList.remove('text-on-surface-variant', 'dark:text-gray-400');
-        countSpan.classList.add('text-red-500');
-    }
-
-    try {
-        if (isCurrentlyLiked) {
-            const { error } = await supabase
-                .from('post_likes')
-                .delete()
-                .match({ post_id: postId, user_id: currentUserProfile.id });
-                
-            if (error) throw error;
-        } else {
-            const { error } = await supabase
-                .from('post_likes')
-                .insert({ post_id: postId, user_id: currentUserProfile.id });
-                
-            if (error) throw error;
-        }
-    } catch (error) {
-        console.error('Error toggling like:', error);
-        showToast('Network error. Failed to update like.', 'error');
-    }
-};
 // ========================================================
 // SMART SOCIAL PLATFORM PICKER ENGINE
 // ========================================================
