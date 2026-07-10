@@ -417,8 +417,9 @@ async function handleLike(postId, isLiked) {
     const likeBtns = document.querySelectorAll(`.like-btn[data-post-id="${postId}"]`);
     
     likeBtns.forEach(likeBtn => {
-        const container = likeBtn.closest('.flex');
-        const countSpan = container.querySelector('.like-count-text'); // Targets the new separate number
+        // 🚀 THE FIX: Use .parentElement instead of .closest('.flex')
+        const container = likeBtn.parentElement; 
+        const countSpan = container.querySelector('.like-count-text'); 
         const iconSpan = likeBtn.querySelector('span:first-child');
         
         let currentCount = parseInt(countSpan.textContent) || 0;
@@ -463,6 +464,7 @@ async function handleLike(postId, isLiked) {
         showToast('Connection failed.', 'error');
     }
 }
+
 async function handlePollVote(postId, optionIndex, isMultipleChoice) {
     if (isVoting) return; 
     isVoting = true;
