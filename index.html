@@ -80,6 +80,11 @@
 </head>
 
 <body class="bg-surface dark:bg-[#121212] text-on-surface dark:text-gray-100 antialiased mb-24 relative overflow-x-hidden transition-colors duration-300 selection:bg-primary/20 overflow-hidden overscroll-y-none">
+
+      <div id="ptr-container" class="fixed top-0 left-1/2 -translate-x-1/2 z-[9999] flex items-center justify-center gap-2 bg-surface dark:bg-[#1e1e1e] border border-surface-variant/50 dark:border-neutral-800 shadow-xl rounded-full px-5 py-2.5 transition-transform opacity-0 pointer-events-none" style="transform: translate(-50%, -150%);">
+        <span id="ptr-spinner" class="material-symbols-outlined text-primary text-[20px]">refresh</span>
+        <span id="ptr-text" class="text-[13px] font-bold text-on-surface dark:text-gray-100">Pull to refresh</span>
+    </div>
     <!-- ========================================== -->
     <!-- NATIVE APP SPLASH SCREEN                   -->
     <!-- ========================================== -->
@@ -151,12 +156,7 @@
     <!-- MAIN CONTENT -->
 <main id="main-content" class="px-5 max-w-screen-md mx-auto relative z-10 pb-6">
         
-        <div id="ptr-container" class="fixed top-[75px] left-1/2 -translate-x-1/2 z-[60] transition-all duration-200 transform -translate-y-[150%] opacity-0 pointer-events-none flex items-center justify-center">
-            <div class="bg-surface-container-lowest dark:bg-[#1e1e1e] shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] rounded-full px-4 py-2 border border-surface-variant/60 dark:border-neutral-700 flex items-center gap-2">
-                <span id="ptr-spinner" class="material-symbols-outlined text-primary text-[20px] transition-transform duration-200">sync</span>
-                <span id="ptr-text" class="text-[13px] font-extrabold text-on-surface dark:text-gray-100 pr-1 tracking-wide">Pull to refresh</span>
-            </div>
-        </div>
+     
       
         <!-- DASHBOARD VIEW -->
 <div id="view-dashboard" class="tab-content active animate-fadeIn pt-2">   
