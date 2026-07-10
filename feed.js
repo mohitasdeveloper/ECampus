@@ -409,64 +409,6 @@ function renderPosts(posts) {
     }).join('');
 }
 
-            const expiryText = isExpired ? 'Poll ended' : (post.poll_expires_at ? `Ends ${timeAgo(post.poll_expires_at)}` : 'Ongoing');
-            const typeText = post.poll_is_multiple_choice ? 'Multiple choice' : 'Single choice';
-
-            contentHtml = `
-                <p class="text-[15px] font-semibold text-on-surface dark:text-gray-100 mb-4 px-1 whitespace-pre-wrap">${post.content}</p>
-                <div class="poll-options-wrapper space-y-2.5 mb-3 px-1">${optionsHtml}</div>
-                <div class="flex justify-between px-2 text-[11px] font-medium text-on-surface-variant dark:text-gray-400 mb-2">
-                    <span class="poll-footer-text"><span class="poll-total-votes">${totalVotes}</span> votes • ${typeText} ${post.poll_is_anon ? 'Anonymous' : 'Public'}</span>
-                    <span>${expiryText}</span>
-                </div>
-            `;
-        }
-
-        return `
-        <div data-post-id="${post.id}" class="bg-surface-container-lowest dark:bg-[#1e1e1e] rounded-[32px] p-5 border border-surface-variant/60 dark:border-neutral-800 shadow-sm mb-5 animate-fadeIn relative">
-            
-            ${post.is_verified ? '<div class="absolute -top-3 -right-3 bg-[#e8b339] text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase shadow-lg shadow-[#e8b339]/30 flex items-center gap-1 z-10"><span class="material-symbols-outlined text-[14px]">stars</span> Verified Post</div>' : ''}
-
-            <div class="flex items-center gap-3 mb-3">
-                ${headerIcon}
-                <div class="flex-1">
-                    <h4 data-user-id="${user.id}" class="profile-link font-bold text-[14px] text-on-surface dark:text-gray-100 leading-tight cursor-pointer hover:text-primary transition-colors flex items-center gap-1">
-                        ${user.full_name} ${verifiedBadge}
-                    </h4>
-                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${timeAgo(post.created_at)}</p>
-                </div>
-                <button data-post-id="${post.id}" data-user-id="${user.id}" data-is-verified="${post.is_verified}" class="post-options-btn text-on-surface-variant hover:text-on-surface dark:text-gray-400 dark:hover:text-gray-100 p-1 rounded-full hover:bg-surface-variant/50 transition-colors">
-                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                </button>
-            </div>
-            
-            ${contentHtml}
-            
-            <div class="flex items-center gap-6 border-t border-surface-variant/40 dark:border-neutral-800 pt-3 px-1 mt-2">
-                
-                <div class="flex items-center gap-1.5">
-                    <button data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center text-on-surface-variant transition-colors active:scale-95 ${userHasLiked ? 'text-red-500' : 'dark:text-gray-400 hover:text-red-500'}">
-                        <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
-                    </button>
-                    <span onclick="openLikesModal('${post.id}')" class="like-count-text text-[13px] font-bold cursor-pointer hover:underline text-on-surface-variant dark:text-gray-400 active:opacity-70">
-                        ${likeCount}
-                    </span>
-                </div>
-
-                <div class="flex items-center gap-1.5">
-                    <button data-post-id="${post.id}" class="comment-btn flex items-center gap-1.5 text-on-surface-variant dark:text-gray-400 hover:text-secondary transition-colors text-[13px] font-medium active:scale-95">
-                        <span class="material-symbols-outlined text-[20px]">chat_bubble</span> 
-                    </button>
-                    <span class="text-[13px] font-bold text-on-surface-variant dark:text-gray-400">
-                        ${commentCount}
-                    </span>
-                </div>
-
-            </div>
-        `;
-    }).join('');
-}
-
 // ==========================================
 // OPTIMISTIC LIKE ENGINE
 // ==========================================
