@@ -6,7 +6,7 @@
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>ECampus</title>
 <!-- 🚀 ADD THIS TO PREVENT THE WHITE FLASH -->
-  <script>
+    <script>
         const isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
         
         if (isDark) {
@@ -15,8 +15,8 @@
             document.write('<style>body, #app-splash-screen { background-color: #121212 !important; }</style>');
         } else {
             document.documentElement.classList.remove('dark');
-            // Force instantly paint light background
-            document.write('<style>body, #app-splash-screen { background-color: #ffffff !important; }</style>');
+            // 🚀 FIX: Changed to #f8f9fa to perfectly match the Tailwind bg-surface color!
+            document.write('<style>body, #app-splash-screen { background-color: #f8f9fa !important; }</style>');
         }
     </script>
     <link rel="stylesheet" href="style.css">
@@ -115,7 +115,7 @@
         </div>
     </div>
     <!-- HEADER -->
-<header class="bg-surface dark:bg-[#121212] safe-pt z-[50] relative">
+<header class="bg-transparent safe-pt z-[50] relative">
     <div id="toast-container"
             class="absolute top-full left-1/2 -translate-x-1/2 w-full max-w-md p-4 space-y-2 z-[200]"></div>
 
