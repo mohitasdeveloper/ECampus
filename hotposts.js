@@ -115,11 +115,14 @@ function setupEventListeners() {
     replyInput?.addEventListener('focus', pauseStory);
     replyInput?.addEventListener('blur', resumeStory);
 
-    // Activity Panel (Self View)
+ // Activity Panel (Self View)
     document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
     document.getElementById('details-tab-likes')?.addEventListener('click', () => switchDetailsTab('likes'));
     document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
+    
+    // 🚀 FIX: Connect the click events for the Activity Panel!
     document.getElementById('hotpost-activity-btn')?.addEventListener('click', openActivityPanel);
+    document.getElementById('activity-backdrop-close')?.addEventListener('click', closeActivityPanel);
     
     // Native Confirm Action
     document.getElementById('delete-hotpost-action-btn')?.addEventListener('click', () => {
