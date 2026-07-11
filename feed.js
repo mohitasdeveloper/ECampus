@@ -958,7 +958,13 @@ window.closeLikesModal = function() {
     const modal = document.getElementById('modal-likes-list');
     const card = document.getElementById('likes-modal-card');
     
+    // 🚀 FIX: Instantly drop the invisible shield
+    modal.style.pointerEvents = 'none';
     modal.classList.add('opacity-0');
     card.classList.add('translate-y-full');
-    setTimeout(() => { modal.classList.replace('flex', 'hidden'); }, 300); 
+    
+    setTimeout(() => { 
+        modal.classList.replace('flex', 'hidden'); 
+        modal.style.pointerEvents = 'auto'; // Reset
+    }, 300); 
 };
