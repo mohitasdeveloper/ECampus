@@ -230,11 +230,15 @@ function renderList(containerId, data, emptyMessage) {
     }
     container.innerHTML = data.map(notif => renderNotificationItem(notif)).join('');
 }
-
 function renderNotificationItem(notif) {
     const sender = notif.sender;
     const ui = iconMap[notif.type] || { icon: 'notifications', color: 'text-gray-500', bg: 'bg-gray-100' };
     const isUnread = !notif.is_read ? 'bg-primary/5 dark:bg-primary/10' : 'bg-surface dark:bg-[#121212]';
+
+    // 🚀 Compress Image & Add Fallback
+    const rawAvatarUrl = sender.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(sender.full_name)}&background=e1e3e4`;
+    const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
+    const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(sender.full_name)}&background=e1e3e4';`;
 
     let textContent = '';
     let actionButtons = '';
@@ -257,7 +261,7 @@ function renderNotificationItem(notif) {
     return `
         <div data-notif-id="${notif.id}" class="notif-card p-4 ${isUnread} flex items-start gap-3.5 cursor-pointer hover:bg-surface-variant/30 dark:hover:bg-neutral-800/50 transition-colors">
             <div class="relative shrink-0">
-                <img src="${sender.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(sender.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover shadow-sm border border-surface-variant/50">
+                <img loading="lazy" src="${optimizedAvatar}" onerror="${fallback}" class="w-12 h-12 rounded-full object-cover shadow-sm border border-surface-variant/50">
                 <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full ${ui.bg} flex items-center justify-center border-[1.5px] border-surface dark:border-[#121212]">
                     <span class="material-symbols-outlined text-[10px] ${ui.color}" style="font-variation-settings: 'FILL' 1">${ui.icon}</span>
                 </div>
