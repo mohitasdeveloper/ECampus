@@ -398,8 +398,14 @@ function redrawDoodleCanvas() {
 function setupEditorTouchPhysics() {
     const container = document.getElementById('hotpost-preview-container');
     
-    let touchMode = 'idle'; // modes: 'draw', 'drag_text', 'zoom_text', 'swipe'
+    let touchMode = 'idle'; 
     let startX = 0, startY = 0;
+
+    // 🚀 Smooth Dragging Trackers
+    let textDragStartX = 0;
+    let textDragStartY = 0;
+    let textInitialObjX = 0;
+    let textInitialObjY = 0;
 
     const getPinchDistance = (touches) => {
         return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
@@ -407,7 +413,7 @@ function setupEditorTouchPhysics() {
 
     container.addEventListener('touchstart', (e) => {
         // Pinch to Zoom specific text
-        if (e.touches.length > 1 && touchMode !== 'zoom_text') {
+        if (e.touches.length === 2 && touchMode !== 'zoom_text') {
             const targetText = e.target.closest('.hotpost-draggable-text');
             if (targetText && !isDrawMode) {
                 touchMode = 'zoom_text';
@@ -429,7 +435,21 @@ function setupEditorTouchPhysics() {
         if (targetText && !isDrawMode) {
             touchMode = 'drag_text';
             activeTextIdForTouch = targetText.id;
-            textTouchStartTime = Date.now(); // Track tap timing
+            textTouchStartTime = Date.now();
+            
+            // 🚀 FIX: Lock initial position for smooth, relative dragging
+            const tObj = textElements.find(t => t.id === activeTextIdForTouch);
+            if (tObj) {
+                textDragStartX = startX;
+                textDragStartY = startY;
+                textInitialObjX = tObj.x;
+                textInitialObjY = tObj.y;
+                tObj.isOverTrash = false;
+            }
+
+            // Show Instagram-style Trash Zone
+            document.getElementById('text-trash-zone')?.classList.remove('opacity-0');
+            document.getElementById('text-trash-zone')?.classList.add('opacity-100');
         } 
         else if (isDrawMode) {
             touchMode = 'draw';
@@ -450,7 +470,7 @@ function setupEditorTouchPhysics() {
             const scaleChange = currentDist / initialPinchDist;
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
             if (tObj) {
-                tObj.scale = Math.max(0.5, Math.min(4.0, initialTextScale * scaleChange));
+                tObj.scale = Math.max(0.3, Math.min(6.0, initialTextScale * scaleChange));
                 renderTextElements();
             }
             return;
@@ -464,10 +484,38 @@ function setupEditorTouchPhysics() {
 
         if (touchMode === 'drag_text' && activeTextIdForTouch) {
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
-            if (tObj) {
-                tObj.x = Math.max(0.05, Math.min(0.95, (currentX - rect.left) / rect.width));
-                tObj.y = Math.max(0.05, Math.min(0.95, (currentY - rect.top) / rect.height));
-                renderTextElements();
+            const targetTextElement = document.getElementById(activeTextIdForTouch);
+            
+            if (tObj && targetTextElement) {
+                // 🚀 FIX: Calculate exactly how far the thumb dragged, not where it is
+                const deltaX = (currentX - textDragStartX) / rect.width;
+                const deltaY = (currentY - textDragStartY) / rect.height;
+
+                // Allow moving text slightly off-screen without disappearing completely
+                tObj.x = Math.max(-0.2, Math.min(1.2, textInitialObjX + deltaX)); 
+                tObj.y = Math.max(-0.2, Math.min(1.2, textInitialObjY + deltaY));
+                
+                // Instagram-Style Trash Collision Detection
+                const trashZone = document.getElementById('text-trash-zone');
+                if (trashZone) {
+                    const trashRect = trashZone.getBoundingClientRect();
+                    // Add padding to hitbox so it's easy to delete
+                    if (currentX > trashRect.left - 20 && currentX < trashRect.right + 20 &&
+                        currentY > trashRect.top - 20 && currentY < trashRect.bottom + 20) {
+                        
+                        trashZone.classList.add('scale-[1.3]', 'bg-error', 'border-error');
+                        targetTextElement.style.opacity = '0.4';
+                        targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale * 0.5})`;
+                        tObj.isOverTrash = true;
+                    } else {
+                        trashZone.classList.remove('scale-[1.3]', 'bg-error', 'border-error');
+                        targetTextElement.style.opacity = '1';
+                        targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
+                        tObj.isOverTrash = false;
+                    }
+                }
+
+                if (!tObj.isOverTrash) renderTextElements(); 
             }
         } 
         else if (touchMode === 'draw' && isDrawing) {
@@ -489,9 +537,23 @@ function setupEditorTouchPhysics() {
 
     container.addEventListener('touchend', (e) => {
         if (touchMode === 'drag_text' && activeTextIdForTouch) {
-            // If let go within 200ms without dragging much, it's a Tap!
-            if (Date.now() - textTouchStartTime < 200) {
+            const trashZone = document.getElementById('text-trash-zone');
+            if (trashZone) {
+                trashZone.classList.remove('opacity-100', 'scale-[1.3]', 'bg-error', 'border-error');
+                trashZone.classList.add('opacity-0');
+            }
+
+            const tObj = textElements.find(t => t.id === activeTextIdForTouch);
+            
+            if (tObj && tObj.isOverTrash) {
+                // 🚀 INSTAGRAM DELETE: Nuke the text layer!
+                textElements = textElements.filter(t => t.id !== activeTextIdForTouch);
+                renderTextElements();
+            } else if (Date.now() - textTouchStartTime < 200) {
+                // Tap to Edit
                 activateTextTool(activeTextIdForTouch);
+            } else {
+                renderTextElements(); // Reset any partial scales
             }
         }
         else if (touchMode === 'draw' && isDrawing) {
