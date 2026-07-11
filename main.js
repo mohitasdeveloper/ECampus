@@ -1871,9 +1871,6 @@ document.addEventListener('mousemove', handleTouchMove);
 let touchStartX = 0;
 let touchStartY = 0;
 
-let touchStartX = 0;
-let touchStartY = 0;
-
 function handleTouchStart(e) {
     if (!e.target || typeof e.target.closest !== 'function') return;
 
