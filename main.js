@@ -1554,15 +1554,21 @@ async function openConnectionsModal() {
             return;
         }
 
-        list.innerHTML = connections.map(user => `
-            <div onclick="viewUserProfile('${user.id}'); closeConnectionsModal();" class="flex items-center gap-4 p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm cursor-pointer hover:bg-surface-variant/20 transition-colors">
-                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/50">
-                <div class="flex-1">
-                    <p class="font-bold text-sm text-on-surface dark:text-gray-100">${user.full_name}</p>
-                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${user.course || 'Student'}</p>
+        list.innerHTML = connections.map(user => {
+            const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+            const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
+            const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
+
+            return `
+            <div onclick="window.viewUserProfile('${user.id}'); closeConnectionsModal();" class="flex items-center gap-4 p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm cursor-pointer hover:bg-surface-variant/20 transition-colors">
+                <img loading="lazy" src="${optimizedAvatar}" onerror="${fallback}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/50 shrink-0">
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-sm text-on-surface dark:text-gray-100 truncate">${user.full_name}</p>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5 truncate">${user.course || 'Student'}</p>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
     } catch (error) {
         console.error('Error fetching connections:', error);
@@ -1602,19 +1608,25 @@ async function openBlockedUsersModal() {
             return;
         }
 
-        list.innerHTML = blockedUsers.map(user => `
+      list.innerHTML = blockedUsers.map(user => {
+            const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+            const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
+            const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
+
+            return `
             <div class="flex items-center gap-4 p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm">
-                <img src="${user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/50">
-                <div class="flex-1">
-                    <p class="font-bold text-sm text-on-surface dark:text-gray-100">${user.full_name}</p>
-                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5">${user.course || 'Student'}</p>
+                <img loading="lazy" src="${optimizedAvatar}" onerror="${fallback}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/50 shrink-0">
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-sm text-on-surface dark:text-gray-100 truncate">${user.full_name}</p>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5 truncate">${user.course || 'Student'}</p>
                 </div>
-                <button data-user-id="${user.id}" class="unblock-btn bg-error/10 text-error px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform hover:bg-error/20">
+                <button data-user-id="${user.id}" class="unblock-btn bg-error/10 text-error px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform hover:bg-error/20 shrink-0">
                     Unblock
                 </button>
             </div>
-        `).join('');
-
+            `;
+        }).join('');
+        
     } catch (error) {
         console.error('Error fetching blocked users:', error);
         list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load blocked users.</p>`;
