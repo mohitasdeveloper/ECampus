@@ -983,16 +983,21 @@ window.openLikesModal = async function(postId) {
             return;
         }
 
-      const getTick = (type) => {
+    const getTick = (type) => {
             if (!type || type === 'none') return '';
-            // 🚀 FIX: Added Dusty Pink (#d49a9e) to the color palette!
+            
+            // 🚀 FIX: Added pink and .trim() to ignore accidental database spaces!
             const colors = { 
                 blue: 'text-[#1d9bf0]', 
                 gold: 'text-[#e8b339]', 
                 green: 'text-primary', 
                 pink: 'text-[#d49a9e]' 
             };
-            return `<span class="material-symbols-outlined text-[14px] ${colors[type.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+            
+            const cleanType = type.toLowerCase().trim();
+            const tickColor = colors[cleanType] || colors.blue;
+            
+            return `<span class="material-symbols-outlined text-[14px] ${tickColor}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
         };
 
         container.innerHTML = likes.map(like => {
