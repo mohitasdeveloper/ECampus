@@ -34,11 +34,11 @@ const FILTER_LIST = [
 ];
 let currentFilterIndex = 0;
 
-// Editor: Text Tool
-let textContent = '';
-let textPosX = 0.5; // Normalized center
-let textPosY = 0.5;
-let textScale = 1.0;
+// Editor: Text Tool (Multi-Text Engine)
+let textElements = [];
+let activeTextId = null;
+let activeTextIdForTouch = null;
+let textTouchStartTime = 0;
 let initialPinchDist = 0;
 let initialTextScale = 1.0;
 
@@ -75,7 +75,7 @@ function setupEventListeners() {
     document.getElementById('submit-hotpost-btn')?.addEventListener('click', submitHotpost);
 
     // Editor Tools Activation
-    document.getElementById('add-text-hotpost-btn')?.addEventListener('click', activateTextTool);
+document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () => activateTextTool());
     document.getElementById('doodle-hotpost-btn')?.addEventListener('click', toggleDrawMode);
     document.getElementById('undo-doodle-btn')?.addEventListener('click', undoLastDoodle);
     
@@ -232,19 +232,22 @@ function resetCameraUI() {
     
     currentFilterIndex = 0;
     document.getElementById('hotpost-preview-img').style.filter = FILTER_LIST[0].css;
+    
     isDrawMode = false;
     doodlePaths = [];
     document.getElementById('doodle-color-picker').classList.add('hidden');
-    document.getElementById('doodle-hotpost-btn').classList.remove('bg-white', 'text-black');
-    document.getElementById('doodle-hotpost-btn').classList.add('bg-black/40', 'text-white');
     
-    const textLayer = document.getElementById('hotpost-draggable-text');
-    textLayer.textContent = '';
-    textLayer.classList.add('hidden');
-    textContent = '';
-    textPosX = 0.5;
-    textPosY = 0.5;
-    textScale = 1.0;
+    const doodleBtn = document.getElementById('doodle-hotpost-btn');
+    if (doodleBtn) {
+        doodleBtn.classList.remove('bg-white', 'text-black');
+        doodleBtn.classList.add('bg-black/40', 'text-white');
+    }
+    
+    // 🚀 Reset ALL dynamic text layers and Multi-Text variables
+    document.querySelectorAll('.hotpost-draggable-text').forEach(el => el.remove());
+    textElements = [];
+    activeTextId = null;
+    activeTextIdForTouch = null;
 }
 
 function showPreviewUI() {
@@ -262,42 +265,65 @@ function showPreviewUI() {
 // ==========================================
 // EDITOR: TEXT & DOODLE TOOLS
 // ==========================================
-
 // TEXT
-function activateTextTool() {
+function activateTextTool(textId = null) {
+    activeTextId = textId;
     const overlay = document.getElementById('hotpost-text-editor-overlay');
     const textarea = document.getElementById('hotpost-in-ui-textarea');
     
     overlay.classList.replace('hidden', 'flex');
-    textarea.value = textContent; 
-    setTimeout(() => textarea.focus(), 50); // Small delay for iOS keyboard
+    if (textId) {
+        const textObj = textElements.find(t => t.id === textId);
+        textarea.value = textObj ? textObj.content : '';
+    } else {
+        textarea.value = '';
+    }
+    setTimeout(() => textarea.focus(), 50);
 }
 
 function saveTextFromUI() {
     const textarea = document.getElementById('hotpost-in-ui-textarea');
-    textContent = textarea.value.trim();
+    const content = textarea.value.trim();
     
-    const textLayer = document.getElementById('hotpost-draggable-text');
-    
-    if (textContent) {
-        textLayer.textContent = textContent;
-        textLayer.classList.remove('hidden');
-        if(!textLayer.style.left) {
-            textPosX = 0.5; textPosY = 0.5; textScale = 1.0; // Default center
+    if (content) {
+        if (activeTextId) {
+            // Update existing text
+            const textObj = textElements.find(t => t.id === activeTextId);
+            if (textObj) textObj.content = content;
+        } else {
+            // Create brand new text layer
+            textElements.push({
+                id: 'text-' + Date.now(),
+                content: content,
+                x: 0.5,
+                y: 0.5,
+                scale: 1.0
+            });
         }
-        updateTextPosition();
-    } else {
-        textLayer.classList.add('hidden');
+    } else if (activeTextId) {
+        // If user deleted all text, remove the layer
+        textElements = textElements.filter(t => t.id !== activeTextId);
     }
     
+    renderTextElements();
     document.getElementById('hotpost-text-editor-overlay').classList.replace('flex', 'hidden');
+    activeTextId = null;
 }
 
-function updateTextPosition() {
-    const textLayer = document.getElementById('hotpost-draggable-text');
-    textLayer.style.left = `${textPosX * 100}%`;
-    textLayer.style.top = `${textPosY * 100}%`;
-    textLayer.style.transform = `translate(-50%, -50%) scale(${textScale})`;
+function renderTextElements() {
+    const container = document.getElementById('hotpost-preview-container');
+    container.querySelectorAll('.hotpost-draggable-text').forEach(el => el.remove());
+
+    textElements.forEach(tObj => {
+        const div = document.createElement('div');
+        div.className = 'hotpost-draggable-text';
+        div.id = tObj.id;
+        div.textContent = tObj.content; // Preserves newlines natively via pre-wrap
+        div.style.left = `${tObj.x * 100}%`;
+        div.style.top = `${tObj.y * 100}%`;
+        div.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
+        container.appendChild(div);
+    });
 }
 
 // DOODLE
@@ -371,7 +397,6 @@ function redrawDoodleCanvas() {
 // ==========================================
 function setupEditorTouchPhysics() {
     const container = document.getElementById('hotpost-preview-container');
-    const textLayer = document.getElementById('hotpost-draggable-text');
     
     let touchMode = 'idle'; // modes: 'draw', 'drag_text', 'zoom_text', 'swipe'
     let startX = 0, startY = 0;
@@ -381,23 +406,30 @@ function setupEditorTouchPhysics() {
     };
 
     container.addEventListener('touchstart', (e) => {
-        // 2-Fingers: Pinch to Zoom Text
-        if (e.touches.length === 2 && textContent && !isDrawMode) {
-            touchMode = 'zoom_text';
-            initialPinchDist = getPinchDistance(e.touches);
-            initialTextScale = textScale;
+        // Pinch to Zoom specific text
+        if (e.touches.length > 1 && touchMode !== 'zoom_text') {
+            const targetText = e.target.closest('.hotpost-draggable-text');
+            if (targetText && !isDrawMode) {
+                touchMode = 'zoom_text';
+                activeTextIdForTouch = targetText.id;
+                initialPinchDist = getPinchDistance(e.touches);
+                const tObj = textElements.find(t => t.id === activeTextIdForTouch);
+                initialTextScale = tObj ? tObj.scale : 1.0;
+            }
             return;
         }
 
-        if (e.touches.length > 1) return; // Prevent chaos
+        if (e.touches.length > 1) return;
 
-        // 1-Finger Interactions
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
 
-        // Check if tapping precisely on the text element
-        if (e.target === textLayer && !isDrawMode) {
+        const targetText = e.target.closest('.hotpost-draggable-text');
+        
+        if (targetText && !isDrawMode) {
             touchMode = 'drag_text';
+            activeTextIdForTouch = targetText.id;
+            textTouchStartTime = Date.now(); // Track tap timing
         } 
         else if (isDrawMode) {
             touchMode = 'draw';
@@ -410,6 +442,83 @@ function setupEditorTouchPhysics() {
         }
     }, { passive: false });
 
+    container.addEventListener('touchmove', (e) => {
+        if (e.cancelable) e.preventDefault(); // LOCK THE SCREEN
+        
+        if (touchMode === 'zoom_text' && e.touches.length === 2 && activeTextIdForTouch) {
+            const currentDist = getPinchDistance(e.touches);
+            const scaleChange = currentDist / initialPinchDist;
+            const tObj = textElements.find(t => t.id === activeTextIdForTouch);
+            if (tObj) {
+                tObj.scale = Math.max(0.5, Math.min(4.0, initialTextScale * scaleChange));
+                renderTextElements();
+            }
+            return;
+        }
+
+        if (e.touches.length > 1) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const rect = container.getBoundingClientRect();
+
+        if (touchMode === 'drag_text' && activeTextIdForTouch) {
+            const tObj = textElements.find(t => t.id === activeTextIdForTouch);
+            if (tObj) {
+                tObj.x = Math.max(0.05, Math.min(0.95, (currentX - rect.left) / rect.width));
+                tObj.y = Math.max(0.05, Math.min(0.95, (currentY - rect.top) / rect.height));
+                renderTextElements();
+            }
+        } 
+        else if (touchMode === 'draw' && isDrawing) {
+            currentPath.push({ x: currentX - rect.left, y: currentY - rect.top });
+            
+            const canvas = document.getElementById('hotpost-doodle-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.lineWidth = 6;
+            ctx.strokeStyle = currentDoodleColor; ctx.shadowColor = currentDoodleColor; ctx.shadowBlur = 4;
+            
+            ctx.beginPath();
+            const prev = currentPath[currentPath.length - 2];
+            const curr = currentPath[currentPath.length - 1];
+            ctx.moveTo(prev.x, prev.y);
+            ctx.lineTo(curr.x, curr.y);
+            ctx.stroke();
+        }
+    }, { passive: false });
+
+    container.addEventListener('touchend', (e) => {
+        if (touchMode === 'drag_text' && activeTextIdForTouch) {
+            // If let go within 200ms without dragging much, it's a Tap!
+            if (Date.now() - textTouchStartTime < 200) {
+                activateTextTool(activeTextIdForTouch);
+            }
+        }
+        else if (touchMode === 'draw' && isDrawing) {
+            isDrawing = false;
+            if (currentPath.length > 1) doodlePaths.push({ color: currentDoodleColor, points: [...currentPath] });
+            currentPath = [];
+        } 
+        else if (touchMode === 'swipe' && !isDrawMode) {
+            const endX = e.changedTouches[0].clientX;
+            const deltaX = endX - startX;
+
+            if (Math.abs(deltaX) > 60) {
+                if (deltaX < 0) currentFilterIndex = (currentFilterIndex + 1) % FILTER_LIST.length; 
+                else currentFilterIndex = (currentFilterIndex - 1 + FILTER_LIST.length) % FILTER_LIST.length; 
+                
+                const filter = FILTER_LIST[currentFilterIndex];
+                document.getElementById('hotpost-preview-img').style.filter = filter.css;
+                showFilterToast(filter.name);
+            }
+        }
+        
+        if (e.touches.length === 0) {
+            touchMode = 'idle';
+            activeTextIdForTouch = null;
+        }
+    }, { passive: true });
+}
     container.addEventListener('touchmove', (e) => {
         if (e.cancelable) e.preventDefault(); // LOCK THE SCREEN
         
@@ -508,20 +617,23 @@ async function submitHotpost() {
             bakeCanvas.height = baseImageObj.height;
             const ctx = bakeCanvas.getContext('2d');
 
+            // 1. Draw Image & Filters
             if (FILTER_LIST[currentFilterIndex].css !== 'none') {
                 ctx.filter = FILTER_LIST[currentFilterIndex].css;
             }
             ctx.drawImage(baseImageObj, 0, 0, bakeCanvas.width, bakeCanvas.height);
             ctx.filter = 'none'; 
 
+            // 2. Draw Doodles
             const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
             if (doodlePaths.length > 0) {
                 ctx.drawImage(doodleCanvas, 0, 0, bakeCanvas.width, bakeCanvas.height);
             }
 
-            if (textContent) {
+            // 3. Bake ALL text layers into the image properly (with multiline support!)
+            textElements.forEach(tObj => {
                 const baseFontSize = Math.floor(bakeCanvas.width * 0.08); 
-                const finalFontSize = Math.floor(baseFontSize * textScale); 
+                const finalFontSize = Math.floor(baseFontSize * tObj.scale); 
                 
                 ctx.font = `800 ${finalFontSize}px Inter, sans-serif`;
                 ctx.fillStyle = "white";
@@ -530,16 +642,24 @@ async function submitHotpost() {
                 ctx.shadowColor = "rgba(0,0,0,0.9)";
                 ctx.shadowBlur = 20;
                 
-                const finalX = bakeCanvas.width * textPosX;
-                const finalY = bakeCanvas.height * textPosY;
-                ctx.fillText(textContent, finalX, finalY);
-            }
+                const finalX = bakeCanvas.width * tObj.x;
+                const finalY = bakeCanvas.height * tObj.y;
+                
+                // Native Canvas doesn't support \n directly, so we split it into lines!
+                const lines = tObj.content.split('\n');
+                lines.forEach((line, index) => {
+                    const lineY = finalY + (index - (lines.length - 1) / 2) * finalFontSize * 1.2;
+                    ctx.fillText(line, finalX, lineY);
+                });
+            });
 
             bakeCanvas.toBlob(resolve, 'image/jpeg', 0.9);
         });
 
+        // Generate the final watermarked photo
         const finalBlob = await getCompiledBlob();
 
+        // Upload to Cloudinary
         const formData = new FormData();
         formData.append('file', finalBlob, 'hotpost.jpg');
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
@@ -548,6 +668,7 @@ async function submitHotpost() {
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
 
+        // Upload to Supabase Database
         const { error } = await supabase.from('hotposts').insert({
             user_id: currentUser.id,
             media_url: data.secure_url,
@@ -562,6 +683,7 @@ async function submitHotpost() {
         fetchHotposts(); 
 
     } catch (error) {
+        console.error("Hotpost Compile Error:", error);
         showToast('Failed to publish hotpost.', 'error');
     } finally {
         btn.disabled = false;
