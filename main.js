@@ -459,12 +459,22 @@ function setupThemeToggle() {
     });
 }
 
-function getTickHtmlLocal(tickType) {
-    if (!tickType || tickType === 'none') return '';
-    const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-    return `<span class="material-symbols-outlined text-[16px] shrink-0 relative -top-[1px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
-}
-
+// 🚀 GLOBAL TICK GENERATOR
+window.getTickHtml = function(type) {
+    if (!type || type === 'none') return '';
+    
+    const colors = { 
+        blue: 'text-[#1d9bf0]', 
+        gold: 'text-[#e8b339]', 
+        green: 'text-primary', 
+        pink: 'text-[#d49a9e]' 
+    };
+    
+    const cleanType = type.toLowerCase().trim();
+    const tickColor = colors[cleanType] || colors.blue;
+    
+    return `<span class="material-symbols-outlined text-[14px] ${tickColor}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+};
 // ========================================================
 // CORE PROFILE UI & SOCIALS
 // ========================================================
