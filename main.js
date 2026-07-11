@@ -459,21 +459,20 @@ function setupThemeToggle() {
     });
 }
 
-// 🚀 GLOBAL TICK GENERATOR
+// 🚀 GLOBAL TICK GENERATOR (Dynamic Engine)
 window.getTickHtml = function(type) {
     if (!type || type === 'none') return '';
     
-    const colors = { 
-        blue: 'text-[#1d9bf0]', 
-        gold: 'text-[#e8b339]', 
-        green: 'text-primary', 
-        pink: 'text-[#d49a9e]' 
+    const cleanType = type.trim();
+    const presets = { 
+        'blue': '#1d9bf0', 
+        'gold': '#e8b339', 
+        'green': 'var(--color-primary, #10b981)', 
+        'pink': '#d49a9e' 
     };
     
-    const cleanType = type.toLowerCase().trim();
-    const tickColor = colors[cleanType] || colors.blue;
-    
-    return `<span class="material-symbols-outlined text-[14px] ${tickColor}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+    const finalColor = presets[cleanType.toLowerCase()] || cleanType;
+    return `<span class="material-symbols-outlined text-[14px]" style="color: ${finalColor}; font-variation-settings: 'FILL' 1;">verified</span>`;
 };
 // ========================================================
 // CORE PROFILE UI & SOCIALS
@@ -1984,14 +1983,15 @@ window.openProfilePeek = async function(userId, imgEl) {
         const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(user.profile_img_url, 'avatar') : user.profile_img_url;
         document.getElementById('peek-avatar').src = optimizedAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         
-        // 🚀 FAILSAFE 3: Inline verified badge so it never crashes looking for external functions
-// 🚀 FAILSAFE 3: Dynamic multi-color badge generator (including Dusty Pink!)
+       // 🚀 FAILSAFE 3: Dynamic multi-color badge generator 
         let verifiedBadge = '';
         if (user.tick_type && user.tick_type !== 'none') {
-            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', pink: 'text-[#d49a9e]' };
-            const tickColor = colors[user.tick_type.toLowerCase()] || colors.blue;
-            verifiedBadge = `<span class="material-symbols-outlined text-[14px] ${tickColor}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
-        }        
+            const cleanType = user.tick_type.trim();
+            const presets = { 'blue': '#1d9bf0', 'gold': '#e8b339', 'green': 'var(--color-primary, #10b981)', 'pink': '#d49a9e' };
+            const tickColor = presets[cleanType.toLowerCase()] || cleanType;
+            
+            verifiedBadge = `<span class="material-symbols-outlined text-[14px]" style="color: ${tickColor}; font-variation-settings: 'FILL' 1;">verified</span>`;
+        }
         document.getElementById('peek-name').innerHTML = `${user.full_name} ${verifiedBadge}`;
         document.getElementById('peek-course').textContent = user.course || 'Campus Member';
         
