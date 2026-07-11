@@ -18,6 +18,11 @@ body {
     user-select: none; /* Standard */
     -webkit-touch-callout: none; /* Disables the long-press popup magnifier */
 }
+/* 🚀 ADD THIS NEW BLOCK: Ensures users can still type and edit text */
+input, textarea {
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
+}
 /* Scrollbar Control */
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
