@@ -1871,34 +1871,32 @@ document.addEventListener('mouseup', handleTouchEnd);
 document.addEventListener('mousemove', handleTouchMove);
 
 function handleTouchStart(e) {
-    const target = e.target.closest('.profile-link');
-    if (!target) return;
+    const profileLink = e.target.closest('.profile-link');
+    const dpLink = e.target.closest('.dp-link');
     
-    const userId = target.dataset.userId;
-    if (!userId) return;
+    // Ignore if not a profile link or DP link
+    if (!profileLink && !dpLink) return;
 
     window.isLongPressing = false;
     
     longPressTimer = setTimeout(() => {
         window.isLongPressing = true;
         if (navigator.vibrate) navigator.vibrate(50);
-        openProfilePeek(userId, target);
+        
+        if (dpLink) {
+            // Trigger the Full-Screen DP Viewer
+            openDpViewer(dpLink.src);
+        } else if (profileLink) {
+            // Trigger the Feed Peek Card
+            const userId = profileLink.dataset.userId;
+            if (userId) openProfilePeek(userId, profileLink);
+        }
     }, 400); 
 }
 
-function handleTouchMove() {
-    clearTimeout(longPressTimer);
-}
-
-function handleTouchEnd(e) {
-    clearTimeout(longPressTimer);
-    
-    if (window.isLongPressing) {
-        if (e.cancelable) e.preventDefault();
-        setTimeout(() => { window.isLongPressing = false; }, 300);
-    }
-}
-
+// ===============================================
+// 1. FEED PEEK CARD LOGIC
+// ===============================================
 window.openProfilePeek = async function(userId, imgEl) {
     const modal = document.getElementById('modal-profile-peek');
     const card = document.getElementById('peek-card');
@@ -1911,6 +1909,8 @@ window.openProfilePeek = async function(userId, imgEl) {
     document.getElementById('peek-course').textContent = 'Fetching details...';
     
     modal.classList.replace('hidden', 'flex');
+    modal.style.pointerEvents = 'auto';
+
     setTimeout(() => {
         modal.classList.remove('opacity-0');
         card.classList.remove('scale-90');
@@ -1941,13 +1941,50 @@ window.closeProfilePeek = function() {
     const modal = document.getElementById('modal-profile-peek');
     const card = document.getElementById('peek-card');
     
-    // 🚀 FIX: Instantly remove pointer events so the user can interact immediately
     modal.style.pointerEvents = 'none';
     modal.classList.add('opacity-0');
     card.classList.add('scale-90');
     
     setTimeout(() => {
         modal.classList.replace('flex', 'hidden');
-        modal.style.pointerEvents = 'auto'; // Reset for next time
+        modal.style.pointerEvents = 'auto';
     }, 300);
 }
+
+// ===============================================
+// 2. PROFILE DP VIEWER LOGIC (Instagram Style)
+// ===============================================
+window.openDpViewer = function(imgSrc) {
+    const modal = document.getElementById('modal-dp-viewer');
+    const card = document.getElementById('dp-viewer-card');
+    const avatarImg = document.getElementById('dp-viewer-image');
+
+    // Upgrade to High-Res via Cloudinary
+    if (imgSrc && imgSrc.includes('cloudinary.com') && imgSrc.includes('w_150')) {
+        imgSrc = imgSrc.replace('w_150,h_150', 'w_600,h_600');
+    }
+    
+    avatarImg.src = imgSrc || '';
+
+    modal.classList.replace('hidden', 'flex');
+    modal.style.pointerEvents = 'auto';
+
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        card.classList.remove('scale-90');
+    }, 10);
+};
+
+window.closeDpViewer = function() {
+    const modal = document.getElementById('modal-dp-viewer');
+    const card = document.getElementById('dp-viewer-card');
+    
+    modal.style.pointerEvents = 'none';
+    modal.classList.add('opacity-0');
+    card.classList.add('scale-90');
+    
+    setTimeout(() => {
+        modal.classList.replace('flex', 'hidden');
+        modal.style.pointerEvents = 'auto';
+    }, 300);
+};
