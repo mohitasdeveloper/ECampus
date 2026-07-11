@@ -33,7 +33,7 @@ export function initFeed(user) {
     currentUser = user;
     
     setupCreatePostPermissions();
-    fetchPosts();
+   refreshMainFeed();
     setupImagePreviews();
 
     document.addEventListener('openCreatePostView', () => {
