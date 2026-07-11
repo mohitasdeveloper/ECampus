@@ -119,6 +119,7 @@ function setupEventListeners() {
     document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
     document.getElementById('details-tab-likes')?.addEventListener('click', () => switchDetailsTab('likes'));
     document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
+    document.getElementById('hotpost-activity-btn')?.addEventListener('click', openActivityPanel);
     
     // Native Confirm Action
     document.getElementById('delete-hotpost-action-btn')?.addEventListener('click', () => {
@@ -755,29 +756,30 @@ function setupViewerTouchPhysics() {
         if(e.cancelable) e.preventDefault();
     }, { passive: false });
 
-    activityContent?.addEventListener('touchend', (e) => {
-        if (!isDraggingPanel) return;
-        isDraggingPanel = false;
+   viewer?.addEventListener('touchend', (e) => {
+        // Stop viewer swipe if the activity panel is already open
+        if (!document.getElementById('modal-story-details').classList.contains('hidden')) return;
+
+        const deltaY = e.changedTouches[0].clientY - viewerStartY;
         
-        activityContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; 
-        const viewerContent = document.getElementById('hotpost-viewer-content');
-        
-        if(viewerContent) {
-            viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
-        }
-        
-        const deltaY = e.changedTouches[0].clientY - panelStartY;
-        
-        if (deltaY > 100) {
-            closeActivityPanel();
-        } else {
-            // Snap back to top and re-apply pushed-back CSS state
-            activityContent.style.transform = `translateY(0px)`;
-            if (viewerContent) {
-                viewerContent.style.transform = '';
-                viewerContent.style.opacity = '';
-                viewerContent.classList.add('viewer-pushed-back');
-            }
+        // 🚀 FIX: Identify exactly what the user is swiping on
+        const isActivityBtn = e.target.closest('#hotpost-activity-btn');
+        const isOtherButtonOrInput = e.target.closest('button:not(#hotpost-activity-btn)') || e.target.closest('input');
+
+        // Block swipe down if they are using the reply box or close button
+        if (isOtherButtonOrInput) return; 
+
+        // Calculate if they started the swipe in the bottom 30% of the screen
+        const screenHeight = window.innerHeight;
+        const startedAtBottom = viewerStartY > (screenHeight * 0.7);
+
+        // 🚀 FIX: SWIPE UP - Only works on the bottom of the screen or directly on the Activity arrow!
+        if (deltaY < -40 && currentViewerState.userId === currentUser.id && (startedAtBottom || isActivityBtn)) {
+            openActivityPanel();
+        } 
+        // SWIPE DOWN to close viewer
+        else if (deltaY > 80) {
+            closeHotpostViewer();
         }
     }, { passive: true });
 }
