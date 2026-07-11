@@ -12,8 +12,12 @@ body {
     min-height: 100dvh;
     overscroll-behavior-y: none;
     transition: background-color 0.3s ease, color 0.3s ease;
+    
+    /* 🚀 ADD THESE 3 LINES: Locks the screen like a native app */
+    -webkit-user-select: none; /* Safari/Android */
+    user-select: none; /* Standard */
+    -webkit-touch-callout: none; /* Disables the long-press popup magnifier */
 }
-
 /* Scrollbar Control */
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
