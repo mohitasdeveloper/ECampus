@@ -1,4 +1,6 @@
-
+import { supabase } from './supabase.js';
+import { showToast } from './ui.js';
+import { timeAgo } from './utils.js';
 
 let currentUser = null;
 let allNotifications = [];
