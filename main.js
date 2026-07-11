@@ -1975,8 +1975,13 @@ window.openProfilePeek = async function(userId, imgEl) {
         document.getElementById('peek-avatar').src = optimizedAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         
         // 🚀 FAILSAFE 3: Inline verified badge so it never crashes looking for external functions
-        const verifiedBadge = user.tick_type && user.tick_type !== 'none' ? `<span class="material-symbols-outlined text-[14px] text-[#1d9bf0]" style="font-variation-settings: 'FILL' 1;">verified</span>` : '';
-        
+// 🚀 FAILSAFE 3: Dynamic multi-color badge generator (including Dusty Pink!)
+        let verifiedBadge = '';
+        if (user.tick_type && user.tick_type !== 'none') {
+            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', pink: 'text-[#d49a9e]' };
+            const tickColor = colors[user.tick_type.toLowerCase()] || colors.blue;
+            verifiedBadge = `<span class="material-symbols-outlined text-[14px] ${tickColor}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+        }        
         document.getElementById('peek-name').innerHTML = `${user.full_name} ${verifiedBadge}`;
         document.getElementById('peek-course').textContent = user.course || 'Campus Member';
         
