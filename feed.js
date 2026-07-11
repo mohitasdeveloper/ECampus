@@ -982,22 +982,23 @@ window.openLikesModal = async function(postId) {
             container.innerHTML = `<div class="py-12 flex flex-col items-center opacity-50"><span class="material-symbols-outlined text-4xl mb-2">favorite</span><p class="text-sm font-bold">No likes yet.</p></div>`;
             return;
         }
-
-    const getTick = (type) => {
+const getTick = (type) => {
             if (!type || type === 'none') return '';
             
-            // 🚀 FIX: Added pink and .trim() to ignore accidental database spaces!
-            const colors = { 
-                blue: 'text-[#1d9bf0]', 
-                gold: 'text-[#e8b339]', 
-                green: 'text-primary', 
-                pink: 'text-[#d49a9e]' 
+            const cleanType = type.trim();
+            
+            // Backward compatibility for standard names, otherwise use EXACTLY what is in the database!
+            const presets = { 
+                'blue': '#1d9bf0', 
+                'gold': '#e8b339', 
+                'green': 'var(--color-primary, #10b981)', 
+                'pink': '#d49a9e' 
             };
             
-            const cleanType = type.toLowerCase().trim();
-            const tickColor = colors[cleanType] || colors.blue;
+            const finalColor = presets[cleanType.toLowerCase()] || cleanType;
             
-            return `<span class="material-symbols-outlined text-[14px] ${tickColor}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+            // 🚀 FIX: Paints the color directly onto the element using inline CSS
+            return `<span class="material-symbols-outlined text-[14px]" style="color: ${finalColor}; font-variation-settings: 'FILL' 1;">verified</span>`;
         };
 
         container.innerHTML = likes.map(like => {
