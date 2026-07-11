@@ -1063,9 +1063,10 @@ function closeActivityPanel() {
     const viewerContent = document.getElementById('hotpost-viewer-content');
     
     sheet.style.transform = `translateY(100%)`;
+    // 🚀 FIX: Instantly unlock the screen while it slides down
+    modal.style.pointerEvents = 'none'; 
     
     if (viewerContent) {
-        // Restore smooth transition and WIPE inline dragging styles
         viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
         viewerContent.style.transform = '';
         viewerContent.style.opacity = '';
@@ -1074,6 +1075,7 @@ function closeActivityPanel() {
 
     setTimeout(() => {
         modal.classList.replace('flex', 'hidden');
+        modal.style.pointerEvents = 'auto'; // Reset
         resumeStory();
     }, 400); 
 }
