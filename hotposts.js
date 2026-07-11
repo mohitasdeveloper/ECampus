@@ -401,7 +401,6 @@ function setupEditorTouchPhysics() {
     let touchMode = 'idle'; 
     let startX = 0, startY = 0;
 
-    // 🚀 Smooth Dragging Trackers
     let textDragStartX = 0;
     let textDragStartY = 0;
     let textInitialObjX = 0;
@@ -413,7 +412,7 @@ function setupEditorTouchPhysics() {
 
     container.addEventListener('touchstart', (e) => {
         // Pinch to Zoom specific text
-        if (e.touches.length === 2 && touchMode !== 'zoom_text') {
+        if (e.touches.length === 2) {
             const targetText = e.target.closest('.hotpost-draggable-text');
             if (targetText && !isDrawMode) {
                 touchMode = 'zoom_text';
@@ -437,7 +436,6 @@ function setupEditorTouchPhysics() {
             activeTextIdForTouch = targetText.id;
             textTouchStartTime = Date.now();
             
-            // 🚀 FIX: Lock initial position for smooth, relative dragging
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
             if (tObj) {
                 textDragStartX = startX;
@@ -447,7 +445,6 @@ function setupEditorTouchPhysics() {
                 tObj.isOverTrash = false;
             }
 
-            // Show Instagram-style Trash Zone
             document.getElementById('text-trash-zone')?.classList.remove('opacity-0');
             document.getElementById('text-trash-zone')?.classList.add('opacity-100');
         } 
@@ -469,9 +466,12 @@ function setupEditorTouchPhysics() {
             const currentDist = getPinchDistance(e.touches);
             const scaleChange = currentDist / initialPinchDist;
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
-            if (tObj) {
+            const targetTextElement = document.getElementById(activeTextIdForTouch);
+            
+            if (tObj && targetTextElement) {
                 tObj.scale = Math.max(0.3, Math.min(6.0, initialTextScale * scaleChange));
-                renderTextElements();
+                // 🚀 FIX: Update DOM directly (No destroying elements!)
+                targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
             }
             return;
         }
@@ -487,19 +487,15 @@ function setupEditorTouchPhysics() {
             const targetTextElement = document.getElementById(activeTextIdForTouch);
             
             if (tObj && targetTextElement) {
-                // 🚀 FIX: Calculate exactly how far the thumb dragged, not where it is
                 const deltaX = (currentX - textDragStartX) / rect.width;
                 const deltaY = (currentY - textDragStartY) / rect.height;
 
-                // Allow moving text slightly off-screen without disappearing completely
                 tObj.x = Math.max(-0.2, Math.min(1.2, textInitialObjX + deltaX)); 
                 tObj.y = Math.max(-0.2, Math.min(1.2, textInitialObjY + deltaY));
                 
-                // Instagram-Style Trash Collision Detection
                 const trashZone = document.getElementById('text-trash-zone');
                 if (trashZone) {
                     const trashRect = trashZone.getBoundingClientRect();
-                    // Add padding to hitbox so it's easy to delete
                     if (currentX > trashRect.left - 20 && currentX < trashRect.right + 20 &&
                         currentY > trashRect.top - 20 && currentY < trashRect.bottom + 20) {
                         
@@ -515,7 +511,9 @@ function setupEditorTouchPhysics() {
                     }
                 }
 
-                if (!tObj.isOverTrash) renderTextElements(); 
+                // 🚀 FIX: Move the text flawlessly using direct CSS
+                targetTextElement.style.left = `${tObj.x * 100}%`;
+                targetTextElement.style.top = `${tObj.y * 100}%`;
             }
         } 
         else if (touchMode === 'draw' && isDrawing) {
@@ -544,16 +542,19 @@ function setupEditorTouchPhysics() {
             }
 
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
+            const targetTextElement = document.getElementById(activeTextIdForTouch);
             
             if (tObj && tObj.isOverTrash) {
-                // 🚀 INSTAGRAM DELETE: Nuke the text layer!
+                // Delete text gracefully
                 textElements = textElements.filter(t => t.id !== activeTextIdForTouch);
-                renderTextElements();
+                if (targetTextElement) targetTextElement.remove(); 
             } else if (Date.now() - textTouchStartTime < 200) {
                 // Tap to Edit
                 activateTextTool(activeTextIdForTouch);
-            } else {
-                renderTextElements(); // Reset any partial scales
+            } else if (targetTextElement && tObj) {
+                // Snap back to full opacity if released outside the trash zone
+                targetTextElement.style.opacity = '1';
+                targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
             }
         }
         else if (touchMode === 'draw' && isDrawing) {
@@ -581,7 +582,6 @@ function setupEditorTouchPhysics() {
         }
     }, { passive: true });
 }
-
 function showFilterToast(name) {
     const toast = document.getElementById('filter-name-toast');
     toast.textContent = name;
