@@ -1855,9 +1855,8 @@ window.selectSocialPlatform = function(id) {
     closeSocialPicker();
 };
 
-
 // ========================================================
-// NATIVE LONG-PRESS ENGINE (Profile Peek)
+// NATIVE LONG-PRESS ENGINE (Profile Peek & DP Viewer)
 // ========================================================
 let longPressTimer;
 window.isLongPressing = false; 
@@ -1865,18 +1864,22 @@ window.isLongPressing = false;
 document.addEventListener('touchstart', handleTouchStart, { passive: true });
 document.addEventListener('touchend', handleTouchEnd);
 document.addEventListener('touchmove', handleTouchMove, { passive: true });
-
 document.addEventListener('mousedown', handleTouchStart);
 document.addEventListener('mouseup', handleTouchEnd);
 document.addEventListener('mousemove', handleTouchMove);
 
 function handleTouchStart(e) {
+    // 🚀 FAILSAFE 1: If user touches raw text, safely ignore it so the app doesn't crash!
+    if (!e.target || typeof e.target.closest !== 'function') return;
+
     const profileLink = e.target.closest('.profile-link');
     const dpLink = e.target.closest('.dp-link');
     
-    // Ignore if not a profile link or DP link
+    // Ignore if they didn't touch a profile or DP link
     if (!profileLink && !dpLink) return;
 
+    // 🚀 FAILSAFE 2: Clear old timers so they don't overlap and glitch
+    clearTimeout(longPressTimer);
     window.isLongPressing = false;
     
     longPressTimer = setTimeout(() => {
@@ -1884,14 +1887,28 @@ function handleTouchStart(e) {
         if (navigator.vibrate) navigator.vibrate(50);
         
         if (dpLink) {
-            // Trigger the Full-Screen DP Viewer
-            openDpViewer(dpLink.src);
+            // Safely open the DP Viewer
+            const imgSrc = dpLink.src || '';
+            window.openDpViewer(imgSrc);
         } else if (profileLink) {
-            // Trigger the Feed Peek Card
+            // Safely open the Feed Peek Card
             const userId = profileLink.dataset.userId;
-            if (userId) openProfilePeek(userId, profileLink);
+            if (userId) window.openProfilePeek(userId, profileLink);
         }
     }, 400); 
+}
+
+function handleTouchMove() {
+    clearTimeout(longPressTimer);
+}
+
+function handleTouchEnd(e) {
+    clearTimeout(longPressTimer);
+    
+    if (window.isLongPressing) {
+        if (e.cancelable) e.preventDefault();
+        setTimeout(() => { window.isLongPressing = false; }, 300);
+    }
 }
 
 // ===============================================
@@ -1901,6 +1918,8 @@ window.openProfilePeek = async function(userId, imgEl) {
     const modal = document.getElementById('modal-profile-peek');
     const card = document.getElementById('peek-card');
     
+    if (!modal || !card) return; // Failsafe
+
     if (imgEl && imgEl.tagName === 'IMG') {
         document.getElementById('peek-avatar').src = imgEl.src;
     }
@@ -1920,16 +1939,18 @@ window.openProfilePeek = async function(userId, imgEl) {
         const { data: user, error } = await supabase.from('users').select('full_name, profile_img_url, course, tick_type').eq('id', userId).single();
         if (error) throw error;
         
-        const optimizedAvatar = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(user.profile_img_url, 'avatar') : user.profile_img_url;
+        const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(user.profile_img_url, 'avatar') : user.profile_img_url;
         document.getElementById('peek-avatar').src = optimizedAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         
-        const verifiedBadge = typeof getTickHtmlLocal === 'function' ? getTickHtmlLocal(user.tick_type) : '';
+        // 🚀 FAILSAFE 3: Inline verified badge so it never crashes looking for external functions
+        const verifiedBadge = user.tick_type && user.tick_type !== 'none' ? `<span class="material-symbols-outlined text-[14px] text-[#1d9bf0]" style="font-variation-settings: 'FILL' 1;">verified</span>` : '';
+        
         document.getElementById('peek-name').innerHTML = `${user.full_name} ${verifiedBadge}`;
         document.getElementById('peek-course').textContent = user.course || 'Campus Member';
         
         document.getElementById('peek-view-profile-btn').onclick = () => {
-            closeProfilePeek();
-            setTimeout(() => viewUserProfile(userId), 200); 
+            window.closeProfilePeek();
+            setTimeout(() => window.viewUserProfile(userId), 200); 
         };
     } catch (err) {
         document.getElementById('peek-name').textContent = 'User Details Unavailable';
@@ -1940,6 +1961,7 @@ window.openProfilePeek = async function(userId, imgEl) {
 window.closeProfilePeek = function() {
     const modal = document.getElementById('modal-profile-peek');
     const card = document.getElementById('peek-card');
+    if (!modal || !card) return;
     
     modal.style.pointerEvents = 'none';
     modal.classList.add('opacity-0');
@@ -1959,8 +1981,10 @@ window.openDpViewer = function(imgSrc) {
     const card = document.getElementById('dp-viewer-card');
     const avatarImg = document.getElementById('dp-viewer-image');
 
-    // Upgrade to High-Res via Cloudinary
-    if (imgSrc && imgSrc.includes('cloudinary.com') && imgSrc.includes('w_150')) {
+    if (!modal || !card || !avatarImg) return; // Failsafe
+
+    // 🚀 FAILSAFE 4: Check if string before replacing so it doesn't crash on null
+    if (imgSrc && typeof imgSrc === 'string' && imgSrc.includes('cloudinary.com') && imgSrc.includes('w_150')) {
         imgSrc = imgSrc.replace('w_150,h_150', 'w_600,h_600');
     }
     
@@ -1978,6 +2002,7 @@ window.openDpViewer = function(imgSrc) {
 window.closeDpViewer = function() {
     const modal = document.getElementById('modal-dp-viewer');
     const card = document.getElementById('dp-viewer-card');
+    if (!modal || !card) return;
     
     modal.style.pointerEvents = 'none';
     modal.classList.add('opacity-0');
