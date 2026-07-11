@@ -1871,19 +1871,24 @@ document.addEventListener('mousemove', handleTouchMove);
 let touchStartX = 0;
 let touchStartY = 0;
 
+let touchStartX = 0;
+let touchStartY = 0;
+
 function handleTouchStart(e) {
     if (!e.target || typeof e.target.closest !== 'function') return;
 
     const profileLink = e.target.closest('.profile-link');
     const dpLink = e.target.closest('.dp-link');
     
-    // Ignore if they didn't touch a profile or DP link
     if (!profileLink && !dpLink) return;
 
-    // Record the exact starting coordinate
+    // 🚀 FIX: Safely record start position for BOTH touch screens and desktop clicks
     if (e.touches && e.touches.length > 0) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
+    } else if (e.clientX !== undefined) {
+        touchStartX = e.clientX;
+        touchStartY = e.clientY;
     }
 
     clearTimeout(longPressTimer);
@@ -1898,25 +1903,40 @@ function handleTouchStart(e) {
             window.openDpViewer(imgSrc);
         } else if (profileLink) {
             const userId = profileLink.dataset.userId;
-            if (userId) window.openProfilePeek(userId, profileLink);
+            
+            // Ensure we are passing an image to the viewer, even if they tapped the wrapper div
+            let imgEl = profileLink;
+            if (profileLink.tagName !== 'IMG') {
+                imgEl = profileLink.querySelector('img') || profileLink;
+            }
+            
+            if (userId) window.openProfilePeek(userId, imgEl);
         }
     }, 400); 
 }
 
 function handleTouchMove(e) {
-    // 🚀 FIX: Ignore micro-movements caused by thumbs squishing on the screen
+    let moveX, moveY;
+
+    // 🚀 FIX: Intelligently extract coordinates without crashing
     if (e.touches && e.touches.length > 0) {
-        const moveX = e.touches[0].clientX;
-        const moveY = e.touches[0].clientY;
-        
-        // If the finger moved more than 10 pixels, they are swiping. Cancel the long press.
-        if (Math.abs(moveX - touchStartX) > 10 || Math.abs(moveY - touchStartY) > 10) {
-            clearTimeout(longPressTimer);
-        }
+        moveX = e.touches[0].clientX;
+        moveY = e.touches[0].clientY;
+    } else if (e.clientX !== undefined) {
+        moveX = e.clientX;
+        moveY = e.clientY;
     } else {
-        clearTimeout(longPressTimer); // Fallback for desktop mouse
+        // If Android fires a ghost event with no coordinates, DO NOTHING! 
+        // (This is what was killing the old profile cards)
+        return; 
+    }
+    
+    // Only cancel if they ACTUALLY dragged their finger more than 10 pixels
+    if (Math.abs(moveX - touchStartX) > 10 || Math.abs(moveY - touchStartY) > 10) {
+        clearTimeout(longPressTimer);
     }
 }
+
 function handleTouchEnd(e) {
     clearTimeout(longPressTimer);
     
