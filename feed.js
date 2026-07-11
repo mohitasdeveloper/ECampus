@@ -35,7 +35,8 @@ export function initFeed(user) {
     setupCreatePostPermissions();
    refreshMainFeed();
     setupImagePreviews();
-
+setupLikesModalTouchPhysics();
+    
     document.addEventListener('openCreatePostView', () => {
         if(currentUser) {
             document.getElementById('create-post-avatar').src = currentUser.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name)}&background=e1e3e4`;
@@ -880,6 +881,65 @@ async function submitComment(postId) {
     btn.disabled = false;
 }
 window.refreshMainFeed = fetchPosts;
+
+
+
+// ==========================================
+// LIKES MODAL TOUCH PHYSICS (Swipe to Close)
+// ==========================================
+function setupLikesModalTouchPhysics() {
+    const card = document.getElementById('likes-modal-card');
+    if (!card) return;
+
+    let panelStartY = 0;
+    let isDraggingPanel = false;
+    let isPanelScrollable = false;
+
+    card.addEventListener('touchstart', (e) => {
+        const scrollArea = e.target.closest('.overflow-y-auto');
+        
+        // If the user has scrolled down the list of names, let them scroll natively
+        if (scrollArea && scrollArea.scrollTop > 0) {
+            isPanelScrollable = true;
+            isDraggingPanel = false;
+        } else {
+            isPanelScrollable = false;
+            panelStartY = e.touches[0].clientY;
+            isDraggingPanel = true;
+            card.style.transition = 'none'; // Disable transition for 1:1 finger tracking
+        }
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (e) => {
+        if (isPanelScrollable || !isDraggingPanel) return;
+        
+        const deltaY = e.touches[0].clientY - panelStartY;
+        
+        // Only allow pulling the card DOWN
+        if (deltaY > 0) {
+            card.style.transform = `translateY(${deltaY}px)`;
+            if (e.cancelable) e.preventDefault(); // Lock the screen behind it
+        }
+    }, { passive: false });
+
+    card.addEventListener('touchend', (e) => {
+        if (isPanelScrollable || !isDraggingPanel) return;
+        isDraggingPanel = false;
+        
+        const deltaY = e.changedTouches[0].clientY - panelStartY;
+        card.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'; 
+        
+        // SWIPE DOWN -> Trigger the close function
+        if (deltaY > 100) {
+            window.closeLikesModal();
+        } 
+        // SNAP BACK -> Didn't swipe far enough
+        else {
+            card.style.transform = ''; 
+        }
+    }, { passive: true });
+}
+
 // ========================================================
 // INSTAGRAM-STYLE LIKES LIST 
 // ========================================================
@@ -888,15 +948,14 @@ window.openLikesModal = async function(postId) {
     const card = document.getElementById('likes-modal-card');
     const container = document.getElementById('likes-list-container');
     
-    if (!modal) {
-        console.error("modal-likes-list HTML is missing from index.html!");
-        return;
-    }
+    if (!modal) return;
 
     // 1. Animate Modal In
     modal.classList.replace('hidden', 'flex');
     setTimeout(() => {
         modal.classList.remove('opacity-0');
+        // 🚀 FIX: Wipe any leftover drag styles to guarantee a clean pop-up
+        card.style.transform = ''; 
         card.classList.remove('translate-y-full');
     }, 10);
 
@@ -911,7 +970,6 @@ window.openLikesModal = async function(postId) {
         </div>`.repeat(5);
 
     try {
-        // 3. Fetch all users who liked this specific post
         const { data: likes, error } = await supabase
             .from('post_likes')
             .select('users(id, full_name, profile_img_url, tick_type)')
@@ -925,7 +983,6 @@ window.openLikesModal = async function(postId) {
             return;
         }
 
-        // 4. Render the list
         const getTick = (type) => {
             if (!type || type === 'none') return '';
             const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary' };
@@ -958,9 +1015,11 @@ window.closeLikesModal = function() {
     const modal = document.getElementById('modal-likes-list');
     const card = document.getElementById('likes-modal-card');
     
-    // 🚀 FIX: Instantly drop the invisible shield
     modal.style.pointerEvents = 'none';
     modal.classList.add('opacity-0');
+    
+    // 🚀 FIX: Erase the thumb's inline translate values so Tailwind can slide it away
+    card.style.transform = ''; 
     card.classList.add('translate-y-full');
     
     setTimeout(() => { 
