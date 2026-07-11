@@ -811,10 +811,10 @@
    <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
         <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
         
-        <div id="hotpost-preview-container" class="absolute w-full h-full hidden overflow-hidden bg-black">
+       <div id="hotpost-preview-container" class="absolute w-full h-full hidden overflow-hidden bg-black">
             <img id="hotpost-preview-img" class="absolute w-full h-full object-cover" />
             <canvas id="hotpost-doodle-canvas"></canvas>
-            <div id="hotpost-draggable-text" class="hotpost-draggable-text hidden"></div>
+            <!-- 🚀 FIX: The hardcoded draggable-text div used to be here. Delete it entirely! -->
             <div id="filter-name-toast" class="filter-name-toast hidden"></div>
         </div>
         
@@ -841,8 +841,9 @@
             <button class="doodle-color-btn w-6 h-6 rounded-full bg-[#007AFF] border-2 border-transparent active:scale-90 transition-transform" data-color="#007AFF"></button>
         </div>
 
-        <div id="hotpost-text-editor-overlay" class="absolute inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden flex-col">
-            <div class="flex justify-between items-center p-5">
+       <div id="hotpost-text-editor-overlay" class="absolute inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden flex-col">
+            <!-- 🚀 FIX: Added pt-[max(1.5rem,env(safe-area-inset-top))] to push buttons below the notch! -->
+            <div class="flex justify-between items-center p-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
                 <button id="cancel-text-btn" class="text-white font-bold text-[16px] active:scale-95">Cancel</button>
                 <button id="done-text-btn" class="bg-white text-black px-4 py-1.5 rounded-full font-bold text-[14px] active:scale-95">Done</button>
             </div>
