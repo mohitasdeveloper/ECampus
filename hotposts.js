@@ -697,96 +697,143 @@ function renderHotpostCircles() {
 
 
 // ==========================================
-// VIEWER ENGINES & PHYSICS
+// VIEWER ENGINES & PHYSICS (Ultimate Failsafe)
 // ==========================================
 function setupViewerTouchPhysics() {
     const viewer = document.getElementById('modal-view-hotpost');
-    const activityContent = document.getElementById('modal-story-details-sheet');
+    const viewerContent = document.getElementById('hotpost-viewer-content');
+    const activityModal = document.getElementById('modal-story-details');
+    const activitySheet = document.getElementById('modal-story-details-sheet');
     
-    // Separated variables so Swipe Up and Drag Down don't conflict
     let viewerStartY = 0;
+    let isDraggingViewer = false;
+
     let panelStartY = 0;
     let isDraggingPanel = false;
-    
-    // VIEWER TOUCH (Swipe Up/Down on Story)
+    let isPanelScrollable = false;
+
+    // ----------------------------------------------------
+    // 1. STORY VIEWER PHYSICS (Swipe Down to Close Story)
+    // ----------------------------------------------------
     viewer?.addEventListener('touchstart', (e) => {
+        // Block if Activity panel is open
+        if (!activityModal.classList.contains('hidden')) return;
+        
+        // Block if touching buttons or the reply input box
+        const isOtherButtonOrInput = e.target.closest('button:not(#hotpost-activity-btn)') || e.target.closest('input');
+        if (isOtherButtonOrInput) return;
+        
         viewerStartY = e.touches[0].clientY;
+        isDraggingViewer = true;
+        if (viewerContent) viewerContent.style.transition = 'none'; 
     }, { passive: true });
+
+    viewer?.addEventListener('touchmove', (e) => {
+        if (!isDraggingViewer) return;
+        const deltaY = e.touches[0].clientY - viewerStartY;
+
+        // 🚀 Live visual feedback: Drag DOWN to scale and close
+        if (deltaY > 0) {
+            const progress = Math.min(deltaY / window.innerHeight, 1);
+            if (viewerContent) {
+                viewerContent.style.transform = `translateY(${deltaY * 0.8}px) scale(${1 - (progress * 0.15)})`;
+            }
+            if (e.cancelable) e.preventDefault(); // Lock screen natively
+        } 
+    }, { passive: false });
 
     viewer?.addEventListener('touchend', (e) => {
-        // Stop viewer swipe if the activity panel is already open
-        if (!document.getElementById('modal-story-details').classList.contains('hidden')) return;
-
+        if (!isDraggingViewer) return;
+        isDraggingViewer = false;
+        
         const deltaY = e.changedTouches[0].clientY - viewerStartY;
-        if (e.target.closest('button') || e.target.closest('input')) return;
+        const isActivityBtn = e.target.closest('#hotpost-activity-btn');
+        
+        // Calculate if they started the swipe in the bottom 30%
+        const screenHeight = window.innerHeight;
+        const startedAtBottom = viewerStartY > (screenHeight * 0.7);
 
-        // Increased sensitivity: -40px for a quick swipe up, 80px for swipe down
-        if (deltaY < -40 && currentViewerState.userId === currentUser.id) {
+        if (viewerContent) viewerContent.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+
+        // SWIPE UP -> Open Activity Panel
+        if (deltaY < -40 && currentViewerState.userId === currentUser.id && (startedAtBottom || isActivityBtn)) {
+            if (viewerContent) viewerContent.style.transform = ''; 
             openActivityPanel();
-        } else if (deltaY > 80) {
+        } 
+        // SWIPE DOWN -> Close Entire Story
+        else if (deltaY > 100) {
             closeHotpostViewer();
+        } 
+        // SNAP BACK (Did not swipe far enough)
+        else {
+            if (viewerContent) viewerContent.style.transform = '';
         }
     }, { passive: true });
 
-    // ACTIVITY PANEL PHYSICS (Drag Sheet Down)
-    activityContent?.addEventListener('touchstart', (e) => {
+    // ----------------------------------------------------
+    // 2. ACTIVITY PANEL PHYSICS (Swipe Down to Close Panel)
+    // ----------------------------------------------------
+    activitySheet?.addEventListener('touchstart', (e) => {
         const scrollArea = e.target.closest('.overflow-y-auto');
+        
+        // Yield to native scroll if the user is scrolling the lists
         if (scrollArea && scrollArea.scrollTop > 0) {
-            isDraggingPanel = false; 
+            isPanelScrollable = true;
+            isDraggingPanel = false;
         } else {
+            isPanelScrollable = false;
             panelStartY = e.touches[0].clientY;
             isDraggingPanel = true;
-            activityContent.style.transition = 'none'; 
-            
-            const viewerContent = document.getElementById('hotpost-viewer-content');
-            if(viewerContent) viewerContent.style.transition = 'none';
+            activitySheet.style.transition = 'none'; 
+            if (viewerContent) viewerContent.style.transition = 'none';
         }
     }, { passive: true });
 
-    activityContent?.addEventListener('touchmove', (e) => {
-        if (!isDraggingPanel) return;
+    activitySheet?.addEventListener('touchmove', (e) => {
+        if (isPanelScrollable || !isDraggingPanel) return;
+        
         const deltaY = e.touches[0].clientY - panelStartY;
         
+        // Only allow dragging DOWN
         if (deltaY > 0) {
-            activityContent.style.transform = `translateY(${deltaY}px)`;
+            activitySheet.style.transform = `translateY(${deltaY}px)`;
+            
+            // Animate background story returning to normal size
             const progress = deltaY / window.innerHeight;
-            const viewerContent = document.getElementById('hotpost-viewer-content');
             if(viewerContent) {
                 viewerContent.style.transform = `scale(${0.92 + (0.08 * progress)}) translateY(${2 - (2 * progress)}vh)`;
                 viewerContent.style.opacity = 0.4 + (0.6 * progress);
             }
+            if (e.cancelable) e.preventDefault(); 
         }
-        if(e.cancelable) e.preventDefault();
     }, { passive: false });
 
-   viewer?.addEventListener('touchend', (e) => {
-        // Stop viewer swipe if the activity panel is already open
-        if (!document.getElementById('modal-story-details').classList.contains('hidden')) return;
-
-        const deltaY = e.changedTouches[0].clientY - viewerStartY;
+    activitySheet?.addEventListener('touchend', (e) => {
+        if (isPanelScrollable || !isDraggingPanel) return;
+        isDraggingPanel = false;
         
-        // 🚀 FIX: Identify exactly what the user is swiping on
-        const isActivityBtn = e.target.closest('#hotpost-activity-btn');
-        const isOtherButtonOrInput = e.target.closest('button:not(#hotpost-activity-btn)') || e.target.closest('input');
-
-        // Block swipe down if they are using the reply box or close button
-        if (isOtherButtonOrInput) return; 
-
-        // Calculate if they started the swipe in the bottom 30% of the screen
-        const screenHeight = window.innerHeight;
-        const startedAtBottom = viewerStartY > (screenHeight * 0.7);
-
-        // 🚀 FIX: SWIPE UP - Only works on the bottom of the screen or directly on the Activity arrow!
-        if (deltaY < -40 && currentViewerState.userId === currentUser.id && (startedAtBottom || isActivityBtn)) {
-            openActivityPanel();
+        const deltaY = e.changedTouches[0].clientY - panelStartY;
+        
+        activitySheet.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; 
+        if(viewerContent) {
+            viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
+        }
+        
+        // SWIPE DOWN -> Close Activity Panel
+        if (deltaY > 120) {
+            closeActivityPanel();
         } 
-        // SWIPE DOWN to close viewer
-        else if (deltaY > 80) {
-            closeHotpostViewer();
+        // SNAP BACK -> Keep Panel Open
+        else {
+            activitySheet.style.transform = `translateY(0px)`;
+            if (viewerContent) {
+                viewerContent.style.transform = '';
+                viewerContent.style.opacity = '';
+                viewerContent.classList.add('viewer-pushed-back');
+            }
         }
     }, { passive: true });
 }
-
 function openHotpostViewer(userId) {
     const userData = hotpostsByUser.get(userId);
     if (!userData || userData.posts.length === 0) return;
