@@ -16,23 +16,21 @@ window.addEventListener('load', () => {
         initPullToRefresh();
     }
 
-    // 2. Splash Screen Logic
-    // This removes the loading screen after the app is ready
+   // 2. Splash Screen Logic
     setTimeout(() => {
         const splash = document.getElementById('app-splash-screen');
         if (splash) {
-            // Fade it out
+            // 🚀 FIX: Instantly unlock the screen before the fade even starts!
+            splash.style.pointerEvents = 'none'; 
             splash.style.opacity = '0';
             
-            // Re-enable scrolling on the main body
             document.body.classList.remove('overflow-hidden');
             
-            // Remove it completely from the DOM after the fade animation finishes
             setTimeout(() => {
                 splash.remove();
             }, 500); 
         }
-    }, 600); 
+    }, 600);
 });
 
 // ==========================================
@@ -1922,10 +1920,13 @@ window.closeProfilePeek = function() {
     const modal = document.getElementById('modal-profile-peek');
     const card = document.getElementById('peek-card');
     
+    // 🚀 FIX: Instantly remove pointer events so the user can interact immediately
+    modal.style.pointerEvents = 'none';
     modal.classList.add('opacity-0');
     card.classList.add('scale-90');
     
     setTimeout(() => {
         modal.classList.replace('flex', 'hidden');
+        modal.style.pointerEvents = 'auto'; // Reset for next time
     }, 300);
 }
