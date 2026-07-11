@@ -432,9 +432,8 @@ function setupThemeToggle() {
     const themeToggle = document.getElementById('theme-toggle-switch');
     if (!themeToggle) return;
 
-    // 🚀 FIX: Sync this logic perfectly with index.html so they don't fight!
     const isDarkMode = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
+
     document.documentElement.classList.toggle('dark', isDarkMode);
     themeToggle.checked = isDarkMode;
     updateNativeStatusBar(isDarkMode); 
@@ -443,10 +442,18 @@ function setupThemeToggle() {
         if (themeToggle.checked) {
             document.documentElement.classList.add('dark');
             localStorage.setItem('theme', 'dark');
+            
+            // 🚀 FIX: Forcefully overwrite the boot script's background color!
+            document.body.style.setProperty('background-color', '#121212', 'important');
+            
             updateNativeStatusBar(true);
         } else {
             document.documentElement.classList.remove('dark');
             localStorage.setItem('theme', 'light');
+            
+            // 🚀 FIX: Forcefully overwrite the boot script's background color!
+            document.body.style.setProperty('background-color', '#f8f9fa', 'important');
+            
             updateNativeStatusBar(false);
         }
     });
