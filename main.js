@@ -1868,8 +1868,10 @@ document.addEventListener('mousedown', handleTouchStart);
 document.addEventListener('mouseup', handleTouchEnd);
 document.addEventListener('mousemove', handleTouchMove);
 
+let touchStartX = 0;
+let touchStartY = 0;
+
 function handleTouchStart(e) {
-    // 🚀 FAILSAFE 1: If user touches raw text, safely ignore it so the app doesn't crash!
     if (!e.target || typeof e.target.closest !== 'function') return;
 
     const profileLink = e.target.closest('.profile-link');
@@ -1878,7 +1880,12 @@ function handleTouchStart(e) {
     // Ignore if they didn't touch a profile or DP link
     if (!profileLink && !dpLink) return;
 
-    // 🚀 FAILSAFE 2: Clear old timers so they don't overlap and glitch
+    // Record the exact starting coordinate
+    if (e.touches && e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }
+
     clearTimeout(longPressTimer);
     window.isLongPressing = false;
     
@@ -1887,21 +1894,29 @@ function handleTouchStart(e) {
         if (navigator.vibrate) navigator.vibrate(50);
         
         if (dpLink) {
-            // Safely open the DP Viewer
             const imgSrc = dpLink.src || '';
             window.openDpViewer(imgSrc);
         } else if (profileLink) {
-            // Safely open the Feed Peek Card
             const userId = profileLink.dataset.userId;
             if (userId) window.openProfilePeek(userId, profileLink);
         }
     }, 400); 
 }
 
-function handleTouchMove() {
-    clearTimeout(longPressTimer);
+function handleTouchMove(e) {
+    // 🚀 FIX: Ignore micro-movements caused by thumbs squishing on the screen
+    if (e.touches && e.touches.length > 0) {
+        const moveX = e.touches[0].clientX;
+        const moveY = e.touches[0].clientY;
+        
+        // If the finger moved more than 10 pixels, they are swiping. Cancel the long press.
+        if (Math.abs(moveX - touchStartX) > 10 || Math.abs(moveY - touchStartY) > 10) {
+            clearTimeout(longPressTimer);
+        }
+    } else {
+        clearTimeout(longPressTimer); // Fallback for desktop mouse
+    }
 }
-
 function handleTouchEnd(e) {
     clearTimeout(longPressTimer);
     
