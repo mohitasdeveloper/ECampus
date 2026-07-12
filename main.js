@@ -459,20 +459,10 @@ function setupThemeToggle() {
     });
 }
 
-// 🚀 GLOBAL TICK GENERATOR (Dynamic Engine)
+// 🚀 GLOBAL TICK GENERATOR (Strict Hex Engine)
 window.getTickHtml = function(type) {
-    if (!type || type === 'none') return '';
-    
-    const cleanType = type.trim();
-    const presets = { 
-        'blue': '#1d9bf0', 
-        'gold': '#e8b339', 
-        'green': 'var(--color-primary, #10b981)', 
-        'pink': '#d49a9e' 
-    };
-    
-    const finalColor = presets[cleanType.toLowerCase()] || cleanType;
-    return `<span class="material-symbols-outlined text-[14px]" style="color: ${finalColor}; font-variation-settings: 'FILL' 1;">verified</span>`;
+    if (!type || type.toLowerCase().trim() === 'none') return '';
+    return `<span class="material-symbols-outlined text-[14px]" style="color: ${type.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
 };
 // ========================================================
 // CORE PROFILE UI & SOCIALS
@@ -581,13 +571,14 @@ function populateProfileUI(profile) {
     
     const tickEl = document.getElementById('my-profile-header-tick');
     if (tickEl) {
-        if (profile.tick_type && profile.tick_type !== 'none') {
-            const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-            tickEl.className = `material-symbols-outlined text-[18px] ${colors[profile.tick_type.toLowerCase()] || colors.blue}`;
+        if (profile.tick_type && profile.tick_type.toLowerCase().trim() !== 'none') {
+            tickEl.className = `material-symbols-outlined text-[18px]`; // Stripped tailwind colors!
+            tickEl.style.color = profile.tick_type.trim(); // Apply hex directly
             tickEl.style.fontVariationSettings = "'FILL' 1";
             tickEl.classList.remove('hidden');
         } else {
             tickEl.classList.add('hidden');
+            tickEl.style.color = '';
         }
     }
     
@@ -1258,9 +1249,8 @@ async function viewUserProfile(userId) {
     const isConnected = connection?.status === 'accepted';
 
     const getTickHtmlLocal = (tickType) => {
-        if (!tickType || tickType === 'none') return '';
-        const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-        return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+        if (!tickType || tickType.toLowerCase().trim() === 'none') return '';
+        return `<span class="material-symbols-outlined text-[14px]" style="color: ${tickType.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
     };
 
     if (user.is_private && !isConnected) {
@@ -1983,15 +1973,12 @@ window.openProfilePeek = async function(userId, imgEl) {
         const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(user.profile_img_url, 'avatar') : user.profile_img_url;
         document.getElementById('peek-avatar').src = optimizedAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         
-       // 🚀 FAILSAFE 3: Dynamic multi-color badge generator 
+       // 🚀 FAILSAFE 3: Strict Hex Code Generator 
         let verifiedBadge = '';
-        if (user.tick_type && user.tick_type !== 'none') {
-            const cleanType = user.tick_type.trim();
-            const presets = { 'blue': '#1d9bf0', 'gold': '#e8b339', 'green': 'var(--color-primary, #10b981)', 'pink': '#d49a9e' };
-            const tickColor = presets[cleanType.toLowerCase()] || cleanType;
-            
-            verifiedBadge = `<span class="material-symbols-outlined text-[14px]" style="color: ${tickColor}; font-variation-settings: 'FILL' 1;">verified</span>`;
+        if (user.tick_type && user.tick_type.toLowerCase().trim() !== 'none') {
+            verifiedBadge = `<span class="material-symbols-outlined text-[14px]" style="color: ${user.tick_type.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
         }
+        
         document.getElementById('peek-name').innerHTML = `${user.full_name} ${verifiedBadge}`;
         document.getElementById('peek-course').textContent = user.course || 'Campus Member';
         
