@@ -95,10 +95,10 @@ setupLikesModalTouchPhysics();
 }
 
 function getTickHtml(tickType) {
-    if (!tickType || tickType === 'none') return '';
-    const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-surface-variant' };
-    const colorClass = colors[tickType.toLowerCase()] || colors.blue;
-    return `<span class="material-symbols-outlined text-[14px] ${colorClass} ml-1" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+    if (!tickType || tickType.toLowerCase().trim() === 'none') return '';
+    
+    // 🚀 FIX: Strictly apply the hex code directly to the style
+    return `<span class="material-symbols-outlined text-[14px] ml-1" style="color: ${tickType.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
 }
 
 function setupCreatePostPermissions() {
@@ -983,22 +983,10 @@ window.openLikesModal = async function(postId) {
             return;
         }
 const getTick = (type) => {
-            if (!type || type === 'none') return '';
+            if (!type || type.toLowerCase().trim() === 'none') return '';
             
-            const cleanType = type.trim();
-            
-            // Backward compatibility for standard names, otherwise use EXACTLY what is in the database!
-            const presets = { 
-                'blue': '#1d9bf0', 
-                'gold': '#e8b339', 
-                'green': 'var(--color-primary, #10b981)', 
-                'pink': '#d49a9e' 
-            };
-            
-            const finalColor = presets[cleanType.toLowerCase()] || cleanType;
-            
-            // 🚀 FIX: Paints the color directly onto the element using inline CSS
-            return `<span class="material-symbols-outlined text-[14px]" style="color: ${finalColor}; font-variation-settings: 'FILL' 1;">verified</span>`;
+            // 🚀 FIX: Strictly apply the hex code directly to the style
+            return `<span class="material-symbols-outlined text-[14px]" style="color: ${type.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
         };
 
         container.innerHTML = likes.map(like => {
