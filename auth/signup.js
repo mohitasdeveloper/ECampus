@@ -66,9 +66,16 @@ async function handleSignup(event) {
     const course = document.getElementById("signup-course").value.trim();
     const mobile = document.getElementById("signup-mobile").value.trim();
     const gender = document.getElementById("signup-gender").value;
+    const termsChecked = document.getElementById("signup-terms").checked;
 
     if (!collegeName || !fullName || !email || !password || !studentId || !course || !mobile || !gender) {
         showMessage("Please fill all the fields.");
+        return;
+    }
+    
+    // Additional validation for the terms and conditions checkbox
+    if (!termsChecked) {
+        showMessage("You must agree to the Privacy Policy and Terms.");
         return;
     }
 
