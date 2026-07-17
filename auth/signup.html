@@ -107,7 +107,17 @@
                 </div>
             </div>
 
-            <div class="mt-6">
+            <!-- New Checkbox Added Here -->
+            <div class="flex items-start gap-3 mt-1">
+                <input type="checkbox" id="signup-terms" class="mt-0.5 w-4 h-4 text-primary bg-surface-variant/20 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded focus:ring-primary focus:ring-1 outline-none cursor-pointer shrink-0" required>
+                <label for="signup-terms" class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400 leading-snug">
+                    I confirm that I am over 16 years of age and agree to the 
+                    <a href="https://ecampus.mohitmali.in/privacy.html" target="_blank" class="text-primary hover:underline font-bold">Privacy Policy</a> & 
+                    <a href="https://ecampus.mohitmali.in/terms.html" target="_blank" class="text-primary hover:underline font-bold">Terms</a>.
+                </label>
+            </div>
+
+            <div class="mt-4">
                 <button type="submit" id="signup-button" class="w-full bg-primary text-white py-4 rounded-xl font-extrabold text-[16px] active:scale-95 transition-all shadow-lg shadow-primary/25 flex justify-center items-center">
                     <span class="btn-text">Create Account</span>
                     <span class="material-symbols-outlined hidden animate-spin">progress_activity</span>
