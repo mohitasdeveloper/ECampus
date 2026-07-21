@@ -2170,3 +2170,148 @@ window.closeDpViewer = function() {
         modal.style.pointerEvents = 'auto';
     }, 300);
 };
+
+// ========================================================
+// NATIVE NESTED SETTINGS ROUTING & LOGIC
+// ========================================================
+
+window.openSettingsSubPanel = function(panelId) {
+    const panel = document.getElementById(panelId);
+    if (panel) {
+        panel.classList.remove('translate-x-full');
+    }
+};
+
+window.closeSettingsSubPanel = function(panelId) {
+    const panel = document.getElementById(panelId);
+    if (panel) {
+        panel.classList.add('translate-x-full');
+    }
+};
+
+// 1. Change Password
+window.executeChangePassword = async function() {
+    const oldPw = document.getElementById('cp-old').value;
+    const newPw = document.getElementById('cp-new').value;
+    const confirmPw = document.getElementById('cp-confirm').value;
+    const btn = document.getElementById('btn-change-password');
+
+    if (!oldPw || !newPw || !confirmPw) return showToast('Please fill all fields.', 'warning');
+    if (newPw !== confirmPw) return showToast('New passwords do not match.', 'error');
+    if (newPw.length < 6) return showToast('Password must be at least 6 characters.', 'warning');
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
+
+    try {
+        // Step 1: Re-authenticate to verify old password
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: currentUserProfile.email,
+            password: oldPw
+        });
+
+        if (authError) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return showToast('Incorrect Current Password.', 'error');
+        }
+
+        // Step 2: Update Password
+        const { error: updateError } = await supabase.auth.updateUser({ password: newPw });
+        if (updateError) throw updateError;
+
+        showToast('Password updated successfully!', 'success');
+        document.getElementById('cp-old').value = '';
+        document.getElementById('cp-new').value = '';
+        document.getElementById('cp-confirm').value = '';
+        closeSettingsSubPanel('settings-account-panel');
+
+    } catch (err) {
+        console.error(err);
+        showToast('Failed to update password.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+};
+
+// 2. Deactivate Account
+window.executeDeactivateAccount = function() {
+    // Show standard destructive modal
+    const modal = document.getElementById('modal-confirm-action');
+    document.getElementById('confirm-action-title').textContent = "Deactivate Account?";
+    document.getElementById('confirm-action-message').textContent = "Your profile and posts will be hidden. You will be logged out.";
+    
+    document.getElementById('confirm-action-yes').onclick = async () => {
+        document.getElementById('confirm-action-yes').textContent = 'Deactivating...';
+        await supabase.from('users').update({ is_deactivated: true }).eq('id', currentUserProfile.id);
+        await supabase.auth.signOut();
+        window.location.replace('auth/login.html'); // Ensure correct path to your login
+    };
+    
+    modal.classList.replace('hidden', 'flex');
+};
+
+// 3. Delete Account
+window.executeDeleteAccount = function() {
+    const modal = document.getElementById('modal-confirm-action');
+    document.getElementById('confirm-action-title').textContent = "Delete Permanently?";
+    document.getElementById('confirm-action-message').textContent = "You will lose all data, posts, and connections. This cannot be undone.";
+    
+    document.getElementById('confirm-action-yes').onclick = async () => {
+        document.getElementById('confirm-action-yes').textContent = 'Deleting...';
+        await supabase.from('users').update({ is_deleted: true }).eq('id', currentUserProfile.id);
+        await supabase.auth.signOut();
+        window.location.replace('auth/login.html'); 
+    };
+    
+    modal.classList.replace('hidden', 'flex');
+};
+
+// 4. Manage Notification Settings
+window.fetchNotificationSettings = async function() {
+    const list = document.getElementById('notification-settings-list');
+    list.innerHTML = `<p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">Loading...</p>`;
+
+    try {
+        const { data, error } = await supabase
+            .from('page_followers')
+            .select('receive_notifications, page_id, users!page_followers_page_id_fkey(full_name, profile_img_url)')
+            .eq('follower_id', currentUserProfile.id);
+
+        if (error) throw error;
+
+        if (data.length === 0) {
+            list.innerHTML = `<p class="text-sm text-center py-8 text-on-surface-variant dark:text-gray-500">You are not following any pages.</p>`;
+            return;
+        }
+
+        list.innerHTML = data.map(item => `
+            <div class="flex items-center justify-between p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm mb-2">
+                <div class="flex items-center gap-3">
+                    <img src="${item.users.profile_img_url}" class="w-10 h-10 rounded-full object-cover">
+                    <p class="font-bold text-[14px] text-on-surface dark:text-gray-100">${item.users.full_name}</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" onchange="togglePageBell('${item.page_id}', this.checked)" class="sr-only peer" ${item.receive_notifications ? 'checked' : ''}>
+                    <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                </label>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error('Error fetching notification settings:', err);
+        list.innerHTML = `<p class="text-sm text-center py-4 text-error">Failed to load settings.</p>`;
+    }
+};
+
+window.togglePageBell = async function(pageId, notifyState) {
+    try {
+        await supabase.rpc('toggle_page_notifications', { p_page_id: pageId, p_follower_id: currentUserProfile.id, p_notify: notifyState });
+        showToast(notifyState ? 'Alerts ON' : 'Alerts OFF', 'success');
+    } catch (err) {
+        console.error('Failed to toggle alert', err);
+        showToast('Failed to update setting.', 'error');
+    }
+};
