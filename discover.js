@@ -61,7 +61,6 @@ async function fetchDiscoverUsers() {
         container.innerHTML = `<p class="text-sm italic text-center py-4 text-red-500">Could not load users to discover.</p>`;
     }
 }
-
 function renderDiscoverUsers(users) {
     const container = document.getElementById('discover-students-container');
     if (users.length === 0) {
@@ -74,7 +73,9 @@ function renderDiscoverUsers(users) {
         const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
         const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
         const btnText = user.role === 'page' ? 'Follow' : 'Connect';
-        const subtitle = user.role === 'page' ? 'Campus Page' : (user.course || 'Student');
+        
+        // Changed to "Official Page"
+        const subtitle = user.role === 'page' ? 'Official Page' : (user.course || 'Student');
 
         return `
         <div class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm hover:border-primary/30 transition-colors">
