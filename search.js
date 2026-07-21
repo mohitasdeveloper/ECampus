@@ -116,28 +116,21 @@ async function performSearch(query) {
 // Universal UI Renderer (Clean, Instagram-Style Flat List)
 function renderUserList(users) {
     return users.map(user => {
-        // 🚀 Compress Image & Add Fallback
         const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
         const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
+        const subtitle = user.role === 'page' ? 'Campus Page' : (user.course || 'Student');
 
         return `
         <div onclick="window.viewUserProfile('${user.id}')" class="flex items-center gap-3 py-3 cursor-pointer active:opacity-60 transition-opacity">
-            
             <img loading="lazy" src="${optimizedAvatar}" onerror="${fallback}" class="w-[52px] h-[52px] rounded-full object-cover shrink-0 border border-surface-variant/50">
-
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1">
-                    <p class="font-bold text-[14px] text-on-surface dark:text-gray-100 truncate">
-                        ${user.full_name}
-                    </p>
+                    <p class="font-bold text-[14px] text-on-surface dark:text-gray-100 truncate">${user.full_name}</p>
                     ${getTickHtml(user.tick_type)}
                 </div>
-                <p class="text-[13px] font-medium text-on-surface-variant dark:text-gray-500 mt-[1px] truncate">
-                    ${user.course || 'Student'}
-                </p>
+                <p class="text-[13px] font-medium text-on-surface-variant dark:text-gray-500 mt-[1px] truncate">${subtitle}</p>
             </div>
-            
         </div>
         `;
     }).join('');
