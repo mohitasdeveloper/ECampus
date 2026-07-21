@@ -1882,7 +1882,7 @@ window.closeSinglePostView = function() {
 function setupAppBackButton() {
     
     const checkAndCloseTopLayer = () => {
-        const modalHierarchy = [
+      const modalHierarchy = [
             { id: 'modal-confirm-action', close: () => document.getElementById('confirm-action-no')?.click() },
             { id: 'modal-action-sheet', close: () => window.closeActionSheet() },
             { id: 'modal-story-details', close: () => document.getElementById('activity-backdrop-close')?.click() },
@@ -1893,9 +1893,19 @@ function setupAppBackButton() {
             { id: 'modal-edit-socials', close: () => window.closeSocialsModal() },
             { id: 'modal-edit-profile', close: () => window.closeEditProfileModal() },
             { id: 'modal-connections', close: () => window.closeConnectionsModal() },
+            { id: 'modal-followers', close: () => window.closeFollowersModal() },
             { id: 'modal-blocked-users', close: () => window.closeBlockedUsersModal() },
             { id: 'modal-single-post', close: () => window.closeSinglePostView() },
             { id: 'modal-notifications', close: () => window.closeNotifications() },
+            
+            // --- NEW: Hardware back support for sub-panels ---
+            { id: 'settings-password-panel', close: () => window.closeSettingsSubPanel('settings-password-panel') },
+            { id: 'settings-deactivate-panel', close: () => window.closeSettingsSubPanel('settings-deactivate-panel') },
+            { id: 'settings-delete-panel', close: () => window.closeSettingsSubPanel('settings-delete-panel') },
+            { id: 'settings-notifications-panel', close: () => window.closeSettingsSubPanel('settings-notifications-panel') },
+            { id: 'settings-account-panel', close: () => window.closeSettingsSubPanel('settings-account-panel') },
+            // -------------------------------------------------
+
             { id: 'settings-sidebar', close: () => window.closeSettingsSidebar() },
             { id: 'view-create-post', close: () => window.closeCreatePostView() },
             { id: 'modal-profile-public', close: () => window.closeProfileModals() },
@@ -1905,9 +1915,10 @@ function setupAppBackButton() {
             { id: 'modal-course-picker', close: () => window.closeCoursePicker() }
         ];
 
+        // Remember to change the check loop to use 'hidden' OR 'translate-x-full' for the sub-panels:
         for (const modal of modalHierarchy) {
             const el = document.getElementById(modal.id);
-            if (el && !el.classList.contains('hidden')) {
+            if (el && (!el.classList.contains('hidden') && !el.classList.contains('translate-x-full'))) {
                 modal.close(); 
                 return true; 
             }
@@ -2240,6 +2251,10 @@ window.getBlockedUserIds = async function(currentUserId) {
 // NATIVE NESTED SETTINGS ROUTING & LOGIC
 // ========================================================
 
+// ========================================================
+// NATIVE NESTED SETTINGS ROUTING & LOGIC
+// ========================================================
+
 window.openSettingsSubPanel = function(panelId) {
     const panel = document.getElementById(panelId);
     if (panel) {
@@ -2254,35 +2269,49 @@ window.closeSettingsSubPanel = function(panelId) {
     }
 };
 
-// 1. Change Password
+// 1. Change Password (Fixed Auth Dependency)
 window.executeChangePassword = async function() {
     const oldPw = document.getElementById('cp-old').value;
     const newPw = document.getElementById('cp-new').value;
     const confirmPw = document.getElementById('cp-confirm').value;
     const btn = document.getElementById('btn-change-password');
+    const errorDiv = document.getElementById('cp-error-msg');
 
-    if (!oldPw || !newPw || !confirmPw) return showToast('Please fill all fields.', 'warning');
-    if (newPw !== confirmPw) return showToast('New passwords do not match.', 'error');
-    if (newPw.length < 6) return showToast('Password must be at least 6 characters.', 'warning');
+    // Reset UI
+    errorDiv.classList.add('hidden');
+    errorDiv.textContent = '';
+    
+    const showError = (msg) => {
+        errorDiv.textContent = msg;
+        errorDiv.classList.remove('hidden');
+    };
+
+    if (!oldPw || !newPw || !confirmPw) return showError('Please fill all fields.');
+    if (newPw !== confirmPw) return showError('New passwords do not match.');
+    if (newPw.length < 6) return showError('Password must be at least 6 characters.');
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
 
     try {
+        // Guarantee we have the active session email
+        const { data: { user }, error: userErr } = await supabase.auth.getUser();
+        if (userErr || !user) throw new Error("Could not verify active user session.");
+
         // Step 1: Re-authenticate to verify old password
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: currentUserProfile.email,
+            email: user.email,
             password: oldPw
         });
 
         if (authError) {
             btn.disabled = false;
             btn.innerHTML = originalText;
-            return showToast('Incorrect Current Password.', 'error');
+            return showError('Incorrect Current Password.');
         }
 
-        // Step 2: Update Password
+        // Step 2: Update Password securely
         const { error: updateError } = await supabase.auth.updateUser({ password: newPw });
         if (updateError) throw updateError;
 
@@ -2290,11 +2319,11 @@ window.executeChangePassword = async function() {
         document.getElementById('cp-old').value = '';
         document.getElementById('cp-new').value = '';
         document.getElementById('cp-confirm').value = '';
-        closeSettingsSubPanel('settings-account-panel');
+        closeSettingsSubPanel('settings-password-panel');
 
     } catch (err) {
-        console.error(err);
-        showToast('Failed to update password.', 'error');
+        console.error("Change Password Error:", err);
+        showError(err.message || 'Failed to update password.');
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -2302,36 +2331,37 @@ window.executeChangePassword = async function() {
 };
 
 // 2. Deactivate Account
-window.executeDeactivateAccount = function() {
-    // Show standard destructive modal
-    const modal = document.getElementById('modal-confirm-action');
-    document.getElementById('confirm-action-title').textContent = "Deactivate Account?";
-    document.getElementById('confirm-action-message').textContent = "Your profile and posts will be hidden. You will be logged out.";
-    
-    document.getElementById('confirm-action-yes').onclick = async () => {
-        document.getElementById('confirm-action-yes').textContent = 'Deactivating...';
+window.executeDeactivateAccount = async function() {
+    const btn = document.getElementById('btn-deactivate-final');
+    btn.textContent = 'Deactivating...';
+    btn.disabled = true;
+
+    try {
         await supabase.from('users').update({ is_deactivated: true }).eq('id', currentUserProfile.id);
         await supabase.auth.signOut();
-        window.location.replace('auth/login.html'); // Ensure correct path to your login
-    };
-    
-    modal.classList.replace('hidden', 'flex');
+        window.location.replace('auth/login.html');
+    } catch (e) {
+        showToast('Failed to deactivate.', 'error');
+        btn.textContent = 'Deactivate Now';
+        btn.disabled = false;
+    }
 };
 
 // 3. Delete Account
-window.executeDeleteAccount = function() {
-    const modal = document.getElementById('modal-confirm-action');
-    document.getElementById('confirm-action-title').textContent = "Delete Permanently?";
-    document.getElementById('confirm-action-message').textContent = "You will lose all data, posts, and connections. This cannot be undone.";
+window.executeDeleteAccount = async function() {
+    const btn = document.getElementById('btn-delete-final');
+    btn.textContent = 'Deleting...';
+    btn.disabled = true;
     
-    document.getElementById('confirm-action-yes').onclick = async () => {
-        document.getElementById('confirm-action-yes').textContent = 'Deleting...';
+    try {
         await supabase.from('users').update({ is_deleted: true }).eq('id', currentUserProfile.id);
         await supabase.auth.signOut();
         window.location.replace('auth/login.html'); 
-    };
-    
-    modal.classList.replace('hidden', 'flex');
+    } catch (e) {
+        showToast('Failed to delete.', 'error');
+        btn.textContent = 'Permanently Delete Account';
+        btn.disabled = false;
+    }
 };
 
 // 4. Manage Notification Settings
@@ -2355,7 +2385,7 @@ window.fetchNotificationSettings = async function() {
         list.innerHTML = data.map(item => `
             <div class="flex items-center justify-between p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm mb-2">
                 <div class="flex items-center gap-3">
-                    <img src="${item.users.profile_img_url}" class="w-10 h-10 rounded-full object-cover">
+                    <img src="${item.users.profile_img_url}" class="w-10 h-10 rounded-full object-cover border border-surface-variant/50">
                     <p class="font-bold text-[14px] text-on-surface dark:text-gray-100">${item.users.full_name}</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
