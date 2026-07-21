@@ -738,17 +738,30 @@ async function fetchHotposts() {
     container.innerHTML = HOTPOST_SKELETON;
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    // 1. Get blocked list
+    const blockedIds = await window.getBlockedUserIds(currentUser.id);
 
-   const { data, error } = await supabase
+    // 2. Build Query using !inner to strip out deactivated/deleted creators
+    let query = supabase
         .from('hotposts')
         .select(`
             id, created_at, media_url, visibility, user_id,
-            users ( id, full_name, profile_img_url, tick_type ),
+            users!inner ( id, full_name, profile_img_url, tick_type, is_deleted, is_deactivated ),
             hotpost_views ( viewer_id )
         `)
         .gt('created_at', twentyFourHoursAgo)
         .eq('is_deleted', false)
+        .eq('users.is_deleted', false)
+        .eq('users.is_deactivated', false)
         .order('created_at', { ascending: false });
+    
+    // 3. Exclude Blocked
+    if (blockedIds.length > 0) {
+        query = query.not('user_id', 'in', `(${blockedIds.join(',')})`);
+    }
+
+    const { data, error } = await query;
     
     if (error) return;
 
