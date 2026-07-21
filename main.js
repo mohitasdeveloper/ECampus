@@ -2177,6 +2177,26 @@ window.closeDpViewer = function() {
 };
 
 // ========================================================
+// GLOBAL BLOCK & FILTER LOGIC
+// ========================================================
+window.getBlockedUserIds = async function(currentUserId) {
+    try {
+        const { data } = await supabase
+            .from('connections')
+            .select('user_one_id, user_two_id')
+            .eq('status', 'blocked')
+            .or(`user_one_id.eq.${currentUserId},user_two_id.eq.${currentUserId}`);
+        
+        if (!data) return [];
+        // Extract the ID of the "other" person in the blocked relationship
+        return data.map(c => c.user_one_id === currentUserId ? c.user_two_id : c.user_one_id);
+    } catch (e) {
+        console.error("Error fetching blocked list:", e);
+        return [];
+    }
+};
+
+// ========================================================
 // NATIVE NESTED SETTINGS ROUTING & LOGIC
 // ========================================================
 
