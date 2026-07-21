@@ -1235,15 +1235,25 @@ async function viewUserProfile(userId) {
     document.getElementById('modal-profile-public').dataset.userId = userId;
     document.getElementById('modal-profile-private').dataset.userId = userId;
 
-    const { data: connection, error: connError } = await supabase
-        .from('connections')
-        .select('status, action_user_id')
-        .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
-        .single();
+    let connection = null;
+    let followRecord = null;
 
-    if (connError && connError.code !== 'PGRST116') { 
-        showToast('Could not check connection status.', 'error');
-        console.error('Error fetching connection:', connError);
+    // Check relationship based on role
+    if (user.role === 'page') {
+        const { data: fData } = await supabase
+            .from('page_followers')
+            .select('*')
+            .eq('page_id', user.id)
+            .eq('follower_id', currentUserProfile.id)
+            .single();
+        followRecord = fData;
+    } else {
+        const { data: cData } = await supabase
+            .from('connections')
+            .select('status, action_user_id')
+            .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
+            .single();
+        connection = cData;
     }
 
     const isConnected = connection?.status === 'accepted';
@@ -1253,7 +1263,7 @@ async function viewUserProfile(userId) {
         return `<span class="material-symbols-outlined text-[14px]" style="color: ${tickType.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
     };
 
-    if (user.is_private && !isConnected) {
+    if (user.is_private && !isConnected && user.role !== 'page') {
         document.getElementById('private-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('private-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
@@ -1267,18 +1277,22 @@ async function viewUserProfile(userId) {
             actionsContainer.innerHTML = `<button class="btn-primary w-full">Request to Connect</button>`;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(user.id, 'request', actionsContainer.firstElementChild);
         }
-
         openProfileModal('private');
     } else {
         document.getElementById('public-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
         document.getElementById('public-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         document.getElementById('public-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
-        document.getElementById('public-profile-course').textContent = user.course || 'Student';
+        
+        // Dynamically show "Followers" vs "Connections"
+        const statsHtml = user.role === 'page' ? 
+            `<span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">${user.connection_count || 0}</span> followers` : 
+            `<span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">${user.connection_count || 0}</span> connections`;
+        document.getElementById('public-profile-connection-count').parentElement.innerHTML = statsHtml;
+        document.getElementById('public-profile-course').textContent = user.role === 'page' ? 'Campus Page' : (user.course || 'Student');
         document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
-        document.getElementById('public-profile-connection-count').textContent = user.connection_count || 0;
         renderSocialLinks(user.social_links, document.getElementById('public-profile-social-links'));
 
-        renderProfileActions(user, connection);
+        renderProfileActions(user, connection, followRecord);
         openProfileModal('public');
 
         const profileFeedContainer = document.getElementById('public-profile-feed');
@@ -1286,40 +1300,23 @@ async function viewUserProfile(userId) {
 
         try {
             const { data: posts, error: postsError } = await supabase
-                .from('posts')
-                .select(`
-                    *,
-                    users ( id, full_name, profile_img_url, role, tick_type ),
-                    post_likes ( user_id ),
-                    post_comments ( count ),
-                    post_poll_votes ( user_id, option_index )
-                `)
-                .eq('user_id', userId)
-                .eq('is_deleted', false)
-                .order('created_at', { ascending: false })
-                .limit(20);
+                .from('posts').select(`*, users ( id, full_name, profile_img_url, role, tick_type ), post_likes ( user_id ), post_comments ( count ), post_poll_votes ( user_id, option_index )`)
+                .eq('user_id', userId).eq('is_deleted', false).order('created_at', { ascending: false }).limit(20);
 
             if (postsError) throw postsError;
 
             if (posts.length === 0) {
-                profileFeedContainer.innerHTML = `
-                    <div class="py-12 flex flex-col items-center justify-center opacity-40 text-on-surface-variant">
-                        <span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span>
-                        <p class="text-sm font-semibold">No posts yet</p>
-                    </div>`;
+                profileFeedContainer.innerHTML = `<div class="py-12 flex flex-col items-center justify-center opacity-40 text-on-surface-variant"><span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span><p class="text-sm font-semibold">No posts yet</p></div>`;
                 return;
             }
-
             profileFeedContainer.innerHTML = generatePostHTML(posts, currentUserProfile.id);
-
         } catch (postsErr) {
-            console.error('Error fetching profile feed layout:', postsErr);
             profileFeedContainer.innerHTML = `<p class="text-sm text-center py-4 text-error">Failed to load posts feed.</p>`;
         }
     }
 }
 
-function renderProfileActions(user, connection) {
+function renderProfileActions(user, connection, followRecord) {
     const actionsContainer = document.getElementById('public-profile-actions');
     const moreMenuBtn = document.getElementById('public-profile-more-btn');
     const moreMenu = document.getElementById('public-profile-more-menu');
@@ -1333,47 +1330,62 @@ function renderProfileActions(user, connection) {
     let mainButtonHtml = '';
     let moreMenuItems = [];
 
-    if (!connection) { 
-        mainButtonHtml = `<button class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Connect</button>`;
-        actionsContainer.innerHTML = mainButtonHtml;
-        actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'request', actionsContainer.firstElementChild);
-        moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
-
-    } else if (connection.status === 'pending') {
-        if (connection.action_user_id === currentUserProfile.id) { 
-            mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Cancel Request</button>`;
-            actionsContainer.innerHTML = mainButtonHtml;
-            actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'cancel', actionsContainer.firstElementChild);
-        } else { 
+    // PAGE LOGIC
+    if (user.role === 'page') {
+        if (!followRecord) {
+            mainButtonHtml = `<button onclick="handleFollowAction('${userId}', 'follow', this)" class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Follow</button>`;
+        } else {
+            const bellIcon = followRecord.receive_notifications ? 'notifications_active' : 'notifications_off';
             mainButtonHtml = `
-                <button class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Accept</button>
-                <button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Decline</button>
+                <button onclick="handleFollowAction('${userId}', 'unfollow', this)" class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Following</button>
+                <button onclick="handleFollowAction('${userId}', 'toggle_bell', this, ${!followRecord.receive_notifications})" class="btn-secondary !p-0 w-12 items-center justify-center border border-surface-variant/60 rounded-xl">
+                    <span class="material-symbols-outlined">${bellIcon}</span>
+                </button>
             `;
-            actionsContainer.innerHTML = mainButtonHtml;
-            actionsContainer.children[0].onclick = () => handleConnectionAction(userId, 'accept', actionsContainer.children[0]);
-            actionsContainer.children[1].onclick = () => handleConnectionAction(userId, 'decline', actionsContainer.children[1]);
         }
-        moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
-
-    } else if (connection.status === 'accepted') {
-        mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm" disabled>✓ Connected</button>`;
-        actionsContainer.innerHTML = mainButtonHtml;
-        moreMenuItems.push({ label: 'Remove connection', action: 'unfriend', class: 'text-error' });
-        moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
-
-    } else if (connection.status === 'blocked') {
-        if (connection.action_user_id === currentUserProfile.id) { 
-            mainButtonHtml = `<button class="btn-error flex-1 !py-2.5 rounded-xl text-sm">Unblock</button>`;
+        moreMenuItems.push({ label: 'Report Page', action: 'report', class: 'text-orange-500' });
+    } 
+    // STUDENT LOGIC
+    else {
+        if (!connection) { 
+            mainButtonHtml = `<button class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Connect</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
-            actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'unblock', actionsContainer.firstElementChild);
-        } else { 
-            mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm" disabled>Blocked</button>`;
+            actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'request', actionsContainer.firstElementChild);
+            moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
+        } else if (connection.status === 'pending') {
+            if (connection.action_user_id === currentUserProfile.id) { 
+                mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Cancel Request</button>`;
+                actionsContainer.innerHTML = mainButtonHtml;
+                actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'cancel', actionsContainer.firstElementChild);
+            } else { 
+                mainButtonHtml = `<button class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Accept</button><button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Decline</button>`;
+                actionsContainer.innerHTML = mainButtonHtml;
+                actionsContainer.children[0].onclick = () => handleConnectionAction(userId, 'accept', actionsContainer.children[0]);
+                actionsContainer.children[1].onclick = () => handleConnectionAction(userId, 'decline', actionsContainer.children[1]);
+            }
+            moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
+        } else if (connection.status === 'accepted') {
+            mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm" disabled>✓ Connected</button>`;
             actionsContainer.innerHTML = mainButtonHtml;
+            moreMenuItems.push({ label: 'Remove connection', action: 'unfriend', class: 'text-error' });
+            moreMenuItems.push({ label: 'Block User', action: 'block', class: 'text-error' });
+        } else if (connection.status === 'blocked') {
+            if (connection.action_user_id === currentUserProfile.id) { 
+                mainButtonHtml = `<button class="btn-error flex-1 !py-2.5 rounded-xl text-sm">Unblock</button>`;
+                actionsContainer.innerHTML = mainButtonHtml;
+                actionsContainer.firstElementChild.onclick = () => handleConnectionAction(userId, 'unblock', actionsContainer.firstElementChild);
+            } else { 
+                mainButtonHtml = `<button class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm" disabled>Blocked</button>`;
+                actionsContainer.innerHTML = mainButtonHtml;
+            }
+        }
+        if (!(connection?.status === 'blocked' && connection.action_user_id !== currentUserProfile.id)) {
+            moreMenuItems.push({ label: 'Report User', action: 'report', class: 'text-orange-500' });
         }
     }
 
-    if (!(connection?.status === 'blocked' && connection.action_user_id !== currentUserProfile.id)) {
-        moreMenuItems.push({ label: 'Report User', action: 'report', class: 'text-orange-500' });
+    if (user.role === 'page') {
+        actionsContainer.innerHTML = mainButtonHtml;
     }
 
     if (moreMenuItems.length > 0) {
@@ -1383,36 +1395,32 @@ function renderProfileActions(user, connection) {
     }
 }
 
-window.handleConnectionAction = async function(targetUserId, action, btn) {
-    const originalText = btn ? btn.innerHTML : '';
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<span class="material-symbols-outlined text-xl animate-spin">progress_activity</span>`;
-    }
+window.handleFollowAction = async function(pageId, action, btn, notifyState = true) {
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-symbols-outlined text-xl animate-spin">progress_activity</span>`;
 
     try {
-        const { data, error } = await supabase.rpc('manage_connection', {
-            p_target_user_id: targetUserId,
-            p_action: action
-        });
-
-        if (error) throw error;
-        showToast(getSuccessMessage(data), 'success');
-
-        if (btn && action === 'request' && data === 'request_sent') btn.textContent = 'Request Sent';
-
-        const modal = document.getElementById('modal-profile-public');
-        if (modal && !modal.classList.contains('hidden') && modal.dataset.userId === targetUserId) {
-            viewUserProfile(targetUserId);
+        if (action === 'follow') {
+            await supabase.from('page_followers').insert({ page_id: pageId, follower_id: currentUserProfile.id });
+            // Increment count directly in users table
+            await supabase.rpc('increment_connection_count', { user_id: pageId });
+            showToast('You are now following this page.', 'success');
+        } else if (action === 'unfollow') {
+            await supabase.from('page_followers').delete().match({ page_id: pageId, follower_id: currentUserProfile.id });
+            await supabase.rpc('decrement_connection_count', { user_id: pageId });
+            showToast('Unfollowed page.', 'info');
+        } else if (action === 'toggle_bell') {
+            await supabase.rpc('toggle_page_notifications', { p_page_id: pageId, p_follower_id: currentUserProfile.id, p_notify: notifyState });
+            showToast(notifyState ? 'Notifications turned ON' : 'Notifications turned OFF', 'success');
         }
-
+        // Refresh the profile UI to show new buttons
+        viewUserProfile(pageId);
     } catch (error) {
-        console.error(`Error performing action '${action}':`, error);
-        showToast(error.message || 'An error occurred.', 'error');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
+        console.error('Follow action error:', error);
+        showToast('Action failed.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 };
 
