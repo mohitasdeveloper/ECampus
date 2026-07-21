@@ -70,20 +70,21 @@ function renderDiscoverUsers(users) {
     }
 
     container.innerHTML = users.map(user => {
-        // 🚀 Compress Image & Add Fallback
         const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
         const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
+        const btnText = user.role === 'page' ? 'Follow' : 'Connect';
+        const subtitle = user.role === 'page' ? 'Campus Page' : (user.course || 'Student');
 
         return `
         <div class="flex items-center gap-4 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm hover:border-primary/30 transition-colors">
             <img loading="lazy" onclick="window.viewUserProfile('${user.id}')" src="${optimizedAvatar}" onerror="${fallback}" class="w-12 h-12 rounded-full object-cover border border-surface-variant shadow-sm cursor-pointer hover:opacity-80 transition-opacity shrink-0">
             <div onclick="window.viewUserProfile('${user.id}')" class="flex-1 cursor-pointer min-w-0">
                 <p class="font-bold text-sm text-gray-900 dark:text-gray-100 hover:text-primary transition-colors truncate">${user.full_name}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${user.course || 'Student'}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${subtitle}</p>
             </div>
-            <button data-user-id="${user.id}" class="connect-btn bg-primary/10 text-primary px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95 shrink-0">
-                Connect
+            <button onclick="window.viewUserProfile('${user.id}')" class="connect-btn bg-primary/10 text-primary px-4 py-2 rounded-full text-[12px] font-bold tracking-wide transition-all hover:bg-primary/20 active:scale-95 shrink-0">
+                ${btnText}
             </button>
         </div>
         `;
