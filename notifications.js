@@ -246,11 +246,14 @@ function renderNotificationItem(notif) {
     let textContent = '';
     let actionButtons = '';
 
-    if (notif.type === 'post_like') textContent = 'liked your post.';
+   if (notif.type === 'post_like') textContent = 'liked your post.';
     else if (notif.type === 'post_comment') textContent = `commented: "<span class="text-on-surface-variant italic">${notif.message}</span>"`;
     else if (notif.type === 'hotpost_like') textContent = 'liked your Hotpost.';
     else if (notif.type === 'hotpost_reply') textContent = `replied to your Hotpost: "<span class="text-on-surface-variant italic">${notif.message}</span>"`;
     else if (notif.type === 'connection_accepted') textContent = 'accepted your connection request.';
+    else if (notif.type === 'new_follower') textContent = 'started following you.';
+    else if (notif.type === 'page_new_post') textContent = 'published a new post.';
+    else if (notif.type === 'page_new_hotpost') textContent = 'added a new hotpost.';
     else if (notif.type === 'connection_request') {
         textContent = 'sent you a connection request.';
         actionButtons = `
@@ -260,7 +263,6 @@ function renderNotificationItem(notif) {
             </div>
         `;
     }
-
     return `
         <div data-notif-id="${notif.id}" class="notif-card p-4 ${isUnread} flex items-start gap-3.5 cursor-pointer hover:bg-surface-variant/30 dark:hover:bg-neutral-800/50 transition-colors">
             <div class="relative shrink-0">
