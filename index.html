@@ -821,7 +821,17 @@
             <div id="blocked-users-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
         </div>
     </div>
-
+<!-- FOLLOWERS MODAL FOR PAGES -->
+    <div id="modal-followers" class="fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm hidden flex-col justify-end">
+        <div class="bg-surface dark:bg-[#1e1e1e] w-full rounded-t-[32px] p-6 pb-8 relative max-w-screen-md mx-auto flex flex-col max-h-[80vh]">
+            <button onclick="document.getElementById('modal-followers').classList.replace('flex', 'hidden')"
+                class="absolute top-4 right-5 w-8 h-8 bg-surface-variant/50 dark:bg-neutral-800 rounded-full flex items-center justify-center text-on-surface dark:text-gray-100">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 class="text-xl font-extrabold mb-4 text-on-surface dark:text-gray-100 shrink-0">Followers</h3>
+            <div id="followers-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        </div>
+    </div>
    <!-- HOTPOST CAMERA & EDITOR MODAL (Ultimate Native Engine) -->
    <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
         <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
