@@ -813,9 +813,9 @@ function generatePostHTML(posts, currentUserId) {
 // ========================================================
 // SIDEBAR & SETTINGS
 // ========================================================
-function openSettingsSidebar() {
+window.openSettingsSidebar = function() {
     const sidebar = document.getElementById('settings-sidebar');
-    const content = document.getElementById('settings-sidebar-content');
+    const content = document.getElementById('settings-main-panel'); // Fixed ID
     const bottomNav = document.querySelector('nav'); 
     
     sidebar.classList.remove('hidden');
@@ -825,23 +825,28 @@ function openSettingsSidebar() {
     void sidebar.offsetWidth;
     sidebar.classList.remove('opacity-0');
     content.classList.remove('translate-x-full');
-}
+};
 
-function closeSettingsSidebar() {
+window.closeSettingsSidebar = function() {
     const sidebar = document.getElementById('settings-sidebar');
-    const content = document.getElementById('settings-sidebar-content');
+    const content = document.getElementById('settings-main-panel'); // Fixed ID
     const bottomNav = document.querySelector('nav');
     
     sidebar.classList.add('opacity-0');
     content.classList.add('translate-x-full');
     
+    // Also close any open sub-panels so it resets for next time
+    const subPanels = document.querySelectorAll('[id^="settings-"][id$="-panel"]');
+    subPanels.forEach(panel => {
+        if (panel.id !== 'settings-main-panel') panel.classList.add('translate-x-full');
+    });
+
     setTimeout(() => {
         sidebar.classList.remove('flex');
         sidebar.classList.add('hidden');
         if (bottomNav) bottomNav.classList.remove('hidden');
     }, 300);
-}
-
+};
 async function togglePrivacy(isPrivate) {
     try {
         const { error } = await supabase.from('users').update({ is_private: isPrivate }).eq('id', currentUserProfile.id);
