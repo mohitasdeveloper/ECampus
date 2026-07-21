@@ -10,6 +10,16 @@ let hotpostsByUser = new Map();
 let currentUser = null;
 let sessionViewedPostIds = new Set();
 
+const ACTIVITY_SKELETON = `
+    <div class="flex items-center gap-3 p-3 animate-pulse">
+        <div class="w-10 h-10 rounded-full shimmer-bg shrink-0"></div>
+        <div class="flex-1 space-y-2">
+            <div class="h-3.5 shimmer-bg rounded-md w-1/2"></div>
+            <div class="h-2.5 shimmer-bg rounded-md w-1/3"></div>
+        </div>
+    </div>
+`.repeat(5);
+
 // Native Shimmer for Hotposts
 const HOTPOST_SKELETON = `
     <div class="flex flex-col items-center gap-1.5 shrink-0">
@@ -1275,7 +1285,7 @@ function switchDetailsTab(tabName) {
 
 async function fetchStoryViewers(hotpostId) {
     const list = document.getElementById('hotpost-viewers-list');
-    list.innerHTML = `<p class="text-sm italic text-center py-8">Loading...</p>`;
+    list.innerHTML = ACTIVITY_SKELETON; // Show instant Shimmer
     try {
         const { data, error } = await supabase.from('hotpost_views').select('viewed_at, users!hotpost_views_viewer_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('viewed_at', { ascending: false });
         if (error) throw error;
@@ -1287,7 +1297,7 @@ async function fetchStoryViewers(hotpostId) {
 
 async function fetchStoryLikes(hotpostId) {
     const list = document.getElementById('hotpost-likes-list');
-    list.innerHTML = `<p class="text-sm italic text-center py-8">Loading...</p>`;
+    list.innerHTML = ACTIVITY_SKELETON; // Show instant Shimmer
     try {
         const { data, error } = await supabase.from('hotpost_likes').select('created_at, users!hotpost_likes_user_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
         if (error) throw error;
@@ -1299,7 +1309,7 @@ async function fetchStoryLikes(hotpostId) {
 
 async function fetchStoryReplies(hotpostId) {
     const list = document.getElementById('hotpost-replies-list');
-    list.innerHTML = `<p class="text-sm italic text-center py-8">Loading...</p>`;
+    list.innerHTML = ACTIVITY_SKELETON; // Show instant Shimmer
     try {
         const { data, error } = await supabase.from('hotpost_replies').select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
         if (error) throw error;
