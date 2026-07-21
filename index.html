@@ -279,74 +279,116 @@
         </div>
     
 
-        <div id="settings-sidebar" class="fixed inset-0 z-[160] hidden justify-end transition-opacity opacity-0 bg-surface dark:bg-[#121212]">
-            <div id="settings-sidebar-content" class="w-full max-w-screen-md mx-auto h-full flex flex-col transition-transform duration-300 translate-x-full shadow-2xl bg-surface dark:bg-[#121212]">
-                
-               <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
-                    <button onclick="closeSettingsSidebar()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
-                        <span class="material-symbols-outlined text-[28px]">arrow_back</span>
-                    </button>
-                    <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Settings</h2>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto px-5 py-4 space-y-2 mt-2">
-                    <div class="flex items-center justify-between p-4 bg-surface-variant/20 dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800">
-                        <div class="flex items-center gap-3 text-on-surface dark:text-gray-200">
-                            <span class="material-symbols-outlined text-[24px]">lock</span>
-                            <span class="text-[15px] font-bold">Private Account</span>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="privacy-toggle-switch" class="sr-only peer" onchange="togglePrivacy(this.checked)">
-                            <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                    </div>
+       <!-- NESTED SETTINGS SIDEBAR -->
+<div id="settings-sidebar" class="fixed inset-0 z-[160] hidden justify-end transition-opacity opacity-0 bg-surface dark:bg-[#121212]">
+    
+    <!-- MAIN SETTINGS PANEL -->
+    <div id="settings-main-panel" class="absolute inset-y-0 right-0 w-full max-w-screen-md mx-auto flex flex-col transition-transform duration-300 translate-x-full shadow-2xl bg-surface dark:bg-[#121212] z-10">
+        <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+            <button onclick="closeSettingsSidebar()" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">close</span>
+            </button>
+            <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Settings</h2>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto px-5 py-4 space-y-2 mt-2">
+            <!-- Account Center -->
+            <button onclick="openSettingsSubPanel('settings-account-panel')" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
+                <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[24px]">manage_accounts</span> Account Center</div>
+                <span class="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_right</span>
+            </button>
+            
+            <!-- Notifications -->
+            <button onclick="openSettingsSubPanel('settings-notifications-panel'); fetchNotificationSettings();" class="w-full flex items-center justify-between p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
+                <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[24px]">notifications</span> Push Notifications</div>
+                <span class="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_right</span>
+            </button>
 
-                    <button onclick="handleProfileStatsClick(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
-    <span class="material-symbols-outlined text-[24px]">group</span> <span id="sidebar-stats-text">Connections</span>
-</button>
-                    
-                    <button onclick="openEditSocialsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
-                        <span class="material-symbols-outlined text-[24px]">link</span> Manage Socials
-                    </button>
-                    
-                   <button onclick="openBlockedUsersModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
-                        <span class="material-symbols-outlined text-[24px]">block</span> Blocked Users
-                    </button>
+            <div class="my-4 border-t border-surface-variant/40 dark:border-neutral-800"></div>
 
-                    <!-- NEW: Privacy Policy Link -->
-                    <a href="https://ecampus.mohitmali.in/privacy.html" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
-                        <span class="material-symbols-outlined text-[24px]">privacy_tip</span> Privacy Policy
-                    </a>
-                    
-                    <!-- NEW: Terms Link -->
-                    <a href="https://ecampus.mohitmali.in/terms.html" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
-                        <span class="material-symbols-outlined text-[24px]">description</span> Terms of Service
-                    </a>
+            <h4 class="text-[12px] font-bold text-primary uppercase tracking-wider mb-2 px-2">Preferences</h4>
+            <div class="flex items-center justify-between p-4 bg-surface-variant/10 dark:bg-neutral-900/30 rounded-2xl">
+                <div class="flex items-center gap-3 text-on-surface dark:text-gray-200"><span class="material-symbols-outlined text-[24px]">lock</span><span class="text-[15px] font-bold">Private Account</span></div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="privacy-toggle-switch" class="sr-only peer" onchange="togglePrivacy(this.checked)">
+                    <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                </label>
+            </div>
+            <div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl transition-colors">
+                <div class="flex items-center gap-3 text-on-surface dark:text-gray-200"><span class="material-symbols-outlined text-[24px]">dark_mode</span><span class="text-[15px] font-bold">Dark Theme</span></div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="theme-toggle-switch" class="sr-only peer">
+                    <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                </label>
+            </div>
 
-                    <div class="my-4 border-t border-surface-variant/40 dark:border-neutral-800"></div>
+            <button onclick="handleProfileStatsClick(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]"><span class="material-symbols-outlined text-[24px]">group</span> <span id="sidebar-stats-text">Connections</span></button>
+            <button onclick="openEditSocialsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]"><span class="material-symbols-outlined text-[24px]">link</span> Manage Socials</button>
+            <button onclick="openBlockedUsersModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]"><span class="material-symbols-outlined text-[24px]">block</span> Blocked Users</button>
 
-                    <div class="flex items-center justify-between p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl transition-colors">
-                        <div class="flex items-center gap-3 text-on-surface dark:text-gray-200">
-                            <span class="material-symbols-outlined text-[24px]">dark_mode</span>
-                            <span class="text-[15px] font-bold">Dark Theme</span>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="theme-toggle-switch" class="sr-only peer">
-                            <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                    </div>
+            <div class="my-4 border-t border-surface-variant/40 dark:border-neutral-800"></div>
+            
+            <a href="https://ecampus.mohitmali.in/privacy.html" target="_blank" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]"><span class="material-symbols-outlined text-[24px]">privacy_tip</span> Privacy Policy</a>
+            <a href="https://ecampus.mohitmali.in/terms.html" target="_blank" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]"><span class="material-symbols-outlined text-[24px]">description</span> Terms of Service</a>
 
-                    <!-- NEW: Account Delete Form (Styled as a destructive action) -->
-                    <a href="https://forms.gle/eo8yeoUcp4qjHvT98" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 p-4 mt-2 hover:bg-error/10 rounded-2xl text-error transition-colors text-left font-bold text-[15px]">
-                        <span class="material-symbols-outlined text-[24px]">person_remove</span> Delete Account
-                    </a>
+            <button id="sign-out-btn" class="w-full flex items-center gap-3 p-4 rounded-2xl bg-error/10 text-error transition-colors text-left mt-6 shadow-sm"><span class="material-symbols-outlined text-[24px]">logout</span><span class="text-[15px] font-extrabold">Sign Out</span></button>
+        </div>
+    </div>
 
-                    <button id="sign-out-btn" class="w-full flex items-center gap-3 p-4 rounded-2xl bg-error/10 text-error transition-colors text-left mt-6 shadow-sm">
-                        <span class="material-symbols-outlined text-[24px]">logout</span>
-                        <span class="text-[15px] font-extrabold">Sign Out</span>
-                    </button>
+    <!-- SUB-PANEL: ACCOUNT CENTER -->
+    <div id="settings-account-panel" class="absolute inset-y-0 right-0 w-full max-w-screen-md mx-auto flex flex-col transition-transform duration-300 translate-x-full bg-surface dark:bg-[#121212] z-20">
+        <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+            <button onclick="closeSettingsSubPanel('settings-account-panel')" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">arrow_back</span>
+            </button>
+            <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Account Center</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-6 space-y-8">
+            
+            <!-- Change Password Form -->
+            <div>
+                <h3 class="text-[15px] font-bold text-on-surface dark:text-gray-100 mb-4">Change Password</h3>
+                <div class="space-y-3">
+                    <input type="password" id="cp-old" placeholder="Current Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
+                    <input type="password" id="cp-new" placeholder="New Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
+                    <input type="password" id="cp-confirm" placeholder="Confirm New Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
+                    <button id="btn-change-password" onclick="executeChangePassword()" class="w-full bg-primary text-white font-bold py-3.5 rounded-xl active:scale-95 transition-transform mt-2">Update Password</button>
                 </div>
             </div>
+
+            <div class="border-t border-surface-variant/40 dark:border-neutral-800"></div>
+
+            <!-- Danger Zone -->
+            <div>
+                <h3 class="text-[15px] font-bold text-error mb-4">Danger Zone</h3>
+                <button onclick="executeDeactivateAccount()" class="w-full flex items-center justify-between p-4 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-2xl font-bold text-[14px] mb-3 active:scale-95 transition-transform">
+                    <div class="flex items-center gap-2"><span class="material-symbols-outlined">pause_circle</span> Deactivate Account</div>
+                </button>
+                <p class="text-xs text-on-surface-variant dark:text-gray-500 px-2 mb-4">Deactivating hides your profile and posts. You can reactivate by logging back in.</p>
+
+                <button onclick="executeDeleteAccount()" class="w-full flex items-center justify-between p-4 bg-error/10 text-error rounded-2xl font-bold text-[14px] active:scale-95 transition-transform">
+                    <div class="flex items-center gap-2"><span class="material-symbols-outlined">delete_forever</span> Delete Account permanently</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUB-PANEL: NOTIFICATIONS -->
+    <div id="settings-notifications-panel" class="absolute inset-y-0 right-0 w-full max-w-screen-md mx-auto flex flex-col transition-transform duration-300 translate-x-full bg-surface dark:bg-[#121212] z-20">
+        <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+            <button onclick="closeSettingsSubPanel('settings-notifications-panel')" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">arrow_back</span>
+            </button>
+            <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Push Notifications</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-6">
+            <p class="text-sm text-on-surface-variant dark:text-gray-400 mb-4">Manage alerts from Official Pages you follow.</p>
+            <div id="notification-settings-list" class="space-y-2">
+                <!-- Managed via JS -->
+            </div>
+        </div>
+    </div>
+</div>
         </div>
     </main>
 
