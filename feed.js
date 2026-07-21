@@ -262,17 +262,30 @@ async function fetchPosts(isRefresh = false) {
     const to = from + POSTS_PER_PAGE - 1;
 
     try {
-        const { data, error } = await supabase
+        // 1. Get everyone you blocked (or who blocked you)
+        const blockedIds = await window.getBlockedUserIds(currentUser.id);
+
+        // 2. Build the query. Notice 'users!inner' which forces the post to drop if the user is deleted/deactivated!
+        let query = supabase
             .from('posts')
             .select(`
                 *,
-                users(id, full_name, profile_img_url, tick_type),
+                users!inner(id, full_name, profile_img_url, tick_type, role, is_deleted, is_deactivated),
                 post_likes(user_id),
                 post_comments(count)
             `)
-            .eq('is_deleted', false) // 🚀 CRITICAL FIX: Hide deleted posts!
+            .eq('is_deleted', false) 
+            .eq('users.is_deleted', false)
+            .eq('users.is_deactivated', false)
             .order('created_at', { ascending: false })
             .range(from, to);
+
+        // 3. Apply the Block Filter if necessary
+        if (blockedIds.length > 0) {
+            query = query.not('user_id', 'in', `(${blockedIds.join(',')})`);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
