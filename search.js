@@ -16,12 +16,20 @@ const LIST_SKELETON = `
 export function initSearch(user) {
     currentUser = user;
     const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
     
+    // Live Debounced Search Listener
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             clearTimeout(searchTimeout);
             
+            // Toggle Clear Button Visibility
+            if (clearBtn) {
+                if (query.length > 0) clearBtn.classList.remove('hidden');
+                else clearBtn.classList.add('hidden');
+            }
+
             if (query.length === 0) {
                 document.getElementById('search-results-container').classList.add('hidden');
                 document.getElementById('explore-users-container').classList.remove('hidden');
@@ -37,6 +45,20 @@ export function initSearch(user) {
             }
         });
     }
+
+    // Clear Button Click Handler
+    if (clearBtn && searchInput) {
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearBtn.classList.add('hidden');
+            clearTimeout(searchTimeout);
+            
+            document.getElementById('search-results-container').classList.add('hidden');
+            document.getElementById('explore-users-container').classList.remove('hidden');
+            
+            searchInput.focus(); // Keep keyboard open
+        });
+    }
     
     fetchExploreUsers();
 }
@@ -47,15 +69,16 @@ function getTickHtml(tickType) {
     return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
 }
 
-// Fetch Top 5 Popular Pages for Suggested Section
+// Fetch Top 5 Pages + Top 10 Students for Suggested Section
 async function fetchExploreUsers() {
     const container = document.getElementById('explore-users-container');
     if (!container) return;
     
-    container.innerHTML = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-2 mt-1">Popular Pages</h3>` + LIST_SKELETON;
+    container.innerHTML = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-2 mt-1">Suggested for you</h3>` + LIST_SKELETON;
 
     try {
-        const { data, error } = await supabase
+        // 1. Fetch Top 5 Pages
+        const { data: pages, error: pagesError } = await supabase
             .from('users')
             .select('id, full_name, profile_img_url, course, tick_type, role')
             .eq('role', 'page')
@@ -63,19 +86,35 @@ async function fetchExploreUsers() {
             .order('connection_count', { ascending: false })
             .limit(5);
 
-        if (error) throw error;
+        if (pagesError) throw pagesError;
+
+        // 2. Fetch Top 10 Students (Exclude Pages)
+        const { data: students, error: studentsError } = await supabase
+            .from('users')
+            .select('id, full_name, profile_img_url, course, tick_type, role')
+            .neq('role', 'page') 
+            .neq('id', currentUser.id)
+            .order('connection_count', { ascending: false })
+            .limit(10);
+
+        if (studentsError) throw studentsError;
         
-        let html = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-2 mt-1">Popular Pages</h3>`;
-        if (!data || data.length === 0) {
-            html += `<p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">No popular pages found.</p>`;
+        // 3. Combine Arrays (Pages first, then Students)
+        const combinedData = [...(pages || []), ...(students || [])];
+
+        let html = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-2 mt-1">Suggested for you</h3>`;
+        
+        if (combinedData.length === 0) {
+            html += `<p class="text-sm italic text-center py-4 text-on-surface-variant dark:text-gray-400">No suggestions found.</p>`;
         } else {
-            html += renderUserList(data);
+            html += renderUserList(combinedData);
         }
+        
         container.innerHTML = html;
 
     } catch (err) {
-        console.error('Error fetching explore pages:', err);
-        container.innerHTML = `<p class="text-sm text-center py-4 text-error">Failed to load suggested pages.</p>`;
+        console.error('Error fetching explore users:', err);
+        container.innerHTML = `<p class="text-sm text-center py-4 text-error">Failed to load suggestions.</p>`;
     }
 }
 
@@ -118,7 +157,6 @@ function renderUserList(users) {
         const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
         const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
         
-        // Show "Official Page" if user is a page, otherwise show course/Student
         const subtitle = user.role === 'page' ? 'Official Page' : (user.course || 'Student');
 
         return `
