@@ -223,7 +223,9 @@ async function submitPost() {
         if (document.getElementById('event-button-text')) document.getElementById('event-button-text').value = '';
         
         showToast('Post published successfully!', 'success');
-        fetchPosts();
+        
+        // FIX: Trigger a true refresh to reset pagination and show the new post
+        window.refreshMainFeed();
 
     } catch (error) {
         showToast(error.message || 'Failed to create post.', 'error');
@@ -889,9 +891,6 @@ async function submitComment(postId) {
     }
     btn.disabled = false;
 }
-window.refreshMainFeed = fetchPosts;
-
-
 
 // ==========================================
 // LIKES MODAL TOUCH PHYSICS (Swipe to Close)
