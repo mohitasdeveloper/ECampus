@@ -12,7 +12,7 @@ const iconMap = {
     'hotpost_reply': { icon: 'reply', color: 'text-purple-500', bg: 'bg-purple-500/10' },
     'connection_request': { icon: 'person_add', color: 'text-primary', bg: 'bg-primary/10' },
     'connection_accepted': { icon: 'handshake', color: 'text-green-500', bg: 'bg-green-500/10' },
-    // NEW: Page Notifications
+    'new_follower': { icon: 'person_add', color: 'text-primary', bg: 'bg-primary/10' },
     'page_new_post': { icon: 'campaign', color: 'text-blue-500', bg: 'bg-blue-500/10' },
     'page_new_hotpost': { icon: 'local_fire_department', color: 'text-orange-500', bg: 'bg-orange-500/10' }
 };
