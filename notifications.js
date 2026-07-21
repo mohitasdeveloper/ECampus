@@ -5,6 +5,16 @@ import { timeAgo } from './utils.js';
 let currentUser = null;
 let allNotifications = [];
 
+const NOTIF_SKELETON = `
+    <div class="flex items-center gap-3.5 p-4 animate-pulse">
+        <div class="w-12 h-12 rounded-full shimmer-bg shrink-0"></div>
+        <div class="flex-1 space-y-2">
+            <div class="h-3.5 shimmer-bg rounded-md w-3/4"></div>
+            <div class="h-2.5 shimmer-bg rounded-md w-1/3"></div>
+        </div>
+    </div>
+`.repeat(6);
+
 const iconMap = {
     'post_like': { icon: 'favorite', color: 'text-red-500', bg: 'bg-red-500/10' },
     'post_comment': { icon: 'chat_bubble', color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -187,6 +197,10 @@ function switchNotifTab(tabName) {
 }
 
 async function fetchNotifications() {
+    // Inject instant shimmer feedback
+    document.getElementById('notifications-list-all').innerHTML = NOTIF_SKELETON;
+    document.getElementById('notifications-list-requests').innerHTML = NOTIF_SKELETON;
+
     try {
         const { data, error } = await supabase
             .from('notifications')
