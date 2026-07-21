@@ -665,15 +665,25 @@ async function submitHotpost() {
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
 
-        // Upload to Supabase Database
-        const { error } = await supabase.from('hotposts').insert({
+       // Upload to Supabase Database
+        const { data: newHotpost, error } = await supabase.from('hotposts').insert({
             user_id: currentUser.id,
             media_url: data.secure_url,
             media_type: 'image',
             visibility: visibility,
-        });
+        }).select('id').single();
 
         if (error) throw error;
+
+        // NEW: Mass-Notify Followers if it's an Official Page
+        if (currentUser.role === 'page' && newHotpost) {
+            await supabase.rpc('notify_page_followers', {
+                p_page_id: currentUser.id,
+                p_type: 'page_new_hotpost',
+                p_message: 'added a new hotpost.',
+                p_target_id: newHotpost.id
+            });
+        }
 
         showToast('Hotpost published!', 'success');
         closeCameraModal();
