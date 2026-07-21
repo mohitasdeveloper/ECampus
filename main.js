@@ -1237,55 +1237,73 @@ async function viewUserProfile(userId) {
         return;
     }
 
+    // --- 1. INSTANT UI FEEDBACK (SHIMMER) ---
+    document.getElementById('modal-profile-public').dataset.userId = userId;
+    
+    // Header & Avatar
+    document.getElementById('public-profile-header-name').innerHTML = `<div class="w-24 h-4 rounded-md shimmer-bg"></div>`;
+    const avatarEl = document.getElementById('public-profile-avatar');
+    avatarEl.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // Transparent placeholder
+    avatarEl.parentElement.classList.add('shimmer-bg');
+    
+    // Details
+    document.getElementById('public-profile-name').innerHTML = `<div class="w-32 h-6 rounded-md shimmer-bg mx-auto"></div>`;
+    document.getElementById('public-profile-course').innerHTML = `<div class="w-20 h-4 rounded-md shimmer-bg mx-auto"></div>`;
+    document.getElementById('public-profile-connection-count').parentElement.innerHTML = `<span id="public-profile-connection-count" class="font-bold">-</span>`;
+    document.getElementById('public-profile-bio').innerHTML = `<div class="flex flex-col gap-1.5 items-center"><div class="w-48 h-3 rounded-md shimmer-bg"></div><div class="w-32 h-3 rounded-md shimmer-bg"></div></div>`;
+    document.getElementById('public-profile-social-links').innerHTML = '';
+    
+    // Actions & Feed
+    document.getElementById('public-profile-actions').innerHTML = `<div class="w-full h-11 rounded-xl shimmer-bg"></div>`;
+    document.getElementById('public-profile-feed').innerHTML = FEED_SKELETON;
+
+    // Slide up instantly!
+    openProfileModal('public');
+
+    // --- 2. NOW FETCH DATA ---
     const { data: user, error } = await supabase.from('users').select('*').eq('id', userId).single();
     if (error || !user) {
         showToast('Could not load profile.', 'error');
-        console.error('Error fetching user profile:', error);
+        closeProfileModals();
         return;
     }
-
-    document.getElementById('modal-profile-public').dataset.userId = userId;
-    document.getElementById('modal-profile-private').dataset.userId = userId;
 
     let connection = null;
     let followRecord = null;
 
-    // Check relationship based on role
     if (user.role === 'page') {
         const { data: fData, error: fError } = await supabase
-            .from('page_followers')
-            .select('*')
-            .eq('page_id', user.id)
-            .eq('follower_id', currentUserProfile.id)
-            .maybeSingle(); // FIX: Using maybeSingle prevents the 406 crash when not following
-        
-        if (fError && fError.code !== 'PGRST116') {
-            console.error('Error fetching follower record:', fError);
-        }
+            .from('page_followers').select('*').eq('page_id', user.id).eq('follower_id', currentUserProfile.id).maybeSingle();
         followRecord = fData;
     } else {
         const { data: cData } = await supabase
-            .from('connections')
-            .select('status, action_user_id')
-            .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
-            .maybeSingle();
+            .from('connections').select('status, action_user_id')
+            .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`).maybeSingle();
         connection = cData;
     }
 
     const isConnected = connection?.status === 'accepted';
-
     const getTickHtmlLocal = (tickType) => {
         if (!tickType || tickType.toLowerCase().trim() === 'none') return '';
         return `<span class="material-symbols-outlined text-[14px]" style="color: ${tickType.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
     };
 
-    if (user.is_private && !isConnected && user.role !== 'page') {
-        document.getElementById('private-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
-        document.getElementById('private-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
-        document.getElementById('private-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
-        document.getElementById('private-profile-course').textContent = user.course || 'Student';
+    // Remove Avatar Shimmer
+    avatarEl.parentElement.classList.remove('shimmer-bg');
+    
+    // Populate Top Meta Data
+    document.getElementById('public-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
+    avatarEl.src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+    document.getElementById('public-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
 
-        const actionsContainer = document.getElementById('private-profile-actions');
+    // --- Handle PRIVATE Profile directly in the same UI container ---
+    if (user.is_private && !isConnected && user.role !== 'page') {
+        document.getElementById('public-profile-course').textContent = user.course || 'Student';
+        document.getElementById('public-profile-connection-count').parentElement.innerHTML = `<span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">Private</span> account`;
+        document.getElementById('public-profile-bio').innerHTML = ''; 
+        document.getElementById('public-profile-social-links').innerHTML = '';
+
+        const actionsContainer = document.getElementById('public-profile-actions');
         if (connection?.status === 'pending' && connection.action_user_id === currentUserProfile.id) {
             actionsContainer.innerHTML = `<button class="btn-secondary w-full">Cancel Request</button>`;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(user.id, 'cancel', actionsContainer.firstElementChild);
@@ -1293,27 +1311,29 @@ async function viewUserProfile(userId) {
             actionsContainer.innerHTML = `<button class="btn-primary w-full">Request to Connect</button>`;
             actionsContainer.firstElementChild.onclick = () => handleConnectionAction(user.id, 'request', actionsContainer.firstElementChild);
         }
-        openProfileModal('private');
-    } else {
-        document.getElementById('public-profile-header-name').innerHTML = `<span class="flex items-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
-        document.getElementById('public-profile-avatar').src = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
-        document.getElementById('public-profile-name').innerHTML = `<span class="flex items-center justify-center gap-1">${user.full_name} ${getTickHtmlLocal(user.tick_type)}</span>`;
-        
-        // Dynamically show "Followers" vs "Connections"
+
+        // Inject the Lock Screen into the feed area
+        document.getElementById('public-profile-feed').innerHTML = `
+            <div class="w-full bg-surface-variant/20 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-800 p-8 rounded-3xl mt-6 flex flex-col items-center justify-center shadow-inner">
+                <span class="material-symbols-outlined text-[42px] text-on-surface-variant opacity-60 mb-3">lock</span>
+                <h4 class="text-[16px] font-bold text-on-surface dark:text-gray-100 mb-1">This Account is Private</h4>
+                <p class="text-[13px] text-on-surface-variant dark:text-gray-400 px-4 text-center">Connect to see their full profile and feed.</p>
+            </div>
+        `;
+    } 
+    // --- Handle PUBLIC Profile / PAGE Profile ---
+    else {
         const statsHtml = user.role === 'page' ? 
             `<span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">${user.connection_count || 0}</span> followers` : 
             `<span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">${user.connection_count || 0}</span> connections`;
         document.getElementById('public-profile-connection-count').parentElement.innerHTML = statsHtml;
         document.getElementById('public-profile-course').textContent = user.role === 'page' ? 'Official Page' : (user.course || 'Student');
         document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
+        
         renderSocialLinks(user.social_links, document.getElementById('public-profile-social-links'));
-
         renderProfileActions(user, connection, followRecord);
-        openProfileModal('public');
 
-        const profileFeedContainer = document.getElementById('public-profile-feed');
-        profileFeedContainer.innerHTML = FEED_SKELETON; 
-
+        // Fetch their Posts Feed
         try {
             const { data: posts, error: postsError } = await supabase
                 .from('posts').select(`*, users ( id, full_name, profile_img_url, role, tick_type ), post_likes ( user_id ), post_comments ( count ), post_poll_votes ( user_id, option_index )`)
@@ -1322,12 +1342,12 @@ async function viewUserProfile(userId) {
             if (postsError) throw postsError;
 
             if (posts.length === 0) {
-                profileFeedContainer.innerHTML = `<div class="py-12 flex flex-col items-center justify-center opacity-40 text-on-surface-variant"><span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span><p class="text-sm font-semibold">No posts yet</p></div>`;
+                document.getElementById('public-profile-feed').innerHTML = `<div class="py-12 flex flex-col items-center justify-center opacity-40 text-on-surface-variant"><span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span><p class="text-sm font-semibold">No posts yet</p></div>`;
                 return;
             }
-            profileFeedContainer.innerHTML = generatePostHTML(posts, currentUserProfile.id);
+            document.getElementById('public-profile-feed').innerHTML = generatePostHTML(posts, currentUserProfile.id);
         } catch (postsErr) {
-            profileFeedContainer.innerHTML = `<p class="text-sm text-center py-4 text-error">Failed to load posts feed.</p>`;
+            document.getElementById('public-profile-feed').innerHTML = `<p class="text-sm text-center py-4 text-error">Failed to load posts feed.</p>`;
         }
     }
 }
