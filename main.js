@@ -1479,6 +1479,46 @@ window.handleFollowAction = async function(pageId, action, btn, notifyState = tr
         btn.innerHTML = originalText;
     }
 };
+
+// ========================================================
+// CONNECTION & BLOCKING ENGINE
+// ========================================================
+async function handleConnectionAction(targetUserId, action, btn) {
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined text-xl animate-spin">progress_activity</span>`;
+    }
+
+    try {
+        const { data, error } = await supabase.rpc('manage_connection', {
+            p_target_user_id: targetUserId,
+            p_action: action
+        });
+
+        if (error) throw error;
+        
+        const msg = typeof getSuccessMessage === 'function' ? getSuccessMessage(data) : 'Action successful!';
+        showToast(msg, 'success');
+
+        if (btn && action === 'request' && data === 'request_sent') btn.textContent = 'Request Sent';
+
+        // Refresh the profile UI so the "Block" instantly changes to "Unblock"
+        const modal = document.getElementById('modal-profile-public');
+        if (modal && !modal.classList.contains('hidden') && modal.dataset.userId === targetUserId) {
+            viewUserProfile(targetUserId);
+        }
+
+    } catch (error) {
+        console.error(`Error performing action '${action}':`, error);
+        showToast(error.message || 'An error occurred.', 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
+window.handleConnectionAction = handleConnectionAction;
 function getSuccessMessage(result) {
     const messages = { request_sent: 'Connection request sent!', accepted: 'Connection accepted!', cancelled: 'Request cancelled.', declined: 'Request declined.', unfriended: 'Connection removed.', blocked: 'User blocked.', unblocked: 'User unblocked.' };
     return messages[result] || 'Action successful!';
