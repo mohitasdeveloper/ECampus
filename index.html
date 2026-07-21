@@ -253,10 +253,10 @@
                         <span id="my-profile-posts-count" class="text-[18px] font-extrabold text-on-surface dark:text-gray-100">0</span>
                         <span class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400">Posts</span>
                     </div>
-                    <div onclick="openConnectionsModal()" class="flex flex-col items-center cursor-pointer">
-                        <span id="my-profile-connection-count" class="text-[18px] font-extrabold text-on-surface dark:text-gray-100">0</span>
-                        <span class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400">Connections</span>
-                    </div>
+                   <div onclick="handleProfileStatsClick()" class="flex flex-col items-center cursor-pointer">
+    <span id="my-profile-connection-count" class="text-[18px] font-extrabold text-on-surface dark:text-gray-100">0</span>
+    <span class="text-[13px] font-medium text-on-surface-variant dark:text-gray-400">Connections</span>
+</div>
                 </div>
             </div>
 
@@ -301,9 +301,9 @@
                         </label>
                     </div>
 
-                    <button onclick="openConnectionsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
-                        <span class="material-symbols-outlined text-[24px]">group</span> Connections
-                    </button>
+                    <button onclick="handleProfileStatsClick(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
+    <span class="material-symbols-outlined text-[24px]">group</span> <span id="sidebar-stats-text">Connections</span>
+</button>
                     
                     <button onclick="openEditSocialsModal(); closeSettingsSidebar();" class="w-full flex items-center gap-3 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-900 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
                         <span class="material-symbols-outlined text-[24px]">link</span> Manage Socials
