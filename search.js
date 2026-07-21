@@ -70,6 +70,7 @@ function getTickHtml(tickType) {
 }
 
 // Fetch Top 5 Pages + Top 10 Students for Suggested Section
+// Fetch Top 5 Pages + Top 10 Students for Suggested Section
 async function fetchExploreUsers() {
     const container = document.getElementById('explore-users-container');
     if (!container) return;
@@ -77,12 +78,18 @@ async function fetchExploreUsers() {
     container.innerHTML = `<h3 class="text-[14px] font-bold text-on-surface dark:text-gray-100 mb-2 mt-1">Suggested for you</h3>` + LIST_SKELETON;
 
     try {
+        const blockedIds = await window.getBlockedUserIds(currentUser.id);
+        // Exclude ourselves and blocked users
+        const excludeIds = [currentUser.id, ...blockedIds];
+
         // 1. Fetch Top 5 Pages
         const { data: pages, error: pagesError } = await supabase
             .from('users')
             .select('id, full_name, profile_img_url, course, tick_type, role')
             .eq('role', 'page')
-            .neq('id', currentUser.id)
+            .eq('is_deleted', false)
+            .eq('is_deactivated', false)
+            .not('id', 'in', `(${excludeIds.join(',')})`)
             .order('connection_count', { ascending: false })
             .limit(5);
 
@@ -93,7 +100,9 @@ async function fetchExploreUsers() {
             .from('users')
             .select('id, full_name, profile_img_url, course, tick_type, role')
             .neq('role', 'page') 
-            .neq('id', currentUser.id)
+            .eq('is_deleted', false)
+            .eq('is_deactivated', false)
+            .not('id', 'in', `(${excludeIds.join(',')})`)
             .order('connection_count', { ascending: false })
             .limit(10);
 
@@ -123,11 +132,16 @@ async function performSearch(query) {
     const container = document.getElementById('search-results-container');
     
     try {
+        const blockedIds = await window.getBlockedUserIds(currentUser.id);
+        const excludeIds = [currentUser.id, ...blockedIds];
+
         const { data, error } = await supabase
             .from('users')
             .select('id, full_name, profile_img_url, course, tick_type, role')
             .ilike('full_name', `%${query}%`)
-            .neq('id', currentUser.id)
+            .eq('is_deleted', false)
+            .eq('is_deactivated', false)
+            .not('id', 'in', `(${excludeIds.join(',')})`)
             .limit(15);
 
         if (error) throw error;
@@ -149,7 +163,6 @@ async function performSearch(query) {
         container.innerHTML = `<p class="text-sm text-center py-4 text-error">Search failed.</p>`;
     }
 }
-
 // Universal UI Renderer ("Official Page" for pages, course/Student for students)
 function renderUserList(users) {
     return users.map(user => {
