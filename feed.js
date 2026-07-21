@@ -159,7 +159,6 @@ async function uploadToCloudinary(file) {
 // ==========================================
 // POST CREATION
 // ==========================================
-
 async function submitPost() {
     const postType = document.getElementById('current-post-type').value;
     const content = document.getElementById('post-content-input').value.trim();
@@ -203,8 +202,19 @@ async function submitPost() {
             payload.event_button_text = (customBtnInput && customBtnInput.value.trim()) ? customBtnInput.value.trim() : 'View Link';
         }
 
-        const { error } = await supabase.from('posts').insert(payload);
+        // Return the inserted data so we can get the post ID
+        const { data: newPost, error } = await supabase.from('posts').insert(payload).select('id').single();
         if (error) throw error;
+
+        // NEW: Mass-Notify Followers if it's an Official Page
+        if (currentUser.role === 'page' && newPost) {
+            await supabase.rpc('notify_page_followers', {
+                p_page_id: currentUser.id,
+                p_type: 'page_new_post',
+                p_message: 'published a new post.',
+                p_target_id: newPost.id
+            });
+        }
 
         window.closeCreatePostView();
         document.getElementById('post-content-input').value = '';
@@ -223,7 +233,6 @@ async function submitPost() {
         btn.textContent = 'Publish';
     }
 }
-
 // ==========================================
 // FETCHING & RENDERING POSTS
 // ==========================================
