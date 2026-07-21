@@ -572,8 +572,8 @@ function populateProfileUI(profile) {
     const tickEl = document.getElementById('my-profile-header-tick');
     if (tickEl) {
         if (profile.tick_type && profile.tick_type.toLowerCase().trim() !== 'none') {
-            tickEl.className = `material-symbols-outlined text-[18px]`; // Stripped tailwind colors!
-            tickEl.style.color = profile.tick_type.trim(); // Apply hex directly
+            tickEl.className = `material-symbols-outlined text-[18px]`;
+            tickEl.style.color = profile.tick_type.trim();
             tickEl.style.fontVariationSettings = "'FILL' 1";
             tickEl.classList.remove('hidden');
         } else {
@@ -586,10 +586,18 @@ function populateProfileUI(profile) {
     if (avatarEl) avatarEl.src = profile.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=e1e3e4`;
     
     const connCountEl = document.getElementById('my-profile-connection-count');
-    if (connCountEl) connCountEl.textContent = profile.connection_count || 0;
+    if (connCountEl) {
+        connCountEl.textContent = profile.connection_count || 0;
+        // Dynamically change label based on role
+        if (profile.role === 'page') {
+            connCountEl.nextElementSibling.textContent = 'Followers';
+        } else {
+            connCountEl.nextElementSibling.textContent = 'Connections';
+        }
+    }
     
     const courseEl = document.getElementById('my-profile-course');
-    if (courseEl) courseEl.textContent = profile.course || 'Student';
+    if (courseEl) courseEl.textContent = profile.role === 'page' ? 'Official Page' : (profile.course || 'Student');
     
     const bioEl = document.getElementById('my-profile-bio');
     if (bioEl) bioEl.textContent = profile.bio || 'No bio yet. Click "Edit Profile" to add one!';
@@ -1403,8 +1411,15 @@ window.handleFollowAction = async function(pageId, action, btn, notifyState = tr
     try {
         if (action === 'follow') {
             await supabase.from('page_followers').insert({ page_id: pageId, follower_id: currentUserProfile.id });
-            // Increment count directly in users table
             await supabase.rpc('increment_connection_count', { user_id: pageId });
+            
+            // Trigger Notification to the Page
+            await supabase.from('notifications').insert({
+                user_id: pageId,
+                sender_id: currentUserProfile.id,
+                type: 'new_follower'
+            });
+
             showToast('You are now following this page.', 'success');
         } else if (action === 'unfollow') {
             await supabase.from('page_followers').delete().match({ page_id: pageId, follower_id: currentUserProfile.id });
@@ -1414,7 +1429,6 @@ window.handleFollowAction = async function(pageId, action, btn, notifyState = tr
             await supabase.rpc('toggle_page_notifications', { p_page_id: pageId, p_follower_id: currentUserProfile.id, p_notify: notifyState });
             showToast(notifyState ? 'Notifications turned ON' : 'Notifications turned OFF', 'success');
         }
-        // Refresh the profile UI to show new buttons
         viewUserProfile(pageId);
     } catch (error) {
         console.error('Follow action error:', error);
@@ -1423,7 +1437,6 @@ window.handleFollowAction = async function(pageId, action, btn, notifyState = tr
         btn.innerHTML = originalText;
     }
 };
-
 function getSuccessMessage(result) {
     const messages = { request_sent: 'Connection request sent!', accepted: 'Connection accepted!', cancelled: 'Request cancelled.', declined: 'Request declined.', unfriended: 'Connection removed.', blocked: 'User blocked.', unblocked: 'User unblocked.' };
     return messages[result] || 'Action successful!';
