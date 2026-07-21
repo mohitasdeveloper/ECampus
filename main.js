@@ -591,8 +591,12 @@ function populateProfileUI(profile) {
         // Dynamically change label based on role
         if (profile.role === 'page') {
             connCountEl.nextElementSibling.textContent = 'Followers';
+            const sidebarText = document.getElementById('sidebar-stats-text');
+            if (sidebarText) sidebarText.textContent = 'Followers';
         } else {
             connCountEl.nextElementSibling.textContent = 'Connections';
+            const sidebarText = document.getElementById('sidebar-stats-text');
+            if (sidebarText) sidebarText.textContent = 'Connections';
         }
     }
     
@@ -1625,6 +1629,71 @@ function closeConnectionsModal() {
 
 window.openConnectionsModal = openConnectionsModal;
 window.closeConnectionsModal = closeConnectionsModal;
+
+// ========================================================
+// FOLLOWERS MODAL (For Pages)
+// ========================================================
+window.handleProfileStatsClick = function() {
+    if (currentUserProfile.role === 'page') {
+        openFollowersModal();
+    } else {
+        openConnectionsModal();
+    }
+};
+
+async function openFollowersModal() {
+    const modal = document.getElementById('modal-followers');
+    const list = document.getElementById('followers-list');
+    if (!modal || !list) return;
+
+    modal.classList.replace('hidden', 'flex');
+    list.innerHTML = LIST_SKELETON; 
+
+    try {
+        const { data, error } = await supabase
+            .from('page_followers')
+            .select('users!page_followers_follower_id_fkey(id, full_name, profile_img_url, course)')
+            .eq('page_id', currentUserProfile.id);
+
+        if (error) throw error;
+
+        // Clean up the nested Supabase response
+        const followers = data.map(f => f.users).filter(Boolean);
+
+        if (followers.length === 0) {
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">You have no followers yet.</p>`;
+            return;
+        }
+
+        list.innerHTML = followers.map(user => {
+            const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
+            const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
+            const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
+
+            return `
+            <div onclick="window.viewUserProfile('${user.id}'); closeFollowersModal();" class="flex items-center gap-4 p-3 bg-surface-container-lowest dark:bg-neutral-900/50 rounded-2xl border border-surface-variant/40 dark:border-neutral-800 shadow-sm cursor-pointer hover:bg-surface-variant/20 transition-colors">
+                <img loading="lazy" src="${optimizedAvatar}" onerror="${fallback}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/50 shrink-0">
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-sm text-on-surface dark:text-gray-100 truncate">${user.full_name}</p>
+                    <p class="text-[11px] text-on-surface-variant dark:text-gray-400 mt-0.5 truncate">${user.course || 'Student'}</p>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Error fetching followers:', error);
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load followers.</p>`;
+    }
+}
+
+function closeFollowersModal() {
+    const modal = document.getElementById('modal-followers');
+    if (modal) modal.classList.replace('flex', 'hidden');
+}
+
+window.openFollowersModal = openFollowersModal;
+window.closeFollowersModal = closeFollowersModal;
 
 async function openBlockedUsersModal() {
     const modal = document.getElementById('modal-blocked-users');
