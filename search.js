@@ -113,13 +113,14 @@ async function performSearch(query) {
     }
 }
 
-// Universal UI Renderer (Clean, Instagram-Style Flat List)
 function renderUserList(users) {
     return users.map(user => {
         const rawAvatarUrl = user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4`;
         const optimizedAvatar = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
         const fallback = `this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=e1e3e4';`;
-        const subtitle = user.role === 'page' ? 'Campus Page' : (user.course || 'Student');
+        
+        // Changed to "Official Page"
+        const subtitle = user.role === 'page' ? 'Official Page' : (user.course || 'Student');
 
         return `
         <div onclick="window.viewUserProfile('${user.id}')" class="flex items-center gap-3 py-3 cursor-pointer active:opacity-60 transition-opacity">
