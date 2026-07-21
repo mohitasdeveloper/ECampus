@@ -1248,19 +1248,23 @@ async function viewUserProfile(userId) {
 
     // Check relationship based on role
     if (user.role === 'page') {
-        const { data: fData } = await supabase
+        const { data: fData, error: fError } = await supabase
             .from('page_followers')
             .select('*')
             .eq('page_id', user.id)
             .eq('follower_id', currentUserProfile.id)
-            .single();
+            .maybeSingle(); // FIX: Using maybeSingle prevents the 406 crash when not following
+        
+        if (fError && fError.code !== 'PGRST116') {
+            console.error('Error fetching follower record:', fError);
+        }
         followRecord = fData;
     } else {
         const { data: cData } = await supabase
             .from('connections')
             .select('status, action_user_id')
             .or(`and(user_one_id.eq.${currentUserProfile.id},user_two_id.eq.${user.id}),and(user_one_id.eq.${user.id},user_two_id.eq.${currentUserProfile.id})`)
-            .single();
+            .maybeSingle();
         connection = cData;
     }
 
@@ -1296,7 +1300,7 @@ async function viewUserProfile(userId) {
             `<span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">${user.connection_count || 0}</span> followers` : 
             `<span id="public-profile-connection-count" class="font-bold text-on-surface dark:text-gray-200">${user.connection_count || 0}</span> connections`;
         document.getElementById('public-profile-connection-count').parentElement.innerHTML = statsHtml;
-        document.getElementById('public-profile-course').textContent = user.role === 'page' ? 'Campus Page' : (user.course || 'Student');
+        document.getElementById('public-profile-course').textContent = user.role === 'page' ? 'Official Page' : (user.course || 'Student');
         document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
         renderSocialLinks(user.social_links, document.getElementById('public-profile-social-links'));
 
@@ -1343,11 +1347,20 @@ function renderProfileActions(user, connection, followRecord) {
         if (!followRecord) {
             mainButtonHtml = `<button onclick="handleFollowAction('${userId}', 'follow', this)" class="btn-primary flex-1 !py-2.5 rounded-xl text-sm">Follow</button>`;
         } else {
-            const bellIcon = followRecord.receive_notifications ? 'notifications_active' : 'notifications_off';
+            const isNotifyOn = followRecord.receive_notifications;
+            const bellIcon = isNotifyOn ? 'notifications_active' : 'notifications_off';
+            
+            // Clear visual indicator: Primary color + border when ON, Muted when OFF
+            const bellStyle = isNotifyOn 
+                ? 'bg-primary/15 text-primary border-primary/40 dark:bg-primary/20' 
+                : 'bg-surface-variant/40 dark:bg-neutral-800 text-on-surface-variant/50 dark:text-gray-500 border-surface-variant/60';
+            
+            const bellTitle = isNotifyOn ? 'Notifications ON (Click to turn OFF)' : 'Notifications OFF (Click to turn ON)';
+
             mainButtonHtml = `
                 <button onclick="handleFollowAction('${userId}', 'unfollow', this)" class="btn-secondary flex-1 !py-2.5 rounded-xl text-sm">Following</button>
-                <button onclick="handleFollowAction('${userId}', 'toggle_bell', this, ${!followRecord.receive_notifications})" class="btn-secondary !p-0 w-12 items-center justify-center border border-surface-variant/60 rounded-xl">
-                    <span class="material-symbols-outlined">${bellIcon}</span>
+                <button onclick="handleFollowAction('${userId}', 'toggle_bell', this, ${!isNotifyOn})" title="${bellTitle}" class="${bellStyle} !p-0 w-12 flex items-center justify-center border rounded-xl transition-all active:scale-95 shrink-0">
+                    <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' ${isNotifyOn ? 1 : 0};">${bellIcon}</span>
                 </button>
             `;
         }
