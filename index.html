@@ -278,8 +278,7 @@
             </div>
         </div>
     
-
-       <!-- NESTED SETTINGS SIDEBAR -->
+<!-- NESTED SETTINGS SIDEBAR -->
 <div id="settings-sidebar" class="fixed inset-0 z-[160] hidden justify-end transition-opacity opacity-0 bg-surface dark:bg-[#121212]">
     
     <!-- MAIN SETTINGS PANEL -->
@@ -335,7 +334,7 @@
         </div>
     </div>
 
-    <!-- SUB-PANEL: ACCOUNT CENTER -->
+    <!-- SUB-PANEL: ACCOUNT CENTER MENU -->
     <div id="settings-account-panel" class="absolute inset-y-0 right-0 w-full max-w-screen-md mx-auto flex flex-col transition-transform duration-300 translate-x-full bg-surface dark:bg-[#121212] z-20">
         <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
             <button onclick="closeSettingsSubPanel('settings-account-panel')" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
@@ -343,33 +342,106 @@
             </button>
             <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Account Center</h2>
         </div>
-        <div class="flex-1 overflow-y-auto px-5 py-6 space-y-8">
+        <div class="flex-1 overflow-y-auto px-5 py-6 space-y-3">
+            <button onclick="openSettingsSubPanel('settings-password-panel')" class="w-full flex items-center justify-between p-4 bg-surface-variant/20 dark:bg-neutral-900/50 hover:bg-surface-variant/40 rounded-2xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[15px]">
+                <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[24px]">key</span> Change Password</div>
+                <span class="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_right</span>
+            </button>
+
+            <button onclick="openSettingsSubPanel('settings-deactivate-panel')" class="w-full flex items-center justify-between p-4 bg-orange-500/10 text-orange-600 dark:text-orange-500 hover:bg-orange-500/20 rounded-2xl font-bold text-[15px] transition-colors">
+                <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[24px]">pause_circle</span> Deactivate Account</div>
+                <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+            </button>
+
+            <button onclick="openSettingsSubPanel('settings-delete-panel')" class="w-full flex items-center justify-between p-4 bg-error/10 text-error hover:bg-error/20 rounded-2xl font-bold text-[15px] transition-colors">
+                <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[24px]">delete_forever</span> Delete Account</div>
+                <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- DETAILED VIEW: CHANGE PASSWORD -->
+    <div id="settings-password-panel" class="absolute inset-y-0 right-0 w-full max-w-screen-md mx-auto flex flex-col transition-transform duration-300 translate-x-full bg-surface dark:bg-[#121212] z-30">
+        <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+            <button onclick="closeSettingsSubPanel('settings-password-panel')" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">arrow_back</span>
+            </button>
+            <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Change Password</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-6">
+            <!-- INLINE ERROR MESSAGE -->
+            <div id="cp-error-msg" class="hidden mb-4 p-3 rounded-xl bg-error/10 text-error text-sm font-bold text-center border border-error/20"></div>
             
-            <!-- Change Password Form -->
-            <div>
-                <h3 class="text-[15px] font-bold text-on-surface dark:text-gray-100 mb-4">Change Password</h3>
-                <div class="space-y-3">
-                    <input type="password" id="cp-old" placeholder="Current Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
-                    <input type="password" id="cp-new" placeholder="New Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
-                    <input type="password" id="cp-confirm" placeholder="Confirm New Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
-                    <button id="btn-change-password" onclick="executeChangePassword()" class="w-full bg-primary text-white font-bold py-3.5 rounded-xl active:scale-95 transition-transform mt-2">Update Password</button>
+            <div class="space-y-3">
+                <input type="password" id="cp-old" placeholder="Current Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
+                <input type="password" id="cp-new" placeholder="New Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
+                <input type="password" id="cp-confirm" placeholder="Confirm New Password" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] outline-none focus:border-primary text-on-surface dark:text-white">
+                <button id="btn-change-password" onclick="executeChangePassword()" class="w-full bg-primary text-white font-bold py-3.5 rounded-xl active:scale-95 transition-transform mt-2">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETAILED VIEW: DEACTIVATE ACCOUNT -->
+    <div id="settings-deactivate-panel" class="absolute inset-y-0 right-0 w-full max-w-screen-md mx-auto flex flex-col transition-transform duration-300 translate-x-full bg-surface dark:bg-[#121212] z-30">
+        <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+            <button onclick="closeSettingsSubPanel('settings-deactivate-panel')" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">arrow_back</span>
+            </button>
+            <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Deactivate Account</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-6">
+            <div class="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5 mb-6">
+                <div class="flex items-center gap-3 text-orange-600 dark:text-orange-500 mb-3">
+                    <span class="material-symbols-outlined text-[28px]">pause_circle</span>
+                    <h3 class="font-extrabold text-[16px]">Account Pause</h3>
                 </div>
+                <ul class="text-[13px] text-on-surface dark:text-gray-200 space-y-2 list-disc pl-5">
+                    <li>Your profile and posts will be hidden from everyone.</li>
+                    <li>No one will be able to search for you or message you.</li>
+                    <li>Your connection requests will be paused.</li>
+                    <li><strong>Reactivation is easy:</strong> Simply log back in anytime to restore your account.</li>
+                </ul>
             </div>
 
-            <div class="border-t border-surface-variant/40 dark:border-neutral-800"></div>
+            <!-- Warning Checkbox -->
+            <label class="flex items-start gap-3 mb-6 cursor-pointer group">
+                <input type="checkbox" id="deactivate-confirm-checkbox" onchange="document.getElementById('btn-deactivate-final').disabled = !this.checked;" class="mt-1 w-5 h-5 rounded border-surface-variant text-orange-500 focus:ring-orange-500 dark:bg-neutral-800 dark:border-neutral-700">
+                <span class="text-[14px] text-on-surface-variant dark:text-gray-400 group-hover:text-on-surface dark:group-hover:text-gray-200 transition-colors">I understand the effects of deactivating my account.</span>
+            </label>
 
-            <!-- Danger Zone -->
-            <div>
-                <h3 class="text-[15px] font-bold text-error mb-4">Danger Zone</h3>
-                <button onclick="executeDeactivateAccount()" class="w-full flex items-center justify-between p-4 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-2xl font-bold text-[14px] mb-3 active:scale-95 transition-transform">
-                    <div class="flex items-center gap-2"><span class="material-symbols-outlined">pause_circle</span> Deactivate Account</div>
-                </button>
-                <p class="text-xs text-on-surface-variant dark:text-gray-500 px-2 mb-4">Deactivating hides your profile and posts. You can reactivate by logging back in.</p>
+            <button id="btn-deactivate-final" disabled onclick="executeDeactivateAccount()" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Deactivate Now</button>
+        </div>
+    </div>
 
-                <button onclick="executeDeleteAccount()" class="w-full flex items-center justify-between p-4 bg-error/10 text-error rounded-2xl font-bold text-[14px] active:scale-95 transition-transform">
-                    <div class="flex items-center gap-2"><span class="material-symbols-outlined">delete_forever</span> Delete Account permanently</div>
-                </button>
+    <!-- DETAILED VIEW: DELETE ACCOUNT -->
+    <div id="settings-delete-panel" class="absolute inset-y-0 right-0 w-full max-w-screen-md mx-auto flex flex-col transition-transform duration-300 translate-x-full bg-surface dark:bg-[#121212] z-30">
+        <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-5 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+            <button onclick="closeSettingsSubPanel('settings-delete-panel')" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">arrow_back</span>
+            </button>
+            <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Delete Account</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-6">
+            <div class="bg-error/10 border border-error/30 rounded-2xl p-5 mb-6">
+                <div class="flex items-center gap-3 text-error mb-3">
+                    <span class="material-symbols-outlined text-[28px]">warning</span>
+                    <h3 class="font-extrabold text-[16px]">Permanent Action</h3>
+                </div>
+                <ul class="text-[13px] text-on-surface dark:text-gray-200 space-y-2 list-disc pl-5">
+                    <li>Your profile, posts, and hotposts will be permanently deleted.</li>
+                    <li>All your connections, likes, and comments will be erased.</li>
+                    <li>Your user ID and email will be permanently blocked.</li>
+                    <li><strong>This action cannot be undone.</strong> You will never be able to log in to this account again.</li>
+                </ul>
             </div>
+
+            <!-- Extra Warning Text Input -->
+            <div class="mb-6">
+                <label class="text-[13px] font-bold text-on-surface-variant dark:text-gray-400 mb-2 block">To verify, type <strong>DELETE</strong> below:</label>
+                <input type="text" id="delete-confirm-input" oninput="document.getElementById('btn-delete-final').disabled = (this.value !== 'DELETE');" placeholder="Type DELETE" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-error/50 rounded-xl p-3.5 text-[14px] outline-none focus:border-error text-error font-bold placeholder-error/50">
+            </div>
+
+            <button id="btn-delete-final" disabled onclick="executeDeleteAccount()" class="w-full bg-error text-white font-bold py-3.5 rounded-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Permanently Delete Account</button>
         </div>
     </div>
 
