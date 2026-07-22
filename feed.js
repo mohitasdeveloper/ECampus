@@ -265,7 +265,7 @@ async function fetchPosts(isRefresh = false) {
         // 1. Get everyone you blocked (or who blocked you)
         const blockedIds = await window.getBlockedUserIds(currentUser.id);
 
-        // 2. Build the query. Notice 'users!inner' which forces the post to drop if the user is deleted/deactivated!
+        // 2. Build the query
         let query = supabase
             .from('posts')
             .select(`
@@ -293,10 +293,18 @@ async function fetchPosts(isRefresh = false) {
             hasMorePosts = false;
         }
 
+        // 🚀 THE FIX: Destroy the old loading spinner BEFORE adding new posts!
+        // This prevents the spinner from getting trapped between old and new posts.
+        const oldSentinel = document.getElementById('feed-bottom-sentinel');
+        if (oldSentinel) oldSentinel.remove();
+
         renderPosts(data, isRefresh);
         currentFeedPage++;
         
-        if (hasMorePosts) setupIntersectionObserver();
+        // Only spawn a new spinner at the very bottom if there are more posts to fetch
+        if (hasMorePosts) {
+            setupIntersectionObserver();
+        }
 
     } catch (error) {
         console.error('Error fetching posts:', error);
