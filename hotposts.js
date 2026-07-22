@@ -23,7 +23,7 @@ const ACTIVITY_SKELETON = `
 // Native Shimmer for Hotposts
 const HOTPOST_SKELETON = `
     <div class="flex flex-col items-center gap-1.5 shrink-0">
-        <div class="w-[68px] h-[68px] rounded-full shimmer-bg shadow-sm"></div>
+        <div class="w-[80px] h-[80px] rounded-full shimmer-bg shadow-sm"></div>
         <div class="w-12 h-2.5 rounded-full shimmer-bg mt-1"></div>
     </div>
 `.repeat(6);
@@ -614,32 +614,42 @@ async function submitHotpost() {
     const originalBtnInner = btn.innerHTML;
     
     btn.disabled = true;
-    // Fixed spinner color to black so it shows on the white button
     btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-black text-[24px]">progress_activity</span>`;
 
     try {
         const getCompiledBlob = () => new Promise((resolve) => {
             const bakeCanvas = document.createElement('canvas');
-            bakeCanvas.width = baseImageObj.width;
-            bakeCanvas.height = baseImageObj.height;
+            
+            // 🚀 EXTREME COMPRESSION 1: Cap resolution at 1280px (Snapchat-style)
+            const MAX_HEIGHT = 1280;
+            let finalWidth = baseImageObj.width;
+            let finalHeight = baseImageObj.height;
+            
+            if (finalHeight > MAX_HEIGHT) {
+                finalWidth = Math.floor((MAX_HEIGHT / finalHeight) * finalWidth);
+                finalHeight = MAX_HEIGHT;
+            }
+
+            bakeCanvas.width = finalWidth;
+            bakeCanvas.height = finalHeight;
             const ctx = bakeCanvas.getContext('2d');
 
             // 1. Draw Image & Filters
             if (FILTER_LIST[currentFilterIndex].css !== 'none') {
                 ctx.filter = FILTER_LIST[currentFilterIndex].css;
             }
-            ctx.drawImage(baseImageObj, 0, 0, bakeCanvas.width, bakeCanvas.height);
+            ctx.drawImage(baseImageObj, 0, 0, finalWidth, finalHeight);
             ctx.filter = 'none'; 
 
             // 2. Draw Doodles
             const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
             if (doodlePaths.length > 0) {
-                ctx.drawImage(doodleCanvas, 0, 0, bakeCanvas.width, bakeCanvas.height);
+                ctx.drawImage(doodleCanvas, 0, 0, finalWidth, finalHeight);
             }
 
-            // 3. Bake ALL text layers into the image properly (with multiline support!)
+            // 3. Bake ALL text layers dynamically
             textElements.forEach(tObj => {
-                const baseFontSize = Math.floor(bakeCanvas.width * 0.08); 
+                const baseFontSize = Math.floor(finalWidth * 0.08); 
                 const finalFontSize = Math.floor(baseFontSize * tObj.scale); 
                 
                 ctx.font = `800 ${finalFontSize}px Inter, sans-serif`;
@@ -649,10 +659,9 @@ async function submitHotpost() {
                 ctx.shadowColor = "rgba(0,0,0,0.9)";
                 ctx.shadowBlur = 20;
                 
-                const finalX = bakeCanvas.width * tObj.x;
-                const finalY = bakeCanvas.height * tObj.y;
+                const finalX = finalWidth * tObj.x;
+                const finalY = finalHeight * tObj.y;
                 
-                // Native Canvas doesn't support \n directly, so we split it into lines!
                 const lines = tObj.content.split('\n');
                 lines.forEach((line, index) => {
                     const lineY = finalY + (index - (lines.length - 1) / 2) * finalFontSize * 1.2;
@@ -660,22 +669,23 @@ async function submitHotpost() {
                 });
             });
 
-            bakeCanvas.toBlob(resolve, 'image/jpeg', 0.9);
+            // 🚀 EXTREME COMPRESSION 2: Convert to WebP at 65% quality
+            bakeCanvas.toBlob(resolve, 'image/webp', 0.65);
         });
 
-        // Generate the final watermarked photo
+        // Generate the final photo
         const finalBlob = await getCompiledBlob();
 
         // Upload to Cloudinary
         const formData = new FormData();
-        formData.append('file', finalBlob, 'hotpost.jpg');
+        formData.append('file', finalBlob, 'hotpost.webp');
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
 
         const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
 
-       // Upload to Supabase Database
+        // Upload to Supabase Database
         const { data: newHotpost, error } = await supabase.from('hotposts').insert({
             user_id: currentUser.id,
             media_url: data.secure_url,
@@ -685,7 +695,7 @@ async function submitHotpost() {
 
         if (error) throw error;
 
-        // NEW: Mass-Notify Followers if it's an Official Page
+        // Mass-Notify Followers if it's an Official Page
         if (currentUser.role === 'page' && newHotpost) {
             await supabase.rpc('notify_page_followers', {
                 p_page_id: currentUser.id,
@@ -707,7 +717,6 @@ async function submitHotpost() {
         btn.innerHTML = originalBtnInner;
     }
 }
-
 window.toggleVisibilitySetting = function() {
     const btn = document.getElementById('hotpost-send-visibility');
     const text = document.getElementById('visibility-text');
@@ -791,12 +800,12 @@ function renderHotpostCircles() {
     const addCircle = document.createElement('div');
     addCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
     addCircle.innerHTML = `
-        <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
+        <div class="w-[80px] h-[80px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
             <div class="w-full h-full rounded-full border-2 border-surface-variant dark:border-neutral-700 overflow-hidden bg-gray-100 dark:bg-neutral-800">
                 <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover opacity-60">
             </div>
-            <div class="absolute bottom-0 right-0 w-6 h-6 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
-                <span class="material-symbols-outlined text-[14px] font-bold">add</span>
+            <div class="absolute bottom-0 right-0 w-7 h-7 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
+                <span class="material-symbols-outlined text-[16px] font-bold">add</span>
             </div>
         </div>
         <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Create</span>
@@ -811,7 +820,7 @@ function renderHotpostCircles() {
         myCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-10';
         const ringClass = myData.viewed ? 'from-gray-300 to-gray-400' : 'from-gray-400 to-gray-600';
         myCircle.innerHTML = `
-            <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm relative">
+            <div class="w-[80px] h-[80px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm relative">
                 <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
                     <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover">
                 </div>
@@ -835,7 +844,7 @@ function renderHotpostCircles() {
         const ringClass = data.viewed ? 'from-gray-300 to-gray-400' : 'from-yellow-400 via-orange-500 to-red-500';
 
         circle.innerHTML = `
-            <div class="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
+            <div class="w-[80px] h-[80px] rounded-full p-[2.5px] bg-gradient-to-tr ${ringClass} shadow-sm">
                 <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
                     <img src="${user.profile_img_url}" class="w-full h-full object-cover">
                 </div>
@@ -845,8 +854,32 @@ function renderHotpostCircles() {
         circle.addEventListener('click', () => openHotpostViewer(userId));
         container.appendChild(circle);
     });
+
+    // 🚀 THE PRELOADER: Runs 1s after UI draws so it doesn't interrupt scrolling
+    setTimeout(() => {
+        if (window.requestIdleCallback) {
+            window.requestIdleCallback(preloadHotpostImages);
+        } else {
+            preloadHotpostImages();
+        }
+    }, 1000); 
 }
 
+// Background worker that silently downloads the first image of everyone's Hotpost
+function preloadHotpostImages() {
+    hotpostsByUser.forEach((data) => {
+        if (data.posts && data.posts.length > 0) {
+            const firstPostUrl = data.posts[0].media_url;
+            const optimizedUrl = typeof window.optimizeImageUrl === 'function' 
+                ? window.optimizeImageUrl(firstPostUrl, 'hotpost') 
+                : firstPostUrl;
+            
+            // Download and cache silently
+            const img = new Image();
+            img.src = optimizedUrl;
+        }
+    });
+}
 
 // ==========================================
 // VIEWER ENGINES & PHYSICS (Ultimate Failsafe)
@@ -1102,8 +1135,8 @@ function playUserStories(userIndex, postIndex = 0) {
     }
     
     document.getElementById('hotpost-viewer-time').textContent = timeAgo(post.created_at);
-    document.getElementById('hotpost-viewer-image').src = post.media_url;
-
+// 🚀 Tell the viewer to use the aggressively optimized (and pre-loaded) version
+document.getElementById('hotpost-viewer-image').src = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(post.media_url, 'hotpost') : post.media_url;
     // 9. Record Database View
     recordView(post.id);
 
