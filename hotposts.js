@@ -10,17 +10,6 @@ let hotpostsByUser = new Map();
 let currentUser = null;
 let sessionViewedPostIds = new Set();
 
-const ACTIVITY_SKELETON = `
-    <div class="flex items-center gap-3 p-3 animate-pulse">
-        <div class="w-10 h-10 rounded-full shimmer-bg shrink-0"></div>
-        <div class="flex-1 space-y-2">
-            <div class="h-3.5 shimmer-bg rounded-md w-1/2"></div>
-            <div class="h-2.5 shimmer-bg rounded-md w-1/3"></div>
-        </div>
-    </div>
-`.repeat(5);
-
-// Native Shimmer for Hotposts
 const HOTPOST_SKELETON = `
     <div class="flex flex-col items-center gap-1.5 shrink-0">
         <div class="w-[80px] h-[80px] rounded-full shimmer-bg shadow-sm"></div>
@@ -28,11 +17,16 @@ const HOTPOST_SKELETON = `
     </div>
 `.repeat(6);
 
-// Camera & Image
+// Camera, Gallery, and Image Zoom State
 let currentCameraStream = null;
 let currentFacingMode = 'environment';
 let currentPhotoBlob = null;
 let baseImageObj = null; 
+
+let imgTransform = { scale: 1, x: 0, y: 0 }; // 🚀 NEW: Tracks pinch/pan of the photo
+let isDraggingBg = false;
+let bgDragStartX = 0, bgDragStartY = 0;
+let initialBgScale = 1;
 
 // Swipe Filters
 const FILTER_LIST = [
@@ -44,7 +38,7 @@ const FILTER_LIST = [
 ];
 let currentFilterIndex = 0;
 
-// Editor: Text Tool (Multi-Text Engine)
+// Editor: Text & Doodle Tools
 let textElements = [];
 let activeTextId = null;
 let activeTextIdForTouch = null;
@@ -52,14 +46,13 @@ let textTouchStartTime = 0;
 let initialPinchDist = 0;
 let initialTextScale = 1.0;
 
-// Editor: Doodle Tool
 let isDrawMode = false;
 let isDrawing = false;
 let currentDoodleColor = '#FFFFFF'; 
+let currentDoodleWidth = 6; // 🚀 NEW: Tracks pen size
 let doodlePaths = []; 
 let currentPath = [];
 
-// Viewer Physics
 let currentViewerState = {
     userId: null, userOrder: [], userIndex: -1, postIndex: 0,
     storyTimer: null, storyDuration: 5000, animationStartTime: 0, remainingDuration: 0,
@@ -138,6 +131,31 @@ document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () =>
     document.getElementById('delete-hotpost-action-btn')?.addEventListener('click', () => {
         showCustomConfirm("Delete Hotpost?", "This will permanently remove this post from your story.", executeDeleteHotpost);
     });
+
+// 🚀 NEW: Gallery Input Listener
+    document.getElementById('hotpost-gallery-input')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                currentPhotoBlob = file;
+                baseImageObj = new Image();
+                baseImageObj.onload = () => {
+                    document.getElementById('hotpost-preview-img').src = event.target.result;
+                    showPreviewUI();
+                    initDoodleCanvas();
+                };
+                baseImageObj.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // 🚀 NEW: Pen Size Slider
+    document.getElementById('doodle-size-slider')?.addEventListener('input', (e) => {
+        currentDoodleWidth = parseInt(e.target.value);
+    });
+    
 }
 
 function showCustomConfirm(title, message, onConfirm) {
@@ -240,12 +258,17 @@ function resetCameraUI() {
     document.getElementById('switch-hotpost-camera-btn').classList.remove('hidden');
     document.getElementById('editor-tools-container').classList.add('hidden');
     
+    // 🚀 Reset Image Transforms
+    imgTransform = { scale: 1, x: 0, y: 0 };
+    document.getElementById('hotpost-preview-img').style.transform = `translate(0px, 0px) scale(1)`;
+    
+    // Reset Filters & Draw
     currentFilterIndex = 0;
     document.getElementById('hotpost-preview-img').style.filter = FILTER_LIST[0].css;
-    
     isDrawMode = false;
     doodlePaths = [];
     document.getElementById('doodle-color-picker').classList.add('hidden');
+    document.getElementById('doodle-size-slider').classList.add('hidden'); // Hide slider
     
     const doodleBtn = document.getElementById('doodle-hotpost-btn');
     if (doodleBtn) {
@@ -253,11 +276,29 @@ function resetCameraUI() {
         doodleBtn.classList.add('bg-black/40', 'text-white');
     }
     
-    // 🚀 Reset ALL dynamic text layers and Multi-Text variables
     document.querySelectorAll('.hotpost-draggable-text').forEach(el => el.remove());
     textElements = [];
     activeTextId = null;
     activeTextIdForTouch = null;
+}
+
+function toggleDrawMode() {
+    isDrawMode = !isDrawMode;
+    const colorPicker = document.getElementById('doodle-color-picker');
+    const slider = document.getElementById('doodle-size-slider');
+    const penBtn = document.getElementById('doodle-hotpost-btn');
+    
+    if (isDrawMode) {
+        colorPicker.classList.replace('hidden', 'flex');
+        slider.classList.remove('hidden');
+        penBtn.classList.replace('bg-black/40', 'bg-white');
+        penBtn.classList.replace('text-white', 'text-black');
+    } else {
+        colorPicker.classList.replace('flex', 'hidden');
+        slider.classList.add('hidden');
+        penBtn.classList.replace('bg-white', 'bg-black/40');
+        penBtn.classList.replace('text-black', 'text-white');
+    }
 }
 
 function showPreviewUI() {
@@ -386,9 +427,9 @@ function redrawDoodleCanvas() {
     
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
-    ctx.lineWidth = 6;
 
     doodlePaths.forEach(pathObj => {
+        ctx.lineWidth = pathObj.width || 6; // 🚀 Restore saved width
         ctx.strokeStyle = pathObj.color;
         ctx.shadowColor = pathObj.color;
         ctx.shadowBlur = 4;
@@ -400,7 +441,6 @@ function redrawDoodleCanvas() {
         ctx.stroke();
     });
 }
-
 
 // ==========================================
 // UNIFIED TOUCH PHYSICS (EDITOR)
@@ -420,8 +460,8 @@ function setupEditorTouchPhysics() {
         return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
     };
 
-    container.addEventListener('touchstart', (e) => {
-        // Pinch to Zoom specific text
+   container.addEventListener('touchstart', (e) => {
+        // Pinch to Zoom (Checks if they are pinching text OR the background)
         if (e.touches.length === 2) {
             const targetText = e.target.closest('.hotpost-draggable-text');
             if (targetText && !isDrawMode) {
@@ -430,6 +470,10 @@ function setupEditorTouchPhysics() {
                 initialPinchDist = getPinchDistance(e.touches);
                 const tObj = textElements.find(t => t.id === activeTextIdForTouch);
                 initialTextScale = tObj ? tObj.scale : 1.0;
+            } else if (!isDrawMode) {
+                touchMode = 'zoom_bg';
+                initialPinchDist = getPinchDistance(e.touches);
+                initialBgScale = imgTransform.scale;
             }
             return;
         }
@@ -452,9 +496,7 @@ function setupEditorTouchPhysics() {
                 textDragStartY = startY;
                 textInitialObjX = tObj.x;
                 textInitialObjY = tObj.y;
-                tObj.isOverTrash = false;
             }
-
             document.getElementById('text-trash-zone')?.classList.remove('opacity-0');
             document.getElementById('text-trash-zone')?.classList.add('opacity-100');
         } 
@@ -465,33 +507,62 @@ function setupEditorTouchPhysics() {
             currentPath = [{ x: startX - rect.left, y: startY - rect.top }];
         } 
         else {
-            touchMode = 'swipe';
+            // 🚀 NEW: If zoomed in, touching the background pans it. If 1x, it swipes filters.
+            if (imgTransform.scale > 1.0) {
+                touchMode = 'pan_bg';
+                bgDragStartX = startX;
+                bgDragStartY = startY;
+            } else {
+                touchMode = 'swipe';
+            }
         }
     }, { passive: false });
 
     container.addEventListener('touchmove', (e) => {
-        if (e.cancelable) e.preventDefault(); // LOCK THE SCREEN
+        if (e.cancelable) e.preventDefault(); 
         
         if (touchMode === 'zoom_text' && e.touches.length === 2 && activeTextIdForTouch) {
             const currentDist = getPinchDistance(e.touches);
             const scaleChange = currentDist / initialPinchDist;
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
             const targetTextElement = document.getElementById(activeTextIdForTouch);
-            
             if (tObj && targetTextElement) {
                 tObj.scale = Math.max(0.3, Math.min(6.0, initialTextScale * scaleChange));
-                // 🚀 FIX: Update DOM directly (No destroying elements!)
                 targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
             }
             return;
         }
 
-        if (e.touches.length > 1) return;
+        // 🚀 NEW: Handle Background Zooming
+        if (touchMode === 'zoom_bg' && e.touches.length === 2) {
+            const currentDist = getPinchDistance(e.touches);
+            const scaleChange = currentDist / initialPinchDist;
+            imgTransform.scale = Math.max(1.0, Math.min(4.0, initialBgScale * scaleChange));
+            
+            // Snap back to center if fully zoomed out
+            if (imgTransform.scale === 1.0) { imgTransform.x = 0; imgTransform.y = 0; }
+            document.getElementById('hotpost-preview-img').style.transform = `translate(${imgTransform.x}px, ${imgTransform.y}px) scale(${imgTransform.scale})`;
+            return;
+        }
 
+        if (e.touches.length > 1) return;
         const currentX = e.touches[0].clientX;
         const currentY = e.touches[0].clientY;
         const rect = container.getBoundingClientRect();
 
+        // 🚀 NEW: Handle Background Panning
+        if (touchMode === 'pan_bg') {
+            const deltaX = currentX - bgDragStartX;
+            const deltaY = currentY - bgDragStartY;
+            imgTransform.x += deltaX;
+            imgTransform.y += deltaY;
+            bgDragStartX = currentX;
+            bgDragStartY = currentY;
+            document.getElementById('hotpost-preview-img').style.transform = `translate(${imgTransform.x}px, ${imgTransform.y}px) scale(${imgTransform.scale})`;
+            return;
+        }
+
+        // TEXT DRAGGING
         if (touchMode === 'drag_text' && activeTextIdForTouch) {
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
             const targetTextElement = document.getElementById(activeTextIdForTouch);
@@ -506,32 +577,28 @@ function setupEditorTouchPhysics() {
                 const trashZone = document.getElementById('text-trash-zone');
                 if (trashZone) {
                     const trashRect = trashZone.getBoundingClientRect();
-                    if (currentX > trashRect.left - 20 && currentX < trashRect.right + 20 &&
-                        currentY > trashRect.top - 20 && currentY < trashRect.bottom + 20) {
-                        
+                    if (currentX > trashRect.left - 20 && currentX < trashRect.right + 20 && currentY > trashRect.top - 20 && currentY < trashRect.bottom + 20) {
                         trashZone.classList.add('scale-[1.3]', 'bg-error', 'border-error');
                         targetTextElement.style.opacity = '0.4';
-                        targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale * 0.5})`;
                         tObj.isOverTrash = true;
                     } else {
                         trashZone.classList.remove('scale-[1.3]', 'bg-error', 'border-error');
                         targetTextElement.style.opacity = '1';
-                        targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
                         tObj.isOverTrash = false;
                     }
                 }
-
-                // 🚀 FIX: Move the text flawlessly using direct CSS
                 targetTextElement.style.left = `${tObj.x * 100}%`;
                 targetTextElement.style.top = `${tObj.y * 100}%`;
             }
         } 
+        // DOODLE DRAWING (Now saves currentDoodleWidth)
         else if (touchMode === 'draw' && isDrawing) {
             currentPath.push({ x: currentX - rect.left, y: currentY - rect.top });
             
             const canvas = document.getElementById('hotpost-doodle-canvas');
             const ctx = canvas.getContext('2d');
-            ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.lineWidth = 6;
+            ctx.lineJoin = "round"; ctx.lineCap = "round"; 
+            ctx.lineWidth = currentDoodleWidth; // 🚀 Uses slider value
             ctx.strokeStyle = currentDoodleColor; ctx.shadowColor = currentDoodleColor; ctx.shadowBlur = 4;
             
             ctx.beginPath();
@@ -542,7 +609,7 @@ function setupEditorTouchPhysics() {
             ctx.stroke();
         }
     }, { passive: false });
-
+    
     container.addEventListener('touchend', (e) => {
         if (touchMode === 'drag_text' && activeTextIdForTouch) {
             const trashZone = document.getElementById('text-trash-zone');
@@ -569,9 +636,10 @@ function setupEditorTouchPhysics() {
         }
         else if (touchMode === 'draw' && isDrawing) {
             isDrawing = false;
-            if (currentPath.length > 1) doodlePaths.push({ color: currentDoodleColor, points: [...currentPath] });
+            // 🚀 Save the width into the path array
+            if (currentPath.length > 1) doodlePaths.push({ color: currentDoodleColor, width: currentDoodleWidth, points: [...currentPath] });
             currentPath = [];
-        } 
+        }
         else if (touchMode === 'swipe' && !isDrawMode) {
             const endX = e.changedTouches[0].clientX;
             const deltaX = endX - startX;
@@ -609,7 +677,10 @@ async function submitHotpost() {
     if (!currentPhotoBlob) return;
 
     const visibilityBtn = document.getElementById('hotpost-send-visibility');
+    const rewatchBtn = document.getElementById('hotpost-rewatch-toggle');
     const visibility = visibilityBtn ? visibilityBtn.dataset.val : 'everyone';
+    const allowRewatch = rewatchBtn ? rewatchBtn.dataset.val === 'true' : false; // 🚀 Reads Rewatch state
+
     const btn = document.getElementById('submit-hotpost-btn');
     const originalBtnInner = btn.innerHTML;
     
@@ -619,27 +690,48 @@ async function submitHotpost() {
     try {
         const getCompiledBlob = () => new Promise((resolve) => {
             const bakeCanvas = document.createElement('canvas');
+            const previewContainer = document.getElementById('hotpost-preview-container');
             
-            // 🚀 EXTREME COMPRESSION 1: Cap resolution at 1280px (Snapchat-style)
+            // Match the exact physical aspect ratio of the phone screen
+            const screenW = previewContainer.clientWidth;
+            const screenH = previewContainer.clientHeight;
+            
             const MAX_HEIGHT = 1280;
-            let finalWidth = baseImageObj.width;
-            let finalHeight = baseImageObj.height;
-            
-            if (finalHeight > MAX_HEIGHT) {
-                finalWidth = Math.floor((MAX_HEIGHT / finalHeight) * finalWidth);
-                finalHeight = MAX_HEIGHT;
-            }
+            const scaleFactor = MAX_HEIGHT / screenH;
+            const finalWidth = screenW * scaleFactor;
+            const finalHeight = MAX_HEIGHT;
 
             bakeCanvas.width = finalWidth;
             bakeCanvas.height = finalHeight;
             const ctx = bakeCanvas.getContext('2d');
 
-            // 1. Draw Image & Filters
+            // 1. Draw Background Image with Pinch/Pan Transforms applied
+            ctx.save();
+            // Move origin to center to apply scale accurately
+            ctx.translate(finalWidth / 2, finalHeight / 2);
+            ctx.scale(imgTransform.scale, imgTransform.scale);
+            // Apply pan offsets
+            ctx.translate(imgTransform.x * scaleFactor, imgTransform.y * scaleFactor);
+            
             if (FILTER_LIST[currentFilterIndex].css !== 'none') {
                 ctx.filter = FILTER_LIST[currentFilterIndex].css;
             }
-            ctx.drawImage(baseImageObj, 0, 0, finalWidth, finalHeight);
-            ctx.filter = 'none'; 
+            
+            // Draw image using object-fit: cover logic
+            const imgAspect = baseImageObj.width / baseImageObj.height;
+            const screenAspect = finalWidth / finalHeight;
+            let drawW, drawH;
+            
+            if (imgAspect > screenAspect) {
+                drawH = finalHeight;
+                drawW = finalHeight * imgAspect;
+            } else {
+                drawW = finalWidth;
+                drawH = finalWidth / imgAspect;
+            }
+            
+            ctx.drawImage(baseImageObj, -drawW / 2, -drawH / 2, drawW, drawH);
+            ctx.restore();
 
             // 2. Draw Doodles
             const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
@@ -647,7 +739,7 @@ async function submitHotpost() {
                 ctx.drawImage(doodleCanvas, 0, 0, finalWidth, finalHeight);
             }
 
-            // 3. Bake ALL text layers dynamically
+            // 3. Bake ALL text layers
             textElements.forEach(tObj => {
                 const baseFontSize = Math.floor(finalWidth * 0.08); 
                 const finalFontSize = Math.floor(baseFontSize * tObj.scale); 
@@ -669,14 +761,11 @@ async function submitHotpost() {
                 });
             });
 
-            // 🚀 EXTREME COMPRESSION 2: Convert to WebP at 65% quality
-            bakeCanvas.toBlob(resolve, 'image/webp', 0.65);
+            bakeCanvas.toBlob(resolve, 'image/webp', 0.65); // Snapchat style compression
         });
 
-        // Generate the final photo
         const finalBlob = await getCompiledBlob();
 
-        // Upload to Cloudinary
         const formData = new FormData();
         formData.append('file', finalBlob, 'hotpost.webp');
         formData.append('upload_preset', CLOUDINARY_HOTPOSTS_PRESET);
@@ -685,23 +774,21 @@ async function submitHotpost() {
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
 
-        // Upload to Supabase Database
+        // 🚀 NEW: Upload with allow_rewatch flag
         const { data: newHotpost, error } = await supabase.from('hotposts').insert({
             user_id: currentUser.id,
             media_url: data.secure_url,
             media_type: 'image',
             visibility: visibility,
+            allow_rewatch: allowRewatch
         }).select('id').single();
 
         if (error) throw error;
 
-        // Mass-Notify Followers if it's an Official Page
         if (currentUser.role === 'page' && newHotpost) {
             await supabase.rpc('notify_page_followers', {
-                p_page_id: currentUser.id,
-                p_type: 'page_new_hotpost',
-                p_message: 'added a new hotpost.',
-                p_target_id: newHotpost.id
+                p_page_id: currentUser.id, p_type: 'page_new_hotpost',
+                p_message: 'added a new hotpost.', p_target_id: newHotpost.id
             });
         }
 
@@ -717,6 +804,8 @@ async function submitHotpost() {
         btn.innerHTML = originalBtnInner;
     }
 }
+
+
 window.toggleVisibilitySetting = function() {
     const btn = document.getElementById('hotpost-send-visibility');
     const text = document.getElementById('visibility-text');
@@ -774,10 +863,14 @@ async function fetchHotposts() {
     
     if (error) return;
 
-    const unviewedData = data.filter(post => {
+   const unviewedData = data.filter(post => {
         if (post.user_id === currentUser.id) return true; 
         const hasViewed = post.hotpost_views.some(v => v.viewer_id === currentUser.id);
-        return !hasViewed;
+        
+        // 🚀 NEW: Allow it to stay on dashboard if allow_rewatch is true!
+        if (!hasViewed) return true;
+        if (hasViewed && post.allow_rewatch) return true;
+        return false;
     });
 
     hotpostsByUser.clear();
@@ -1373,6 +1466,35 @@ async function executeDeleteHotpost() {
     if (error) showToast('Failed to delete Hotpost.', 'error');
     else { showToast('Hotpost deleted.', 'success'); fetchHotposts(); }
 }
+
+window.toggleRewatchSetting = function() {
+    const btn = document.getElementById('hotpost-rewatch-toggle');
+    const icon = document.getElementById('rewatch-icon');
+    
+    if(btn.dataset.val === 'false') {
+        btn.dataset.val = 'true';
+        icon.textContent = 'all_inclusive'; // Infinity icon
+        showToast('Rewatch Allowed (Post will stay for 24hrs)', 'info');
+    } else {
+        btn.dataset.val = 'false';
+        icon.textContent = 'looks_one'; // 1x icon
+        showToast('Play Once (Post disappears after viewing)', 'info');
+    }
+};
+
+window.toggleVisibilitySetting = function() {
+    const btn = document.getElementById('hotpost-send-visibility');
+    const icon = document.getElementById('visibility-icon');
+    if(btn.dataset.val === 'everyone') {
+        btn.dataset.val = 'connections';
+        icon.textContent = 'stars';
+        btn.classList.replace('bg-black/50', 'bg-green-500/80');
+    } else {
+        btn.dataset.val = 'everyone';
+        icon.textContent = 'public';
+        btn.classList.replace('bg-green-500/80', 'bg-black/50');
+    }
+};
 
 window.openHotpostCamera = openCameraModal;
 window.openStoryDetailsModal = openActivityPanel;
