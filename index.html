@@ -949,16 +949,20 @@
             <div id="followers-list" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
         </div>
     </div>
-   <!-- HOTPOST CAMERA & EDITOR MODAL (Ultimate Native Engine) -->
+
+  <!-- HOTPOST CAMERA & EDITOR MODAL (Ultimate Native Engine) -->
    <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
         <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
         
-    <div id="hotpost-preview-container" class="absolute w-full h-full hidden overflow-hidden bg-black">
-            <img id="hotpost-preview-img" class="absolute w-full h-full object-cover" />
-            <canvas id="hotpost-doodle-canvas"></canvas>
+        <div id="hotpost-preview-container" class="absolute w-full h-full hidden overflow-hidden bg-black">
+            <!-- 🚀 The background image is now a separate draggable layer -->
+            <div id="hotpost-bg-wrapper" class="absolute w-full h-full flex items-center justify-center pointer-events-none">
+                <img id="hotpost-preview-img" class="w-full h-full object-cover pointer-events-none" />
+            </div>
+            
+            <canvas id="hotpost-doodle-canvas" class="absolute top-0 left-0 w-full h-full pointer-events-none z-40"></canvas>
             <div id="filter-name-toast" class="filter-name-toast hidden"></div>
             
-            <!-- 🚀 NEW: Instagram-Style Trash Zone -->
             <div id="text-trash-zone" class="absolute bottom-[max(6rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-14 h-14 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 pointer-events-none z-[100] border border-white/20 shadow-xl">
                 <span class="material-symbols-outlined text-[28px]">delete</span>
             </div>
@@ -972,6 +976,8 @@
             <button id="undo-doodle-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all shadow-md">
                 <span class="material-symbols-outlined text-[22px]">undo</span>
             </button>
+            <!-- 🚀 NEW: Vertical Pen Size Slider -->
+            <input type="range" id="doodle-size-slider" class="pen-size-slider hidden mt-2" min="2" max="24" value="6" orient="vertical">
         </div>
 
         <div class="absolute top-[max(1.25rem,env(safe-area-inset-top))] left-4 z-50 flex gap-4">
@@ -987,8 +993,7 @@
             <button class="doodle-color-btn w-6 h-6 rounded-full bg-[#007AFF] border-2 border-transparent active:scale-90 transition-transform" data-color="#007AFF"></button>
         </div>
 
-       <div id="hotpost-text-editor-overlay" class="absolute inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden flex-col">
-            <!-- 🚀 FIX: Added pt-[max(1.5rem,env(safe-area-inset-top))] to push buttons below the notch! -->
+        <div id="hotpost-text-editor-overlay" class="absolute inset-0 z-[100] bg-black/70 backdrop-blur-sm hidden flex-col">
             <div class="flex justify-between items-center p-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
                 <button id="cancel-text-btn" class="text-white font-bold text-[16px] active:scale-95">Cancel</button>
                 <button id="done-text-btn" class="bg-white text-black px-4 py-1.5 rounded-full font-bold text-[14px] active:scale-95">Done</button>
@@ -998,20 +1003,33 @@
             </div>
         </div>
 
-        <div class="absolute bottom-[max(2.5rem,env(safe-area-inset-bottom))] z-50 w-full px-8 pointer-events-none">
-            <div id="capture-ui" class="flex justify-center pointer-events-auto">
+        <div class="absolute bottom-[max(2.5rem,env(safe-area-inset-bottom))] z-50 w-full px-6 pointer-events-none">
+            <!-- Capture State -->
+            <div id="capture-ui" class="flex items-center justify-between pointer-events-auto">
+                <!-- 🚀 NEW: Gallery Button -->
+                <button onclick="document.getElementById('hotpost-gallery-input').click()" class="w-12 h-12 bg-black/40 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform shadow-lg">
+                    <span class="material-symbols-outlined text-[24px]">photo_library</span>
+                </button>
+                <input type="file" id="hotpost-gallery-input" accept="image/*" class="hidden">
+                
                 <button id="capture-hotpost-btn" class="w-[84px] h-[84px] rounded-full bg-transparent border-[4px] border-white backdrop-blur-sm flex items-center justify-center active:scale-95 transition-all shadow-[0_0_20px_rgba(0,0,0,0.3)]">
                     <div class="w-[68px] h-[68px] bg-white rounded-full transition-transform"></div>
                 </button>
+                <div class="w-12 h-12"></div> <!-- Spacer to keep capture button centered -->
             </div>
             
+            <!-- Preview State -->
             <div id="preview-ui" class="hidden justify-between items-center w-full pointer-events-auto">
                 <button id="retake-hotpost-btn" class="text-white font-bold p-3.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px]">delete</span></button>
                 
-                <div class="flex items-center gap-3">
-                    <button id="hotpost-send-visibility" data-val="everyone" onclick="toggleVisibilitySetting()" class="flex items-center gap-2 bg-black/50 backdrop-blur-md text-white text-[14px] font-bold border border-white/20 rounded-full px-5 py-3 outline-none shadow-lg active:scale-95 transition-colors">
+                <div class="flex items-center gap-2">
+                    <!-- 🚀 NEW: Rewatch Toggle -->
+                    <button id="hotpost-rewatch-toggle" data-val="false" onclick="toggleRewatchSetting()" class="flex items-center justify-center w-12 h-12 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-full shadow-lg active:scale-95 transition-colors">
+                        <span id="rewatch-icon" class="material-symbols-outlined text-[22px]">looks_one</span>
+                    </button>
+                    
+                    <button id="hotpost-send-visibility" data-val="everyone" onclick="toggleVisibilitySetting()" class="flex items-center gap-2 bg-black/50 backdrop-blur-md text-white text-[14px] font-bold border border-white/20 rounded-full px-4 py-3 shadow-lg active:scale-95 transition-colors">
                         <span id="visibility-icon" class="material-symbols-outlined text-[18px]">public</span>
-                        <span id="visibility-text">Everyone</span>
                     </button>
                     <button id="submit-hotpost-btn" class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-black shadow-lg active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px] ml-1">send</span></button>
                 </div>
