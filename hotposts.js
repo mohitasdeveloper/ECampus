@@ -17,13 +17,23 @@ const HOTPOST_SKELETON = `
     </div>
 `.repeat(6);
 
+const ACTIVITY_SKELETON = `
+    <div class="flex items-center gap-3 p-3 animate-pulse">
+        <div class="w-10 h-10 rounded-full shimmer-bg shrink-0"></div>
+        <div class="flex-1 space-y-2">
+            <div class="h-3.5 shimmer-bg rounded-md w-1/2"></div>
+            <div class="h-2.5 shimmer-bg rounded-md w-1/3"></div>
+        </div>
+    </div>
+`.repeat(5);
+
 // Camera, Gallery, and Image Zoom State
 let currentCameraStream = null;
 let currentFacingMode = 'environment';
 let currentPhotoBlob = null;
 let baseImageObj = null; 
 
-let imgTransform = { scale: 1, x: 0, y: 0 }; // 🚀 NEW: Tracks pinch/pan of the photo
+let imgTransform = { scale: 1, x: 0, y: 0 }; 
 let isDraggingBg = false;
 let bgDragStartX = 0, bgDragStartY = 0;
 let initialBgScale = 1;
@@ -49,7 +59,7 @@ let initialTextScale = 1.0;
 let isDrawMode = false;
 let isDrawing = false;
 let currentDoodleColor = '#FFFFFF'; 
-let currentDoodleWidth = 6; // 🚀 NEW: Tracks pen size
+let currentDoodleWidth = 6; 
 let doodlePaths = []; 
 let currentPath = [];
 
@@ -78,7 +88,7 @@ function setupEventListeners() {
     document.getElementById('submit-hotpost-btn')?.addEventListener('click', submitHotpost);
 
     // Editor Tools Activation
-document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () => activateTextTool());
+    document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () => activateTextTool());
     document.getElementById('doodle-hotpost-btn')?.addEventListener('click', toggleDrawMode);
     document.getElementById('undo-doodle-btn')?.addEventListener('click', undoLastDoodle);
     
@@ -118,12 +128,10 @@ document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () =>
     replyInput?.addEventListener('focus', pauseStory);
     replyInput?.addEventListener('blur', resumeStory);
 
- // Activity Panel (Self View)
+    // Activity Panel (Self View)
     document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
     document.getElementById('details-tab-likes')?.addEventListener('click', () => switchDetailsTab('likes'));
     document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
-    
-    // 🚀 FIX: Connect the click events for the Activity Panel!
     document.getElementById('hotpost-activity-btn')?.addEventListener('click', openActivityPanel);
     document.getElementById('activity-backdrop-close')?.addEventListener('click', closeActivityPanel);
     
@@ -132,7 +140,7 @@ document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () =>
         showCustomConfirm("Delete Hotpost?", "This will permanently remove this post from your story.", executeDeleteHotpost);
     });
 
-// 🚀 NEW: Gallery Input Listener
+    // Gallery Input Listener
     document.getElementById('hotpost-gallery-input')?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -151,11 +159,10 @@ document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () =>
         }
     });
 
-    // 🚀 NEW: Pen Size Slider
+    // Pen Size Slider
     document.getElementById('doodle-size-slider')?.addEventListener('input', (e) => {
         currentDoodleWidth = parseInt(e.target.value);
     });
-    
 }
 
 function showCustomConfirm(title, message, onConfirm) {
@@ -171,7 +178,6 @@ function showCustomConfirm(title, message, onConfirm) {
     const confirmBtn = document.getElementById('confirm-action-yes');
     const cancelBtn = document.getElementById('confirm-action-no');
     
-    // Clone to clear old event listeners
     const newConfirmBtn = confirmBtn.cloneNode(true);
     const newCancelBtn = cancelBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
@@ -196,7 +202,7 @@ async function openCameraModal() {
     const video = document.getElementById('hotpost-camera-feed');
     modal.classList.replace('hidden', 'flex');
     resetCameraUI();
-    toggleCameraStatusBar(true); // Turn status bar Pitch Black
+    toggleCameraStatusBar(true);
 
     if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
 
@@ -216,9 +222,8 @@ function closeCameraModal() {
     const modal = document.getElementById('modal-hotpost-camera');
     if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
     modal.classList.replace('flex', 'hidden');
-    toggleCameraStatusBar(false); // Revert status bar to normal theme
+    toggleCameraStatusBar(false);
 }
-
 
 function switchCamera() {
     currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
@@ -244,7 +249,7 @@ function capturePhoto() {
         baseImageObj.onload = () => {
             document.getElementById('hotpost-preview-img').src = URL.createObjectURL(blob);
             showPreviewUI();
-            initDoodleCanvas(); // Must be called after UI is shown to get correct dimensions
+            initDoodleCanvas();
         };
         baseImageObj.src = URL.createObjectURL(blob);
     }, 'image/jpeg', 0.9);
@@ -258,7 +263,7 @@ function resetCameraUI() {
     document.getElementById('switch-hotpost-camera-btn').classList.remove('hidden');
     document.getElementById('editor-tools-container').classList.add('hidden');
     
-    // 🚀 Reset Image Transforms
+    // Reset Image Transforms
     imgTransform = { scale: 1, x: 0, y: 0 };
     document.getElementById('hotpost-preview-img').style.transform = `translate(0px, 0px) scale(1)`;
     
@@ -268,7 +273,7 @@ function resetCameraUI() {
     isDrawMode = false;
     doodlePaths = [];
     document.getElementById('doodle-color-picker').classList.add('hidden');
-    document.getElementById('doodle-size-slider').classList.add('hidden'); // Hide slider
+    document.getElementById('doodle-size-slider').classList.add('hidden');
     
     const doodleBtn = document.getElementById('doodle-hotpost-btn');
     if (doodleBtn) {
@@ -282,25 +287,6 @@ function resetCameraUI() {
     activeTextIdForTouch = null;
 }
 
-function toggleDrawMode() {
-    isDrawMode = !isDrawMode;
-    const colorPicker = document.getElementById('doodle-color-picker');
-    const slider = document.getElementById('doodle-size-slider');
-    const penBtn = document.getElementById('doodle-hotpost-btn');
-    
-    if (isDrawMode) {
-        colorPicker.classList.replace('hidden', 'flex');
-        slider.classList.remove('hidden');
-        penBtn.classList.replace('bg-black/40', 'bg-white');
-        penBtn.classList.replace('text-white', 'text-black');
-    } else {
-        colorPicker.classList.replace('flex', 'hidden');
-        slider.classList.add('hidden');
-        penBtn.classList.replace('bg-white', 'bg-black/40');
-        penBtn.classList.replace('text-black', 'text-white');
-    }
-}
-
 function showPreviewUI() {
     document.getElementById('hotpost-camera-feed').classList.add('hidden');
     document.getElementById('hotpost-preview-container').classList.remove('hidden');
@@ -312,11 +298,9 @@ function showPreviewUI() {
     document.getElementById('editor-tools-container').classList.add('flex');
 }
 
-
 // ==========================================
 // EDITOR: TEXT & DOODLE TOOLS
 // ==========================================
-// TEXT
 function activateTextTool(textId = null) {
     activeTextId = textId;
     const overlay = document.getElementById('hotpost-text-editor-overlay');
@@ -338,21 +322,12 @@ function saveTextFromUI() {
     
     if (content) {
         if (activeTextId) {
-            // Update existing text
             const textObj = textElements.find(t => t.id === activeTextId);
             if (textObj) textObj.content = content;
         } else {
-            // Create brand new text layer
-            textElements.push({
-                id: 'text-' + Date.now(),
-                content: content,
-                x: 0.5,
-                y: 0.5,
-                scale: 1.0
-            });
+            textElements.push({ id: 'text-' + Date.now(), content: content, x: 0.5, y: 0.5, scale: 1.0 });
         }
     } else if (activeTextId) {
-        // If user deleted all text, remove the layer
         textElements = textElements.filter(t => t.id !== activeTextId);
     }
     
@@ -369,7 +344,7 @@ function renderTextElements() {
         const div = document.createElement('div');
         div.className = 'hotpost-draggable-text';
         div.id = tObj.id;
-        div.textContent = tObj.content; // Preserves newlines natively via pre-wrap
+        div.textContent = tObj.content; 
         div.style.left = `${tObj.x * 100}%`;
         div.style.top = `${tObj.y * 100}%`;
         div.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
@@ -377,12 +352,10 @@ function renderTextElements() {
     });
 }
 
-// DOODLE
 function initDoodleCanvas() {
     setTimeout(() => {
         const canvas = document.getElementById('hotpost-doodle-canvas');
         const container = document.getElementById('hotpost-preview-container');
-        // Match physical screen space exactly
         canvas.width = container.clientWidth;
         canvas.height = container.clientHeight;
         const ctx = canvas.getContext('2d');
@@ -393,14 +366,17 @@ function initDoodleCanvas() {
 function toggleDrawMode() {
     isDrawMode = !isDrawMode;
     const colorPicker = document.getElementById('doodle-color-picker');
+    const slider = document.getElementById('doodle-size-slider');
     const penBtn = document.getElementById('doodle-hotpost-btn');
     
     if (isDrawMode) {
         colorPicker.classList.replace('hidden', 'flex');
+        slider.classList.remove('hidden');
         penBtn.classList.replace('bg-black/40', 'bg-white');
         penBtn.classList.replace('text-white', 'text-black');
     } else {
         colorPicker.classList.replace('flex', 'hidden');
+        slider.classList.add('hidden');
         penBtn.classList.replace('bg-white', 'bg-black/40');
         penBtn.classList.replace('text-black', 'text-white');
     }
@@ -429,7 +405,7 @@ function redrawDoodleCanvas() {
     ctx.lineCap = "round";
 
     doodlePaths.forEach(pathObj => {
-        ctx.lineWidth = pathObj.width || 6; // 🚀 Restore saved width
+        ctx.lineWidth = pathObj.width || 6;
         ctx.strokeStyle = pathObj.color;
         ctx.shadowColor = pathObj.color;
         ctx.shadowBlur = 4;
@@ -451,17 +427,14 @@ function setupEditorTouchPhysics() {
     let touchMode = 'idle'; 
     let startX = 0, startY = 0;
 
-    let textDragStartX = 0;
-    let textDragStartY = 0;
-    let textInitialObjX = 0;
-    let textInitialObjY = 0;
+    let textDragStartX = 0, textDragStartY = 0;
+    let textInitialObjX = 0, textInitialObjY = 0;
 
     const getPinchDistance = (touches) => {
         return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
     };
 
-   container.addEventListener('touchstart', (e) => {
-        // Pinch to Zoom (Checks if they are pinching text OR the background)
+    container.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
             const targetText = e.target.closest('.hotpost-draggable-text');
             if (targetText && !isDrawMode) {
@@ -507,7 +480,6 @@ function setupEditorTouchPhysics() {
             currentPath = [{ x: startX - rect.left, y: startY - rect.top }];
         } 
         else {
-            // 🚀 NEW: If zoomed in, touching the background pans it. If 1x, it swipes filters.
             if (imgTransform.scale > 1.0) {
                 touchMode = 'pan_bg';
                 bgDragStartX = startX;
@@ -533,13 +505,11 @@ function setupEditorTouchPhysics() {
             return;
         }
 
-        // 🚀 NEW: Handle Background Zooming
         if (touchMode === 'zoom_bg' && e.touches.length === 2) {
             const currentDist = getPinchDistance(e.touches);
             const scaleChange = currentDist / initialPinchDist;
             imgTransform.scale = Math.max(1.0, Math.min(4.0, initialBgScale * scaleChange));
             
-            // Snap back to center if fully zoomed out
             if (imgTransform.scale === 1.0) { imgTransform.x = 0; imgTransform.y = 0; }
             document.getElementById('hotpost-preview-img').style.transform = `translate(${imgTransform.x}px, ${imgTransform.y}px) scale(${imgTransform.scale})`;
             return;
@@ -550,7 +520,6 @@ function setupEditorTouchPhysics() {
         const currentY = e.touches[0].clientY;
         const rect = container.getBoundingClientRect();
 
-        // 🚀 NEW: Handle Background Panning
         if (touchMode === 'pan_bg') {
             const deltaX = currentX - bgDragStartX;
             const deltaY = currentY - bgDragStartY;
@@ -562,7 +531,6 @@ function setupEditorTouchPhysics() {
             return;
         }
 
-        // TEXT DRAGGING
         if (touchMode === 'drag_text' && activeTextIdForTouch) {
             const tObj = textElements.find(t => t.id === activeTextIdForTouch);
             const targetTextElement = document.getElementById(activeTextIdForTouch);
@@ -591,14 +559,13 @@ function setupEditorTouchPhysics() {
                 targetTextElement.style.top = `${tObj.y * 100}%`;
             }
         } 
-        // DOODLE DRAWING (Now saves currentDoodleWidth)
         else if (touchMode === 'draw' && isDrawing) {
             currentPath.push({ x: currentX - rect.left, y: currentY - rect.top });
             
             const canvas = document.getElementById('hotpost-doodle-canvas');
             const ctx = canvas.getContext('2d');
             ctx.lineJoin = "round"; ctx.lineCap = "round"; 
-            ctx.lineWidth = currentDoodleWidth; // 🚀 Uses slider value
+            ctx.lineWidth = currentDoodleWidth; 
             ctx.strokeStyle = currentDoodleColor; ctx.shadowColor = currentDoodleColor; ctx.shadowBlur = 4;
             
             ctx.beginPath();
@@ -622,21 +589,17 @@ function setupEditorTouchPhysics() {
             const targetTextElement = document.getElementById(activeTextIdForTouch);
             
             if (tObj && tObj.isOverTrash) {
-                // Delete text gracefully
                 textElements = textElements.filter(t => t.id !== activeTextIdForTouch);
                 if (targetTextElement) targetTextElement.remove(); 
             } else if (Date.now() - textTouchStartTime < 200) {
-                // Tap to Edit
                 activateTextTool(activeTextIdForTouch);
             } else if (targetTextElement && tObj) {
-                // Snap back to full opacity if released outside the trash zone
                 targetTextElement.style.opacity = '1';
                 targetTextElement.style.transform = `translate(-50%, -50%) scale(${tObj.scale})`;
             }
         }
         else if (touchMode === 'draw' && isDrawing) {
             isDrawing = false;
-            // 🚀 Save the width into the path array
             if (currentPath.length > 1) doodlePaths.push({ color: currentDoodleColor, width: currentDoodleWidth, points: [...currentPath] });
             currentPath = [];
         }
@@ -660,6 +623,7 @@ function setupEditorTouchPhysics() {
         }
     }, { passive: true });
 }
+
 function showFilterToast(name) {
     const toast = document.getElementById('filter-name-toast');
     toast.textContent = name;
@@ -668,7 +632,6 @@ function showFilterToast(name) {
     toast.offsetHeight; 
     toast.style.animation = 'fadeOutUp 1s ease-out forwards';
 }
-
 
 // ==========================================
 // THE BAKE COMPILER
@@ -679,7 +642,7 @@ async function submitHotpost() {
     const visibilityBtn = document.getElementById('hotpost-send-visibility');
     const rewatchBtn = document.getElementById('hotpost-rewatch-toggle');
     const visibility = visibilityBtn ? visibilityBtn.dataset.val : 'everyone';
-    const allowRewatch = rewatchBtn ? rewatchBtn.dataset.val === 'true' : false; // 🚀 Reads Rewatch state
+    const allowRewatch = rewatchBtn ? rewatchBtn.dataset.val === 'true' : false;
 
     const btn = document.getElementById('submit-hotpost-btn');
     const originalBtnInner = btn.innerHTML;
@@ -692,7 +655,6 @@ async function submitHotpost() {
             const bakeCanvas = document.createElement('canvas');
             const previewContainer = document.getElementById('hotpost-preview-container');
             
-            // Match the exact physical aspect ratio of the phone screen
             const screenW = previewContainer.clientWidth;
             const screenH = previewContainer.clientHeight;
             
@@ -705,19 +667,15 @@ async function submitHotpost() {
             bakeCanvas.height = finalHeight;
             const ctx = bakeCanvas.getContext('2d');
 
-            // 1. Draw Background Image with Pinch/Pan Transforms applied
             ctx.save();
-            // Move origin to center to apply scale accurately
             ctx.translate(finalWidth / 2, finalHeight / 2);
             ctx.scale(imgTransform.scale, imgTransform.scale);
-            // Apply pan offsets
             ctx.translate(imgTransform.x * scaleFactor, imgTransform.y * scaleFactor);
             
             if (FILTER_LIST[currentFilterIndex].css !== 'none') {
                 ctx.filter = FILTER_LIST[currentFilterIndex].css;
             }
             
-            // Draw image using object-fit: cover logic
             const imgAspect = baseImageObj.width / baseImageObj.height;
             const screenAspect = finalWidth / finalHeight;
             let drawW, drawH;
@@ -733,13 +691,11 @@ async function submitHotpost() {
             ctx.drawImage(baseImageObj, -drawW / 2, -drawH / 2, drawW, drawH);
             ctx.restore();
 
-            // 2. Draw Doodles
             const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
             if (doodlePaths.length > 0) {
                 ctx.drawImage(doodleCanvas, 0, 0, finalWidth, finalHeight);
             }
 
-            // 3. Bake ALL text layers
             textElements.forEach(tObj => {
                 const baseFontSize = Math.floor(finalWidth * 0.08); 
                 const finalFontSize = Math.floor(baseFontSize * tObj.scale); 
@@ -761,7 +717,7 @@ async function submitHotpost() {
                 });
             });
 
-            bakeCanvas.toBlob(resolve, 'image/webp', 0.65); // Snapchat style compression
+            bakeCanvas.toBlob(resolve, 'image/webp', 0.65); 
         });
 
         const finalBlob = await getCompiledBlob();
@@ -774,7 +730,6 @@ async function submitHotpost() {
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
 
-        // 🚀 NEW: Upload with allow_rewatch flag
         const { data: newHotpost, error } = await supabase.from('hotposts').insert({
             user_id: currentUser.id,
             media_url: data.secure_url,
@@ -805,25 +760,34 @@ async function submitHotpost() {
     }
 }
 
+window.toggleRewatchSetting = function() {
+    const btn = document.getElementById('hotpost-rewatch-toggle');
+    const icon = document.getElementById('rewatch-icon');
+    
+    if(btn.dataset.val === 'false') {
+        btn.dataset.val = 'true';
+        icon.textContent = 'all_inclusive';
+        showToast('Rewatch Allowed (Post will stay for 24hrs)', 'info');
+    } else {
+        btn.dataset.val = 'false';
+        icon.textContent = 'looks_one';
+        showToast('Play Once (Post disappears after viewing)', 'info');
+    }
+};
 
 window.toggleVisibilitySetting = function() {
     const btn = document.getElementById('hotpost-send-visibility');
-    const text = document.getElementById('visibility-text');
     const icon = document.getElementById('visibility-icon');
-    
     if(btn.dataset.val === 'everyone') {
         btn.dataset.val = 'connections';
-        text.textContent = 'Connections';
         icon.textContent = 'stars';
         btn.classList.replace('bg-black/50', 'bg-green-500/80');
     } else {
         btn.dataset.val = 'everyone';
-        text.textContent = 'Everyone';
         icon.textContent = 'public';
         btn.classList.replace('bg-green-500/80', 'bg-black/50');
     }
-}
-
+};
 
 // ==========================================
 // DASHBOARD VIEW & CIRCLES
@@ -832,19 +796,15 @@ async function fetchHotposts() {
     const container = document.querySelector('#hotposts-container');
     if (!container) return;
     
-    // Inject the Shimmer Loading Circles immediately
     container.innerHTML = HOTPOST_SKELETON;
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
-    // 1. Get blocked list
     const blockedIds = await window.getBlockedUserIds(currentUser.id);
 
-    // 2. Build Query using !inner to strip out deactivated/deleted creators
     let query = supabase
         .from('hotposts')
         .select(`
-            id, created_at, media_url, visibility, user_id,
+            id, created_at, media_url, visibility, user_id, allow_rewatch,
             users!inner ( id, full_name, profile_img_url, tick_type, is_deleted, is_deactivated ),
             hotpost_views ( viewer_id )
         `)
@@ -854,20 +814,17 @@ async function fetchHotposts() {
         .eq('users.is_deactivated', false)
         .order('created_at', { ascending: false });
     
-    // 3. Exclude Blocked
     if (blockedIds.length > 0) {
         query = query.not('user_id', 'in', `(${blockedIds.join(',')})`);
     }
 
     const { data, error } = await query;
-    
     if (error) return;
 
    const unviewedData = data.filter(post => {
         if (post.user_id === currentUser.id) return true; 
         const hasViewed = post.hotpost_views.some(v => v.viewer_id === currentUser.id);
         
-        // 🚀 NEW: Allow it to stay on dashboard if allow_rewatch is true!
         if (!hasViewed) return true;
         if (hasViewed && post.allow_rewatch) return true;
         return false;
@@ -884,12 +841,12 @@ async function fetchHotposts() {
 
     renderHotpostCircles();
 }
+
 function renderHotpostCircles() {
     const container = document.querySelector('#view-dashboard .flex.gap-4.overflow-x-auto');
     if (!container) return;
     container.innerHTML = ''; 
 
-    // 1. Permanent "Add Story" Button
     const addCircle = document.createElement('div');
     addCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
     addCircle.innerHTML = `
@@ -906,7 +863,6 @@ function renderHotpostCircles() {
     addCircle.addEventListener('click', openCameraModal);
     container.appendChild(addCircle);
 
-    // 2. "Your Story" Ring
     const myData = hotpostsByUser.get(currentUser.id);
     if (myData && myData.posts.length > 0) {
         const myCircle = document.createElement('div');
@@ -924,7 +880,6 @@ function renderHotpostCircles() {
         container.appendChild(myCircle);
     }
 
-    // 3. Other Users
     const otherUserIds = Array.from(hotpostsByUser.keys()).filter(id => id !== currentUser.id);
     otherUserIds.sort((a, b) => (hotpostsByUser.get(a).viewed || false) - (hotpostsByUser.get(b).viewed || false));
 
@@ -948,7 +903,6 @@ function renderHotpostCircles() {
         container.appendChild(circle);
     });
 
-    // 🚀 THE PRELOADER: Runs 1s after UI draws so it doesn't interrupt scrolling
     setTimeout(() => {
         if (window.requestIdleCallback) {
             window.requestIdleCallback(preloadHotpostImages);
@@ -958,7 +912,6 @@ function renderHotpostCircles() {
     }, 1000); 
 }
 
-// Background worker that silently downloads the first image of everyone's Hotpost
 function preloadHotpostImages() {
     hotpostsByUser.forEach((data) => {
         if (data.posts && data.posts.length > 0) {
@@ -967,7 +920,6 @@ function preloadHotpostImages() {
                 ? window.optimizeImageUrl(firstPostUrl, 'hotpost') 
                 : firstPostUrl;
             
-            // Download and cache silently
             const img = new Image();
             img.src = optimizedUrl;
         }
@@ -990,14 +942,8 @@ function setupViewerTouchPhysics() {
     let isDraggingPanel = false;
     let isPanelScrollable = false;
 
-    // ----------------------------------------------------
-    // 1. STORY VIEWER PHYSICS (Swipe Down to Close Story)
-    // ----------------------------------------------------
     viewer?.addEventListener('touchstart', (e) => {
-        // Block if Activity panel is open
         if (!activityModal.classList.contains('hidden')) return;
-        
-        // Block if touching buttons or the reply input box
         const isOtherButtonOrInput = e.target.closest('button:not(#hotpost-activity-btn)') || e.target.closest('input');
         if (isOtherButtonOrInput) return;
         
@@ -1010,13 +956,12 @@ function setupViewerTouchPhysics() {
         if (!isDraggingViewer) return;
         const deltaY = e.touches[0].clientY - viewerStartY;
 
-        // 🚀 Live visual feedback: Drag DOWN to scale and close
         if (deltaY > 0) {
             const progress = Math.min(deltaY / window.innerHeight, 1);
             if (viewerContent) {
                 viewerContent.style.transform = `translateY(${deltaY * 0.8}px) scale(${1 - (progress * 0.15)})`;
             }
-            if (e.cancelable) e.preventDefault(); // Lock screen natively
+            if (e.cancelable) e.preventDefault(); 
         } 
     }, { passive: false });
 
@@ -1027,34 +972,25 @@ function setupViewerTouchPhysics() {
         const deltaY = e.changedTouches[0].clientY - viewerStartY;
         const isActivityBtn = e.target.closest('#hotpost-activity-btn');
         
-        // Calculate if they started the swipe in the bottom 30%
         const screenHeight = window.innerHeight;
         const startedAtBottom = viewerStartY > (screenHeight * 0.7);
 
         if (viewerContent) viewerContent.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 
-        // SWIPE UP -> Open Activity Panel
         if (deltaY < -40 && currentViewerState.userId === currentUser.id && (startedAtBottom || isActivityBtn)) {
             if (viewerContent) viewerContent.style.transform = ''; 
             openActivityPanel();
         } 
-        // SWIPE DOWN -> Close Entire Story
         else if (deltaY > 100) {
             closeHotpostViewer();
         } 
-        // SNAP BACK (Did not swipe far enough)
         else {
             if (viewerContent) viewerContent.style.transform = '';
         }
     }, { passive: true });
 
-    // ----------------------------------------------------
-    // 2. ACTIVITY PANEL PHYSICS (Swipe Down to Close Panel)
-    // ----------------------------------------------------
     activitySheet?.addEventListener('touchstart', (e) => {
         const scrollArea = e.target.closest('.overflow-y-auto');
-        
-        // Yield to native scroll if the user is scrolling the lists
         if (scrollArea && scrollArea.scrollTop > 0) {
             isPanelScrollable = true;
             isDraggingPanel = false;
@@ -1069,14 +1005,10 @@ function setupViewerTouchPhysics() {
 
     activitySheet?.addEventListener('touchmove', (e) => {
         if (isPanelScrollable || !isDraggingPanel) return;
-        
         const deltaY = e.touches[0].clientY - panelStartY;
         
-        // Only allow dragging DOWN
         if (deltaY > 0) {
             activitySheet.style.transform = `translateY(${deltaY}px)`;
-            
-            // Animate background story returning to normal size
             const progress = deltaY / window.innerHeight;
             if(viewerContent) {
                 viewerContent.style.transform = `scale(${0.92 + (0.08 * progress)}) translateY(${2 - (2 * progress)}vh)`;
@@ -1097,11 +1029,9 @@ function setupViewerTouchPhysics() {
             viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
         }
         
-        // SWIPE DOWN -> Close Activity Panel
         if (deltaY > 120) {
             closeActivityPanel();
         } 
-        // SNAP BACK -> Keep Panel Open
         else {
             activitySheet.style.transform = `translateY(0px)`;
             if (viewerContent) {
@@ -1112,6 +1042,7 @@ function setupViewerTouchPhysics() {
         }
     }, { passive: true });
 }
+
 function openHotpostViewer(userId) {
     const userData = hotpostsByUser.get(userId);
     if (!userData || userData.posts.length === 0) return;
@@ -1129,7 +1060,7 @@ function openHotpostViewer(userId) {
     ];
 
     document.getElementById('modal-view-hotpost').classList.replace('hidden', 'flex');
-    toggleCameraStatusBar(true); // <-- Turn Status Bar Black
+    toggleCameraStatusBar(true); 
     playUserStories(0); 
 }
 
@@ -1139,7 +1070,6 @@ function closeHotpostViewer() {
     const activeBar = document.querySelector('#hotpost-progress-bars .progress-bar-inner.active');
     if (activeBar) activeBar.style.animation = 'none';
     
-    // FAILSAFE: Wipe all 3D scaling and inline styles when closing the viewer completely
     const viewerContent = document.getElementById('hotpost-viewer-content');
     if (viewerContent) {
         viewerContent.style.transform = '';
@@ -1149,7 +1079,7 @@ function closeHotpostViewer() {
     }
     
     processStoryDisappear();
-    toggleCameraStatusBar(false); // <-- Revert Status Bar to standard Theme
+    toggleCameraStatusBar(false);
 }
 
 function processStoryDisappear() {
@@ -1160,16 +1090,12 @@ function processStoryDisappear() {
     }
 }
 
-
-
 function playUserStories(userIndex, postIndex = 0) {
-    // 1. Check if we reached the end of the stories
     if (userIndex >= currentViewerState.userOrder.length) {
         closeHotpostViewer();
         return;
     }
 
-    // 2. Update current state
     currentViewerState.userIndex = userIndex;
     currentViewerState.postIndex = postIndex;
     currentViewerState.userId = currentViewerState.userOrder[userIndex];
@@ -1177,7 +1103,6 @@ function playUserStories(userIndex, postIndex = 0) {
     const userData = hotpostsByUser.get(currentViewerState.userId);
     const post = userData.posts[currentViewerState.postIndex];
 
-    // 3. Render Progress Bars
     const progressContainer = document.getElementById('hotpost-progress-bars');
     progressContainer.innerHTML = userData.posts.map((p, index) => `
         <div class="flex-1 bg-white/30 rounded-full overflow-hidden">
@@ -1187,11 +1112,9 @@ function playUserStories(userIndex, postIndex = 0) {
 
     const isMyStory = currentViewerState.userId === currentUser.id;
     
-    // 4. Toggle Bottom UI (Reply vs Activity)
     document.getElementById('hotpost-reply-container').style.display = isMyStory ? 'none' : 'flex';
     document.getElementById('hotpost-activity-btn').style.display = isMyStory ? 'flex' : 'none';
     
-    // 5. Update Visibility Icon
     const visIcon = document.getElementById('hotpost-viewer-visibility');
     if (post.visibility === 'connections') {
         visIcon.textContent = 'stars';
@@ -1203,21 +1126,18 @@ function playUserStories(userIndex, postIndex = 0) {
         visIcon.classList.add('text-white/80');
     }
 
-    // 6. Reset Like Button Visuals
     const likeBtnIcon = document.querySelector('#hotpost-like-btn span');
     if(likeBtnIcon) {
         likeBtnIcon.style.fontVariationSettings = "'FILL' 0";
         likeBtnIcon.classList.remove('text-red-500');
     }
 
-    // 7. Verified Tick Helper
     const getTickHtmlLocal = (tickType) => {
         if (!tickType || tickType === 'none') return '';
         const colors = { blue: 'text-[#1d9bf0]', gold: 'text-[#e8b339]', green: 'text-primary', gray: 'text-white/80' };
         return `<span class="material-symbols-outlined text-[14px] ${colors[tickType.toLowerCase()] || colors.blue}" style="font-variation-settings: 'FILL' 1;">verified</span>`;
     };
 
-    // 8. Inject Header Info (Avatar, Name, Tick, Time)
     document.getElementById('hotpost-viewer-avatar').src = userData.user.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.full_name)}&background=e1e3e4`;
     
     const nameContainer = document.getElementById('hotpost-viewer-name');
@@ -1228,19 +1148,16 @@ function playUserStories(userIndex, postIndex = 0) {
     }
     
     document.getElementById('hotpost-viewer-time').textContent = timeAgo(post.created_at);
-// 🚀 Tell the viewer to use the aggressively optimized (and pre-loaded) version
-document.getElementById('hotpost-viewer-image').src = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(post.media_url, 'hotpost') : post.media_url;
-    // 9. Record Database View
+    document.getElementById('hotpost-viewer-image').src = typeof window.optimizeImageUrl === 'function' ? window.optimizeImageUrl(post.media_url, 'hotpost') : post.media_url;
+
     recordView(post.id);
 
-    // 10. Start Progress Bar Animation
     const activeBar = progressContainer.querySelector(`.progress-bar-inner[data-index="${postIndex}"]`);
     if (activeBar) {
         activeBar.style.animation = `fill-progress ${currentViewerState.storyDuration}ms linear forwards`;
         activeBar.classList.add('active');
     }
 
-    // 11. Physics / Timing Engine Reset
     clearTimeout(currentViewerState.storyTimer);
     currentViewerState.remainingDuration = currentViewerState.storyDuration; 
     currentViewerState.animationStartTime = performance.now();
@@ -1369,7 +1286,6 @@ function openActivityPanel() {
     const sheet = document.getElementById('modal-story-details-sheet');
     const viewerContent = document.getElementById('hotpost-viewer-content');
     
-    // Ensure perfectly clean state before pushing back
     if (viewerContent) {
         viewerContent.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-radius 0.4s ease';
         viewerContent.style.transform = '';
@@ -1393,7 +1309,6 @@ function closeActivityPanel() {
     const viewerContent = document.getElementById('hotpost-viewer-content');
     
     sheet.style.transform = `translateY(100%)`;
-    // 🚀 FIX: Instantly unlock the screen while it slides down
     modal.style.pointerEvents = 'none'; 
     
     if (viewerContent) {
@@ -1405,7 +1320,7 @@ function closeActivityPanel() {
 
     setTimeout(() => {
         modal.classList.replace('flex', 'hidden');
-        modal.style.pointerEvents = 'auto'; // Reset
+        modal.style.pointerEvents = 'auto'; 
         resumeStory();
     }, 400); 
 }
@@ -1424,7 +1339,7 @@ function switchDetailsTab(tabName) {
 
 async function fetchStoryViewers(hotpostId) {
     const list = document.getElementById('hotpost-viewers-list');
-    list.innerHTML = ACTIVITY_SKELETON; // Show instant Shimmer
+    list.innerHTML = ACTIVITY_SKELETON; 
     try {
         const { data, error } = await supabase.from('hotpost_views').select('viewed_at, users!hotpost_views_viewer_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('viewed_at', { ascending: false });
         if (error) throw error;
@@ -1436,7 +1351,7 @@ async function fetchStoryViewers(hotpostId) {
 
 async function fetchStoryLikes(hotpostId) {
     const list = document.getElementById('hotpost-likes-list');
-    list.innerHTML = ACTIVITY_SKELETON; // Show instant Shimmer
+    list.innerHTML = ACTIVITY_SKELETON; 
     try {
         const { data, error } = await supabase.from('hotpost_likes').select('created_at, users!hotpost_likes_user_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
         if (error) throw error;
@@ -1448,7 +1363,7 @@ async function fetchStoryLikes(hotpostId) {
 
 async function fetchStoryReplies(hotpostId) {
     const list = document.getElementById('hotpost-replies-list');
-    list.innerHTML = ACTIVITY_SKELETON; // Show instant Shimmer
+    list.innerHTML = ACTIVITY_SKELETON; 
     try {
         const { data, error } = await supabase.from('hotpost_replies').select('created_at, content, users!hotpost_replies_replier_id_fkey(full_name, profile_img_url)').eq('hotpost_id', hotpostId).eq('is_deleted', false).order('created_at', { ascending: false });
         if (error) throw error;
@@ -1466,35 +1381,6 @@ async function executeDeleteHotpost() {
     if (error) showToast('Failed to delete Hotpost.', 'error');
     else { showToast('Hotpost deleted.', 'success'); fetchHotposts(); }
 }
-
-window.toggleRewatchSetting = function() {
-    const btn = document.getElementById('hotpost-rewatch-toggle');
-    const icon = document.getElementById('rewatch-icon');
-    
-    if(btn.dataset.val === 'false') {
-        btn.dataset.val = 'true';
-        icon.textContent = 'all_inclusive'; // Infinity icon
-        showToast('Rewatch Allowed (Post will stay for 24hrs)', 'info');
-    } else {
-        btn.dataset.val = 'false';
-        icon.textContent = 'looks_one'; // 1x icon
-        showToast('Play Once (Post disappears after viewing)', 'info');
-    }
-};
-
-window.toggleVisibilitySetting = function() {
-    const btn = document.getElementById('hotpost-send-visibility');
-    const icon = document.getElementById('visibility-icon');
-    if(btn.dataset.val === 'everyone') {
-        btn.dataset.val = 'connections';
-        icon.textContent = 'stars';
-        btn.classList.replace('bg-black/50', 'bg-green-500/80');
-    } else {
-        btn.dataset.val = 'everyone';
-        icon.textContent = 'public';
-        btn.classList.replace('bg-green-500/80', 'bg-black/50');
-    }
-};
 
 window.openHotpostCamera = openCameraModal;
 window.openStoryDetailsModal = openActivityPanel;
