@@ -305,3 +305,31 @@ input, textarea {
     overscroll-behavior-y: contain !important;
     touch-action: pan-y !important;
 }
+/* Pen Size Slider */
+.pen-size-slider {
+    -webkit-appearance: slider-vertical;
+    appearance: slider-vertical;
+    width: 8px;
+    height: 120px;
+    background: rgba(0, 0, 0, 0.4);
+    outline: none;
+    border-radius: 10px;
+    backdrop-filter: blur(4px);
+}
+.pen-size-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* Draggable Background Image */
+#hotpost-preview-img {
+    transform-origin: center center;
+    transition: filter 0.3s ease;
+    will-change: transform, filter;
+}
