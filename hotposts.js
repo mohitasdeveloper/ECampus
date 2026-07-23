@@ -9,6 +9,7 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_HOTPOSTS_PRESET } from './config.js';
 let hotpostsByUser = new Map();
 let currentUser = null;
 let sessionViewedPostIds = new Set();
+let isUploadingBackground = false; // 🚀 Tracks Instagram-style background uploading
 
 const HOTPOST_SKELETON = `
     <div class="flex flex-col items-center gap-1.5 shrink-0">
@@ -32,6 +33,10 @@ let currentCameraStream = null;
 let currentFacingMode = 'environment';
 let currentPhotoBlob = null;
 let baseImageObj = null; 
+
+// Video Pre-Capture Zoom
+let videoZoomScale = 1;
+let initialVideoPinchDist = 0;
 
 let imgTransform = { scale: 1, x: 0, y: 0 }; 
 let isDraggingBg = false;
@@ -70,9 +75,6 @@ let currentViewerState = {
 
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
-// ==========================================
-// INITIALIZATION
-// ==========================================
 export function initHotposts(user) {
     currentUser = user;
     setupEventListeners();
@@ -80,14 +82,13 @@ export function initHotposts(user) {
 }
 
 function setupEventListeners() {
-    // Camera Top Controls
-    document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', closeCameraModal);
+    // 🚀 Update to use Discard Warning logic
+    document.getElementById('close-hotpost-camera-btn')?.addEventListener('click', attemptCloseCamera);
     document.getElementById('switch-hotpost-camera-btn')?.addEventListener('click', switchCamera);
     document.getElementById('capture-hotpost-btn')?.addEventListener('click', capturePhoto);
-    document.getElementById('retake-hotpost-btn')?.addEventListener('click', resetCameraUI);
+    document.getElementById('retake-hotpost-btn')?.addEventListener('click', attemptRetake);
     document.getElementById('submit-hotpost-btn')?.addEventListener('click', submitHotpost);
 
-    // Editor Tools Activation
     document.getElementById('add-text-hotpost-btn')?.addEventListener('click', () => activateTextTool());
     document.getElementById('doodle-hotpost-btn')?.addEventListener('click', toggleDrawMode);
     document.getElementById('undo-doodle-btn')?.addEventListener('click', undoLastDoodle);
@@ -96,17 +97,15 @@ function setupEventListeners() {
         btn.addEventListener('click', (e) => setDoodleColor(e.target.dataset.color));
     });
 
-    // In-UI Text Editor Overlay actions
     document.getElementById('cancel-text-btn')?.addEventListener('click', () => {
         document.getElementById('hotpost-text-editor-overlay').classList.replace('flex', 'hidden');
     });
     document.getElementById('done-text-btn')?.addEventListener('click', saveTextFromUI);
 
-    // Initialize Touch Engines
+    setupVideoZoomPhysics();
     setupEditorTouchPhysics();
     setupViewerTouchPhysics();
 
-    // Viewer Navigation
     document.getElementById('close-hotpost-viewer-btn')?.addEventListener('click', closeHotpostViewer);
     document.getElementById('hotpost-nav-next')?.addEventListener('click', nextStory);
     document.getElementById('hotpost-nav-prev')?.addEventListener('click', prevStory);
@@ -128,19 +127,16 @@ function setupEventListeners() {
     replyInput?.addEventListener('focus', pauseStory);
     replyInput?.addEventListener('blur', resumeStory);
 
-    // Activity Panel (Self View)
     document.getElementById('details-tab-viewers')?.addEventListener('click', () => switchDetailsTab('viewers'));
     document.getElementById('details-tab-likes')?.addEventListener('click', () => switchDetailsTab('likes'));
     document.getElementById('details-tab-replies')?.addEventListener('click', () => switchDetailsTab('replies'));
     document.getElementById('hotpost-activity-btn')?.addEventListener('click', openActivityPanel);
     document.getElementById('activity-backdrop-close')?.addEventListener('click', closeActivityPanel);
     
-    // Native Confirm Action
     document.getElementById('delete-hotpost-action-btn')?.addEventListener('click', () => {
         showCustomConfirm("Delete Hotpost?", "This will permanently remove this post from your story.", executeDeleteHotpost);
     });
 
-    // Gallery Input Listener
     document.getElementById('hotpost-gallery-input')?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -159,7 +155,6 @@ function setupEventListeners() {
         }
     });
 
-    // Pen Size Slider
     document.getElementById('doodle-size-slider')?.addEventListener('input', (e) => {
         currentDoodleWidth = parseInt(e.target.value);
     });
@@ -195,6 +190,30 @@ function showCustomConfirm(title, message, onConfirm) {
 }
 
 // ==========================================
+// DISCARD & CLOSE WARNINGS
+// ==========================================
+function attemptCloseCamera() {
+    if (currentPhotoBlob) {
+        showCustomConfirm("Discard Hotpost?", "If you go back now, you will lose your edits.", () => {
+            resetCameraUI();
+            closeCameraModal(true); // force close
+        });
+    } else {
+        closeCameraModal(true);
+    }
+}
+
+function attemptRetake() {
+    if (textElements.length > 0 || doodlePaths.length > 0 || currentFilterIndex !== 0 || imgTransform.scale > 1) {
+        showCustomConfirm("Discard Edits?", "Are you sure you want to retake this photo?", () => {
+            resetCameraUI();
+        });
+    } else {
+        resetCameraUI();
+    }
+}
+
+// ==========================================
 // CAMERA ENGINE
 // ==========================================
 async function openCameraModal() {
@@ -211,14 +230,16 @@ async function openCameraModal() {
             video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
         video.srcObject = currentCameraStream;
-        video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'none';
+        
+        videoZoomScale = 1;
+        video.style.transform = currentFacingMode === 'user' ? `scaleX(-1) scale(${videoZoomScale})` : `scale(${videoZoomScale})`;
     } catch (err) {
         showToast('Camera access denied.', 'error');
-        closeCameraModal();
+        closeCameraModal(true);
     }
 }
 
-function closeCameraModal() {
+function closeCameraModal(force = false) {
     const modal = document.getElementById('modal-hotpost-camera');
     if (currentCameraStream) currentCameraStream.getTracks().forEach(track => track.stop());
     modal.classList.replace('flex', 'hidden');
@@ -228,6 +249,37 @@ function closeCameraModal() {
 function switchCamera() {
     currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
     openCameraModal();
+}
+
+// 🚀 LIVE VIDEO ZOOM PHYSICS
+function setupVideoZoomPhysics() {
+    const video = document.getElementById('hotpost-camera-feed');
+    
+    const getPinchDistance = (touches) => {
+        return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    };
+
+    video.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2 && document.getElementById('preview-ui').classList.contains('hidden')) {
+            initialVideoPinchDist = getPinchDistance(e.touches);
+        }
+    }, { passive: true });
+
+    video.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && document.getElementById('preview-ui').classList.contains('hidden')) {
+            if (e.cancelable) e.preventDefault();
+            const currentDist = getPinchDistance(e.touches);
+            const scaleChange = currentDist / initialVideoPinchDist;
+            
+            // Limit zoom between 1x and 4x
+            videoZoomScale = Math.max(1.0, Math.min(4.0, videoZoomScale * scaleChange));
+            initialVideoPinchDist = currentDist; // Reset for smooth continuous zooming
+
+            video.style.transform = currentFacingMode === 'user' 
+                ? `scaleX(-1) scale(${videoZoomScale})` 
+                : `scale(${videoZoomScale})`;
+        }
+    }, { passive: false });
 }
 
 function capturePhoto() {
@@ -248,6 +300,11 @@ function capturePhoto() {
         baseImageObj = new Image();
         baseImageObj.onload = () => {
             document.getElementById('hotpost-preview-img').src = URL.createObjectURL(blob);
+            
+            // Transfer pre-capture video zoom to the post-capture image scale!
+            imgTransform.scale = videoZoomScale;
+            document.getElementById('hotpost-preview-img').style.transform = `translate(0px, 0px) scale(${imgTransform.scale})`;
+            
             showPreviewUI();
             initDoodleCanvas();
         };
@@ -263,6 +320,13 @@ function resetCameraUI() {
     document.getElementById('switch-hotpost-camera-btn').classList.remove('hidden');
     document.getElementById('editor-tools-container').classList.add('hidden');
     
+    currentPhotoBlob = null;
+    
+    // Reset Video Zoom
+    videoZoomScale = 1;
+    const video = document.getElementById('hotpost-camera-feed');
+    video.style.transform = currentFacingMode === 'user' ? `scaleX(-1) scale(1)` : `scale(1)`;
+
     // Reset Image Transforms
     imgTransform = { scale: 1, x: 0, y: 0 };
     document.getElementById('hotpost-preview-img').style.transform = `translate(0px, 0px) scale(1)`;
@@ -435,6 +499,7 @@ function setupEditorTouchPhysics() {
     };
 
     container.addEventListener('touchstart', (e) => {
+        // 🚀 FIXED: Strictly isolate Text zooming from Background zooming
         if (e.touches.length === 2) {
             const targetText = e.target.closest('.hotpost-draggable-text');
             if (targetText && !isDrawMode) {
@@ -443,7 +508,7 @@ function setupEditorTouchPhysics() {
                 initialPinchDist = getPinchDistance(e.touches);
                 const tObj = textElements.find(t => t.id === activeTextIdForTouch);
                 initialTextScale = tObj ? tObj.scale : 1.0;
-            } else if (!isDrawMode) {
+            } else if (!isDrawMode && !targetText) {
                 touchMode = 'zoom_bg';
                 initialPinchDist = getPinchDistance(e.touches);
                 initialBgScale = imgTransform.scale;
@@ -634,7 +699,7 @@ function showFilterToast(name) {
 }
 
 // ==========================================
-// THE BAKE COMPILER
+// BACKGROUND UPLOADING ENGINE (Instagram Style)
 // ==========================================
 async function submitHotpost() {
     if (!currentPhotoBlob) return;
@@ -644,12 +709,11 @@ async function submitHotpost() {
     const visibility = visibilityBtn ? visibilityBtn.dataset.val : 'everyone';
     const allowRewatch = rewatchBtn ? rewatchBtn.dataset.val === 'true' : false;
 
-    const btn = document.getElementById('submit-hotpost-btn');
-    const originalBtnInner = btn.innerHTML;
+    // 🚀 1. Set Global Uploading State & Instantly Close Camera
+    isUploadingBackground = true;
+    renderHotpostCircles(); // Will now show the spinning loader ring
+    closeCameraModal(true);
     
-    btn.disabled = true;
-    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-black text-[24px]">progress_activity</span>`;
-
     try {
         const getCompiledBlob = () => new Promise((resolve) => {
             const bakeCanvas = document.createElement('canvas');
@@ -748,15 +812,14 @@ async function submitHotpost() {
         }
 
         showToast('Hotpost published!', 'success');
-        closeCameraModal();
-        fetchHotposts(); 
 
     } catch (error) {
         console.error("Hotpost Compile Error:", error);
         showToast('Failed to publish hotpost.', 'error');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalBtnInner;
+        // 🚀 2. Remove Uploading State & Refresh
+        isUploadingBackground = false;
+        fetchHotposts(); 
     }
 }
 
@@ -796,7 +859,8 @@ async function fetchHotposts() {
     const container = document.querySelector('#hotposts-container');
     if (!container) return;
     
-    container.innerHTML = HOTPOST_SKELETON;
+    // Only show full skeleton if not doing a silent background refresh
+    if (!isUploadingBackground) container.innerHTML = HOTPOST_SKELETON;
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const blockedIds = await window.getBlockedUserIds(currentUser.id);
@@ -847,22 +911,37 @@ function renderHotpostCircles() {
     if (!container) return;
     container.innerHTML = ''; 
 
+    // 1. "Add Story" Button / Uploading Indicator
     const addCircle = document.createElement('div');
     addCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
-    addCircle.innerHTML = `
-        <div class="w-[80px] h-[80px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
-            <div class="w-full h-full rounded-full border-2 border-surface-variant dark:border-neutral-700 overflow-hidden bg-gray-100 dark:bg-neutral-800">
-                <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover opacity-60">
+    
+    if (isUploadingBackground) {
+        // 🚀 Show Spinning Upload Ring
+        addCircle.innerHTML = `
+            <div class="w-[80px] h-[80px] rounded-full p-[3px] hotpost-uploading-ring shadow-sm relative pointer-events-none">
+                <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                    <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover opacity-60">
+                </div>
             </div>
-            <div class="absolute bottom-0 right-0 w-7 h-7 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
-                <span class="material-symbols-outlined text-[16px] font-bold">add</span>
+            <span class="text-[11px] font-bold text-on-surface-variant dark:text-gray-400">Uploading...</span>
+        `;
+    } else {
+        addCircle.innerHTML = `
+            <div class="w-[80px] h-[80px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
+                <div class="w-full h-full rounded-full border-2 border-surface-variant dark:border-neutral-700 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                    <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover opacity-60">
+                </div>
+                <div class="absolute bottom-0 right-0 w-7 h-7 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
+                    <span class="material-symbols-outlined text-[16px] font-bold">add</span>
+                </div>
             </div>
-        </div>
-        <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Create</span>
-    `;
-    addCircle.addEventListener('click', openCameraModal);
+            <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100">Create</span>
+        `;
+        addCircle.addEventListener('click', openCameraModal);
+    }
     container.appendChild(addCircle);
 
+    // 2. "Your Story" Ring
     const myData = hotpostsByUser.get(currentUser.id);
     if (myData && myData.posts.length > 0) {
         const myCircle = document.createElement('div');
