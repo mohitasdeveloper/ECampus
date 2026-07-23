@@ -333,3 +333,14 @@ input, textarea {
     transition: filter 0.3s ease;
     will-change: transform, filter;
 }
+
+/* Dashboard Hotpost Upload Spinner */
+@keyframes uploadSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.hotpost-uploading-ring {
+    border: 2px dashed #006e1c !important;
+    background: transparent !important;
+    animation: uploadSpin 2s linear infinite;
+}
