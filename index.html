@@ -950,12 +950,12 @@
         </div>
     </div>
 
-  <!-- HOTPOST CAMERA & EDITOR MODAL (Ultimate Native Engine) -->
+ <!-- HOTPOST CAMERA & EDITOR MODAL (Ultimate Native Engine) -->
    <div id="modal-hotpost-camera" class="fixed inset-0 z-[200] bg-black hidden flex-col justify-center items-center">
-        <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover" playsinline autoplay></video>
+        <!-- 🚀 Video feed now supports touch for pre-capture zooming -->
+        <video id="hotpost-camera-feed" class="absolute w-full h-full object-cover origin-center transition-transform duration-75" playsinline autoplay></video>
         
         <div id="hotpost-preview-container" class="absolute w-full h-full hidden overflow-hidden bg-black">
-            <!-- 🚀 The background image is now a separate draggable layer -->
             <div id="hotpost-bg-wrapper" class="absolute w-full h-full flex items-center justify-center pointer-events-none">
                 <img id="hotpost-preview-img" class="w-full h-full object-cover pointer-events-none" />
             </div>
@@ -976,13 +976,15 @@
             <button id="undo-doodle-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full w-11 h-11 flex items-center justify-center active:scale-95 transition-all shadow-md">
                 <span class="material-symbols-outlined text-[22px]">undo</span>
             </button>
-            <!-- 🚀 NEW: Vertical Pen Size Slider -->
             <input type="range" id="doodle-size-slider" class="pen-size-slider hidden mt-2" min="2" max="24" value="6" orient="vertical">
         </div>
 
         <div class="absolute top-[max(1.25rem,env(safe-area-inset-top))] left-4 z-50 flex gap-4">
+            <!-- 🚀 Changed to a generic 'Close' button that triggers a warning -->
             <button id="close-hotpost-camera-btn" class="text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">close</span></button>
         </div>
+        
+        <!-- Switch Camera Button -->
         <button id="switch-hotpost-camera-btn" class="absolute top-[max(1.25rem,env(safe-area-inset-top))] right-4 z-50 text-white p-2.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform w-11 h-11 flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">cameraswitch</span></button>
 
         <div id="doodle-color-picker" class="absolute top-20 left-1/2 -translate-x-1/2 z-50 hidden gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-lg">
@@ -1006,7 +1008,6 @@
         <div class="absolute bottom-[max(2.5rem,env(safe-area-inset-bottom))] z-50 w-full px-6 pointer-events-none">
             <!-- Capture State -->
             <div id="capture-ui" class="flex items-center justify-between pointer-events-auto">
-                <!-- 🚀 NEW: Gallery Button -->
                 <button onclick="document.getElementById('hotpost-gallery-input').click()" class="w-12 h-12 bg-black/40 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform shadow-lg">
                     <span class="material-symbols-outlined text-[24px]">photo_library</span>
                 </button>
@@ -1015,15 +1016,15 @@
                 <button id="capture-hotpost-btn" class="w-[84px] h-[84px] rounded-full bg-transparent border-[4px] border-white backdrop-blur-sm flex items-center justify-center active:scale-95 transition-all shadow-[0_0_20px_rgba(0,0,0,0.3)]">
                     <div class="w-[68px] h-[68px] bg-white rounded-full transition-transform"></div>
                 </button>
-                <div class="w-12 h-12"></div> <!-- Spacer to keep capture button centered -->
+                <div class="w-12 h-12"></div> 
             </div>
             
             <!-- Preview State -->
             <div id="preview-ui" class="hidden justify-between items-center w-full pointer-events-auto">
-                <button id="retake-hotpost-btn" class="text-white font-bold p-3.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px]">delete</span></button>
+                <!-- 🚀 Changed to a Back Arrow to discard current photo -->
+                <button id="retake-hotpost-btn" class="text-white font-bold p-3.5 bg-black/40 backdrop-blur-md rounded-full active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button>
                 
                 <div class="flex items-center gap-2">
-                    <!-- 🚀 NEW: Rewatch Toggle -->
                     <button id="hotpost-rewatch-toggle" data-val="false" onclick="toggleRewatchSetting()" class="flex items-center justify-center w-12 h-12 bg-black/50 backdrop-blur-md text-white border border-white/20 rounded-full shadow-lg active:scale-95 transition-colors">
                         <span id="rewatch-icon" class="material-symbols-outlined text-[22px]">looks_one</span>
                     </button>
@@ -1031,12 +1032,13 @@
                     <button id="hotpost-send-visibility" data-val="everyone" onclick="toggleVisibilitySetting()" class="flex items-center gap-2 bg-black/50 backdrop-blur-md text-white text-[14px] font-bold border border-white/20 rounded-full px-4 py-3 shadow-lg active:scale-95 transition-colors">
                         <span id="visibility-icon" class="material-symbols-outlined text-[18px]">public</span>
                     </button>
+                    <!-- 🚀 Send button is now cleaner, handled by background process -->
                     <button id="submit-hotpost-btn" class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-black shadow-lg active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px] ml-1">send</span></button>
                 </div>
             </div>
         </div>
     </div>
-
+    
   <div id="modal-view-hotpost" class="fixed inset-0 z-[200] bg-black hidden flex-col items-center justify-center">
         <div id="hotpost-viewer-content" class="w-full h-full max-w-screen-md mx-auto relative flex flex-col">
             
