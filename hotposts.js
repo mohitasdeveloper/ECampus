@@ -709,79 +709,85 @@ async function submitHotpost() {
     const visibility = visibilityBtn ? visibilityBtn.dataset.val : 'everyone';
     const allowRewatch = rewatchBtn ? rewatchBtn.dataset.val === 'true' : false;
 
-    // 🚀 1. Set Global Uploading State & Instantly Close Camera
+    // 🚀 CRITICAL FIX: Grab dimensions BEFORE hiding the modal
+    // (Hidden elements have 0 width/height, which was causing the math crash!)
+    const previewContainer = document.getElementById('hotpost-preview-container');
+    const screenW = previewContainer.clientWidth;
+    const screenH = previewContainer.clientHeight;
+
+    // 1. Set Global Uploading State & Instantly Close Camera
     isUploadingBackground = true;
-    renderHotpostCircles(); // Will now show the spinning loader ring
+    renderHotpostCircles(); // Shows the spinning loader ring on dashboard
     closeCameraModal(true);
     
     try {
-        const getCompiledBlob = () => new Promise((resolve) => {
-            const bakeCanvas = document.createElement('canvas');
-            const previewContainer = document.getElementById('hotpost-preview-container');
-            
-            const screenW = previewContainer.clientWidth;
-            const screenH = previewContainer.clientHeight;
-            
-            const MAX_HEIGHT = 1280;
-            const scaleFactor = MAX_HEIGHT / screenH;
-            const finalWidth = screenW * scaleFactor;
-            const finalHeight = MAX_HEIGHT;
-
-            bakeCanvas.width = finalWidth;
-            bakeCanvas.height = finalHeight;
-            const ctx = bakeCanvas.getContext('2d');
-
-            ctx.save();
-            ctx.translate(finalWidth / 2, finalHeight / 2);
-            ctx.scale(imgTransform.scale, imgTransform.scale);
-            ctx.translate(imgTransform.x * scaleFactor, imgTransform.y * scaleFactor);
-            
-            if (FILTER_LIST[currentFilterIndex].css !== 'none') {
-                ctx.filter = FILTER_LIST[currentFilterIndex].css;
-            }
-            
-            const imgAspect = baseImageObj.width / baseImageObj.height;
-            const screenAspect = finalWidth / finalHeight;
-            let drawW, drawH;
-            
-            if (imgAspect > screenAspect) {
-                drawH = finalHeight;
-                drawW = finalHeight * imgAspect;
-            } else {
-                drawW = finalWidth;
-                drawH = finalWidth / imgAspect;
-            }
-            
-            ctx.drawImage(baseImageObj, -drawW / 2, -drawH / 2, drawW, drawH);
-            ctx.restore();
-
-            const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
-            if (doodlePaths.length > 0) {
-                ctx.drawImage(doodleCanvas, 0, 0, finalWidth, finalHeight);
-            }
-
-            textElements.forEach(tObj => {
-                const baseFontSize = Math.floor(finalWidth * 0.08); 
-                const finalFontSize = Math.floor(baseFontSize * tObj.scale); 
+        const getCompiledBlob = () => new Promise((resolve, reject) => {
+            try {
+                const bakeCanvas = document.createElement('canvas');
                 
-                ctx.font = `800 ${finalFontSize}px Inter, sans-serif`;
-                ctx.fillStyle = "white";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.shadowColor = "rgba(0,0,0,0.9)";
-                ctx.shadowBlur = 20;
+                const MAX_HEIGHT = 1280;
+                const scaleFactor = MAX_HEIGHT / screenH;
+                const finalWidth = screenW * scaleFactor;
+                const finalHeight = MAX_HEIGHT;
+
+                bakeCanvas.width = finalWidth;
+                bakeCanvas.height = finalHeight;
+                const ctx = bakeCanvas.getContext('2d');
+
+                ctx.save();
+                ctx.translate(finalWidth / 2, finalHeight / 2);
+                ctx.scale(imgTransform.scale, imgTransform.scale);
+                ctx.translate(imgTransform.x * scaleFactor, imgTransform.y * scaleFactor);
                 
-                const finalX = finalWidth * tObj.x;
-                const finalY = finalHeight * tObj.y;
+                if (FILTER_LIST[currentFilterIndex].css !== 'none') {
+                    ctx.filter = FILTER_LIST[currentFilterIndex].css;
+                }
                 
-                const lines = tObj.content.split('\n');
-                lines.forEach((line, index) => {
-                    const lineY = finalY + (index - (lines.length - 1) / 2) * finalFontSize * 1.2;
-                    ctx.fillText(line, finalX, lineY);
+                const imgAspect = baseImageObj.width / baseImageObj.height;
+                const screenAspect = finalWidth / finalHeight;
+                let drawW, drawH;
+                
+                if (imgAspect > screenAspect) {
+                    drawH = finalHeight;
+                    drawW = finalHeight * imgAspect;
+                } else {
+                    drawW = finalWidth;
+                    drawH = finalWidth / imgAspect;
+                }
+                
+                ctx.drawImage(baseImageObj, -drawW / 2, -drawH / 2, drawW, drawH);
+                ctx.restore();
+
+                const doodleCanvas = document.getElementById('hotpost-doodle-canvas');
+                if (doodlePaths.length > 0) {
+                    ctx.drawImage(doodleCanvas, 0, 0, finalWidth, finalHeight);
+                }
+
+                textElements.forEach(tObj => {
+                    const baseFontSize = Math.floor(finalWidth * 0.08); 
+                    const finalFontSize = Math.floor(baseFontSize * tObj.scale); 
+                    
+                    ctx.font = `800 ${finalFontSize}px Inter, sans-serif`;
+                    ctx.fillStyle = "white";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.shadowColor = "rgba(0,0,0,0.9)";
+                    ctx.shadowBlur = 20;
+                    
+                    const finalX = finalWidth * tObj.x;
+                    const finalY = finalHeight * tObj.y;
+                    
+                    const lines = tObj.content.split('\n');
+                    lines.forEach((line, index) => {
+                        const lineY = finalY + (index - (lines.length - 1) / 2) * finalFontSize * 1.2;
+                        ctx.fillText(line, finalX, lineY);
+                    });
                 });
-            });
 
-            bakeCanvas.toBlob(resolve, 'image/webp', 0.65); 
+                bakeCanvas.toBlob(resolve, 'image/webp', 0.65); 
+            } catch (err) {
+                reject(err);
+            }
         });
 
         const finalBlob = await getCompiledBlob();
@@ -817,8 +823,9 @@ async function submitHotpost() {
         console.error("Hotpost Compile Error:", error);
         showToast('Failed to publish hotpost.', 'error');
     } finally {
-        // 🚀 2. Remove Uploading State & Refresh
+        // 2. Remove Uploading State, Clean Camera Memory & Refresh
         isUploadingBackground = false;
+        resetCameraUI(); // Wipe old image/text so it's fresh for next time
         fetchHotposts(); 
     }
 }
