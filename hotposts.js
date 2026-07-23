@@ -923,10 +923,14 @@ function renderHotpostCircles() {
     addCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
     
     if (isUploadingBackground) {
-        // 🚀 Show Spinning Upload Ring
+        // 🚀 Show Spinning Upload Ring (Isolated from the image)
         addCircle.innerHTML = `
-            <div class="w-[80px] h-[80px] rounded-full p-[3px] hotpost-uploading-ring shadow-sm relative pointer-events-none">
-                <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+            <div class="w-[80px] h-[80px] relative flex items-center justify-center pointer-events-none shadow-sm">
+                <!-- The Spinning Dashed Border Overlay -->
+                <div class="absolute inset-0 rounded-full hotpost-uploading-ring"></div>
+                
+                <!-- The Static Profile Image (Stays perfectly still) -->
+                <div class="w-[74px] h-[74px] rounded-full border-2 border-white dark:border-[#121212] overflow-hidden bg-gray-100 dark:bg-neutral-800 z-10">
                     <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover opacity-60">
                 </div>
             </div>
@@ -935,7 +939,7 @@ function renderHotpostCircles() {
     } else {
         addCircle.innerHTML = `
             <div class="w-[80px] h-[80px] rounded-full p-[2.5px] bg-transparent shadow-sm relative">
-                <div class="w-full h-full rounded-full border-2 border-surface-variant dark:border-neutral-700 overflow-hidden bg-gray-100 dark:bg-neutral-800">
+                <div class="w-full h-full rounded-full border-2 border-white dark:border-neutral-900 overflow-hidden bg-gray-100 dark:bg-neutral-800">
                     <img src="${currentUser.profile_img_url}" class="w-full h-full object-cover opacity-60">
                 </div>
                 <div class="absolute bottom-0 right-0 w-7 h-7 bg-primary text-white rounded-full border-[2.5px] border-white dark:border-[#121212] flex items-center justify-center z-30 shadow-sm">
