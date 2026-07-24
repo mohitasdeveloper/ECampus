@@ -709,15 +709,12 @@ async function submitHotpost() {
     const visibility = visibilityBtn ? visibilityBtn.dataset.val : 'everyone';
     const allowRewatch = rewatchBtn ? rewatchBtn.dataset.val === 'true' : false;
 
-    // 🚀 CRITICAL FIX: Grab dimensions BEFORE hiding the modal
-    // (Hidden elements have 0 width/height, which was causing the math crash!)
     const previewContainer = document.getElementById('hotpost-preview-container');
     const screenW = previewContainer.clientWidth;
     const screenH = previewContainer.clientHeight;
 
-    // 1. Set Global Uploading State & Instantly Close Camera
     isUploadingBackground = true;
-    renderHotpostCircles(); // Shows the spinning loader ring on dashboard
+    renderHotpostCircles(); 
     closeCameraModal(true);
     
     try {
@@ -763,8 +760,10 @@ async function submitHotpost() {
                     ctx.drawImage(doodleCanvas, 0, 0, finalWidth, finalHeight);
                 }
 
+                // 🚀 TEXT WRAPPING ENGINE
                 textElements.forEach(tObj => {
-                    const baseFontSize = Math.floor(finalWidth * 0.08); 
+                    // 1. Reduced base font size from 0.08 to 0.055 for a cleaner look
+                    const baseFontSize = Math.floor(finalWidth * 0.055); 
                     const finalFontSize = Math.floor(baseFontSize * tObj.scale); 
                     
                     ctx.font = `800 ${finalFontSize}px Inter, sans-serif`;
@@ -776,10 +775,31 @@ async function submitHotpost() {
                     
                     const finalX = finalWidth * tObj.x;
                     const finalY = finalHeight * tObj.y;
+                    const maxWidth = finalWidth * 0.85; // Constrain to 85% of image width
                     
-                    const lines = tObj.content.split('\n');
-                    lines.forEach((line, index) => {
-                        const lineY = finalY + (index - (lines.length - 1) / 2) * finalFontSize * 1.2;
+                    // 2. Mathematically wrap words that exceed screen width
+                    const paragraphs = tObj.content.split('\n');
+                    let wrappedLines = [];
+                    
+                    paragraphs.forEach(paragraph => {
+                        const words = paragraph.split(' ');
+                        let currentLine = '';
+                        for (let i = 0; i < words.length; i++) {
+                            const testLine = currentLine + words[i] + ' ';
+                            const metrics = ctx.measureText(testLine);
+                            if (metrics.width > maxWidth && i > 0) {
+                                wrappedLines.push(currentLine.trim());
+                                currentLine = words[i] + ' ';
+                            } else {
+                                currentLine = testLine;
+                            }
+                        }
+                        wrappedLines.push(currentLine.trim());
+                    });
+
+                    // 3. Draw the newly calculated multi-line text
+                    wrappedLines.forEach((line, index) => {
+                        const lineY = finalY + (index - (wrappedLines.length - 1) / 2) * finalFontSize * 1.2;
                         ctx.fillText(line, finalX, lineY);
                     });
                 });
@@ -823,13 +843,11 @@ async function submitHotpost() {
         console.error("Hotpost Compile Error:", error);
         showToast('Failed to publish hotpost.', 'error');
     } finally {
-        // 2. Remove Uploading State, Clean Camera Memory & Refresh
         isUploadingBackground = false;
-        resetCameraUI(); // Wipe old image/text so it's fresh for next time
+        resetCameraUI(); 
         fetchHotposts(); 
     }
 }
-
 window.toggleRewatchSetting = function() {
     const btn = document.getElementById('hotpost-rewatch-toggle');
     const icon = document.getElementById('rewatch-icon');
@@ -866,7 +884,6 @@ async function fetchHotposts() {
     const container = document.querySelector('#hotposts-container');
     if (!container) return;
     
-    // Only show full skeleton if not doing a silent background refresh
     if (!isUploadingBackground) container.innerHTML = HOTPOST_SKELETON;
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -892,27 +909,34 @@ async function fetchHotposts() {
     const { data, error } = await query;
     if (error) return;
 
-   const unviewedData = data.filter(post => {
+    // 🚀 FILTER: Keep unviewed posts, OR viewed posts that allow rewatch
+    const unviewedData = data.filter(post => {
         if (post.user_id === currentUser.id) return true; 
         const hasViewed = post.hotpost_views.some(v => v.viewer_id === currentUser.id);
         
-        if (!hasViewed) return true;
-        if (hasViewed && post.allow_rewatch) return true;
-        return false;
+        if (!hasViewed) return true; 
+        if (hasViewed && post.allow_rewatch) return true; 
+        return false; 
     });
 
     hotpostsByUser.clear();
     for (const post of unviewedData) {
         const userId = post.users.id;
         if (!hotpostsByUser.has(userId)) {
-            hotpostsByUser.set(userId, { user: post.users, posts: [], viewed: false });
+            // Default to viewed=true. We will turn it colorful (false) if we find an unviewed post
+            hotpostsByUser.set(userId, { user: post.users, posts: [], viewed: true });
         }
+        
+        const hasViewed = post.hotpost_views.some(v => v.viewer_id === currentUser.id);
+        if (!hasViewed && post.user_id !== currentUser.id) {
+            hotpostsByUser.get(userId).viewed = false; // Makes the ring colorful
+        }
+        
         hotpostsByUser.get(userId).posts.unshift({ ...post, users: undefined }); 
     }
 
     renderHotpostCircles();
 }
-
 function renderHotpostCircles() {
     const container = document.querySelector('#view-dashboard .flex.gap-4.overflow-x-auto');
     if (!container) return;
@@ -1172,11 +1196,28 @@ function closeHotpostViewer() {
     toggleCameraStatusBar(false);
 }
 
+// 🚀 OPTION C HYBRID ENGINE: Evaluates local ring state immediately after you finish watching
 function processStoryDisappear() {
     const lastViewedUser = currentViewerState.userId;
     if (lastViewedUser && lastViewedUser !== currentUser.id) {
-        hotpostsByUser.delete(lastViewedUser);
-        renderHotpostCircles();
+        const userData = hotpostsByUser.get(lastViewedUser);
+        if (userData) {
+            
+            // Re-filter their posts. Keep only ones that allow rewatch OR haven't been seen yet.
+            userData.posts = userData.posts.filter(p => {
+                const viewed = p.hotpost_views?.some(v => v.viewer_id === currentUser.id) || sessionViewedPostIds.has(p.id);
+                return !viewed || p.allow_rewatch;
+            });
+            
+            if (userData.posts.length === 0) {
+                // All posts watched, and NONE allow rewatch -> Destroy the circle forever
+                hotpostsByUser.delete(lastViewedUser);
+            } else {
+                // Posts remain, meaning they allow rewatch -> Turn the circle Grey locally
+                userData.viewed = true; 
+            }
+            renderHotpostCircles();
+        }
     }
 }
 
