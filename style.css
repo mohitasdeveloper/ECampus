@@ -344,3 +344,14 @@ input, textarea {
     background: transparent !important;
     animation: uploadSpin 2s linear infinite;
 }
+/* Constrain draggable text width so it auto-wraps cleanly */
+.hotpost-draggable-text {
+    position: absolute;
+    max-width: 85%;
+    word-wrap: break-word;
+    text-align: center;
+    white-space: pre-wrap; /* Preserves newlines and spaces */
+    color: white;
+    font-weight: 800;
+    text-shadow: 0 0 20px rgba(0,0,0,0.9);
+}
