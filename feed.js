@@ -500,8 +500,9 @@ function renderPosts(posts, isRefresh = false) {
         else if (post.post_type === 'image') {
             contentHtml = `<div class="w-full bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center border-y border-surface-variant/40 dark:border-neutral-800 mt-2"><img loading="lazy" src="${typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.media_url, 'feed') : post.media_url}" class="w-full h-auto max-h-[80vh] object-cover"></div>`;
         }
-        else if (post.post_type === 'event') {
-            const event = post.post_events && post.post_events.length > 0 ? post.post_events[0] : null;
+     else if (post.post_type === 'event') {
+            // 🚀 HOTFIX: Handle Supabase 1-to-1 object responses
+            const event = Array.isArray(post.post_events) ? post.post_events[0] : post.post_events;
             if (event) {
                 const optimizedEventMedia = typeof optimizeImageUrl === 'function' && event.event_image_url ? optimizeImageUrl(event.event_image_url, 'feed') : event.event_image_url;
                 const eventImgHtml = event.event_image_url ? `<img loading="lazy" src="${optimizedEventMedia}" class="w-full h-auto max-h-[80vh] object-cover border-y border-surface-variant/40 dark:border-neutral-800 mt-2">` : '';
@@ -531,8 +532,9 @@ function renderPosts(posts, isRefresh = false) {
                 `;
             }
         }
-        else if (post.post_type === 'poll') {
-            const poll = post.post_polls && post.post_polls.length > 0 ? post.post_polls[0] : null;
+       else if (post.post_type === 'poll') {
+            // 🚀 HOTFIX: Handle Supabase 1-to-1 object responses
+            const poll = Array.isArray(post.post_polls) ? post.post_polls[0] : post.post_polls;
             if (poll) {
                 const votes = post.post_poll_votes || [];
                 const totalVotes = votes.length;
