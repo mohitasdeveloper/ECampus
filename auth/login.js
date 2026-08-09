@@ -96,6 +96,7 @@ async function processSuccessfulLogin(session) {
 }
 
 // 🔐 HANDLE LOGIN
+// 🔐 HANDLE LOGIN
 async function handleLogin(event) {
     event.preventDefault();
 
@@ -120,7 +121,14 @@ async function handleLogin(event) {
 
             if (error) {
                 console.error("Login error:", error);
-                showMessage(error.message || "Invalid email or password.");
+                
+                // Supabase bundles "User not found" and "Wrong password" into one error.
+                // We prompt them to create an account if they hit this.
+                const msg = error.message.includes("Invalid login credentials") 
+                    ? "Account not found or invalid password. Please create an account first." 
+                    : error.message;
+                    
+                showMessage(msg);
                 setLoading(loginButton, false);
                 return;
             }
@@ -140,13 +148,19 @@ async function handleLogin(event) {
 
             if (error) {
                 console.error("Function error:", error);
-                showMessage("Server error. Try again.");
+                // Replaced "Server error. Try again." with a softer, user-friendly message
+                showMessage("Connection issue. Please try again later.");
                 setLoading(loginButton, false);
                 return;
             }
 
             if (data?.error) {
-                showMessage(data.error);
+                // Catch custom edge function "not found" errors and map them
+                const msg = data.error.toLowerCase().includes("not found") 
+                    ? "Account not found. Please create an account first." 
+                    : data.error;
+                    
+                showMessage(msg);
                 setLoading(loginButton, false);
                 return;
             }
@@ -171,11 +185,10 @@ async function handleLogin(event) {
 
     } catch (err) {
         console.error("Login error:", err);
-        showMessage("Something went wrong.");
+        showMessage("Something went wrong. Please try again.");
         setLoading(loginButton, false);
     }
 }
-
 // 🔁 Check existing session on load
 async function checkUserSession() {
     try {
