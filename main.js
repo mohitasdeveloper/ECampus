@@ -661,7 +661,7 @@ function populateProfileUI(profile) {
     if (typeof fetchMyProfileFeed === 'function') {
         fetchMyProfileFeed(profile.id);
     }
- // Sync Native Mention Privacy Label
+// Sync Native Mention Privacy Label
     const mentionPrivacyLabel = document.getElementById('mention-privacy-label');
     if (mentionPrivacyLabel) {
         mentionPrivacyLabel.textContent = profile.mention_privacy === 'none' ? 'No One' : 'Connections';
@@ -669,6 +669,14 @@ function populateProfileUI(profile) {
     // Sync Bottom Nav Avatar
     const navAvatar = document.getElementById('nav-profile-avatar');
     if (navAvatar) navAvatar.src = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(profile.profile_img_url, 'avatar') : profile.profile_img_url;
+
+    // 🚀 NEW: Fetch Page Services for "My Profile"
+    if (profile.role === 'page') {
+        if (typeof window.fetchPageServices === 'function') window.fetchPageServices(profile.id, true);
+    } else {
+        const myServicesWrapper = document.getElementById('my-profile-services-wrapper');
+        if (myServicesWrapper) myServicesWrapper.classList.add('hidden');
+    }
 }
 // ========================================================
 // PROFILE FEED RENDER ENGINE
@@ -1433,8 +1441,16 @@ async function viewUserProfile(userId) {
         statsContainer.className = "text-sm text-on-surface-variant dark:text-gray-400 mb-4 cursor-pointer hover:text-primary transition-colors inline-block px-4 py-1.5 rounded-xl bg-surface-variant/10 active:bg-surface-variant/20 active:scale-95";
         statsContainer.onclick = () => window.openUserConnectionsModal(user.id, user.role, user.full_name); // CLICKABLE!
 
-        document.getElementById('public-profile-course').textContent = user.role === 'page' ? 'Official Page' : (user.course || 'Student');
+       document.getElementById('public-profile-course').textContent = user.role === 'page' ? 'Official Page' : (user.course || 'Student');
         document.getElementById('public-profile-bio').textContent = user.bio || 'No bio available.';
+        
+        // 🚀 NEW: Fetch Page Services for "Public Profile"
+        if (user.role === 'page') {
+            if (typeof window.fetchPageServices === 'function') window.fetchPageServices(user.id, false);
+        } else {
+            const pubServicesWrapper = document.getElementById('public-profile-services-wrapper');
+            if (pubServicesWrapper) pubServicesWrapper.classList.add('hidden');
+        }
         
         renderSocialLinks(user.social_links, document.getElementById('public-profile-social-links'));
         renderProfileActions(user, connection, followRecord);
@@ -3201,3 +3217,258 @@ function setupVerificationBanner(status) {
         banner.querySelector('.material-symbols-outlined:last-child').classList.replace('text-orange-500', 'text-error');
     }
 }
+// ========================================================
+// PAGE SERVICES ENGINE (Native Cards & Capacitor Router)
+// ========================================================
+
+const SERVICE_ICONS = [
+    'link', 'language', 'shopping_cart', 'storefront', 'calendar_month', 'event_available',
+    'support_agent', 'forum', 'chat', 'description', 'assignment', 'school', 'menu_book',
+    'groups', 'sports_esports', 'palette', 'code', 'movie', 'music_note', 'volunteer_activism',
+    'article', 'confirmation_number', 'video_library', 'photo_library', 'work', 'gavel',
+    'health_and_safety', 'fitness_center', 'restaurant', 'local_cafe', 'flight', 'hotel',
+    'account_balance', 'campaign', 'podcasts', 'headset', 'mic', 'camera_alt', 'videocam',
+    'local_offer', 'payments', 'qr_code_scanner', 'star', 'emoji_events'
+];
+
+// --- 1. Capacitor Native Link Router ---
+window.openServiceLink = async function(url, openInApp) {
+    if (!url) return;
+    
+    // Add protocol if missing
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+
+    if (openInApp && window.Capacitor && window.Capacitor.isNativePlatform()) {
+        try {
+            const { Browser } = await import('@capacitor/browser');
+            await Browser.open({ url: url, presentationStyle: 'popover' });
+        } catch (e) {
+            console.error("Browser plugin failed, falling back", e);
+            window.open(url, '_system');
+        }
+    } else {
+        window.open(url, openInApp ? '_blank' : '_system');
+    }
+};
+
+// --- 2. Fetch & Render Engine ---
+window.fetchPageServices = async function(userId, isMyProfile = false) {
+    const wrapperId = isMyProfile ? 'my-profile-services-wrapper' : 'public-profile-services-wrapper';
+    const containerId = isMyProfile ? 'my-profile-services-container' : 'public-profile-services-container';
+    
+    const wrapper = document.getElementById(wrapperId);
+    const container = document.getElementById(containerId);
+    if (!wrapper || !container) return;
+
+    try {
+        const { data, error } = await supabase
+            .from('page_services')
+            .select('*')
+            .eq('page_id', userId)
+            .eq('is_active', true)
+            .order('order_index', { ascending: true })
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // If no services and not owner, hide entirely
+        if (data.length === 0 && !isMyProfile) {
+            wrapper.classList.add('hidden');
+            return;
+        }
+
+        wrapper.classList.remove('hidden');
+        let html = '';
+
+        // Add 'Add Link' button for owners
+        if (isMyProfile) {
+            html += `
+            <div onclick="window.openManageServiceModal()" class="w-[180px] min-h-[150px] rounded-[24px] border-2 border-dashed border-surface-variant dark:border-neutral-700 bg-transparent flex flex-col items-center justify-center p-4 shrink-0 snap-start cursor-pointer active:scale-[0.98] transition-all hover:border-primary/50 group">
+                <div class="w-12 h-12 rounded-full bg-surface-variant/30 dark:bg-neutral-800 text-on-surface dark:text-gray-300 flex items-center justify-center mb-3 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">add</span>
+                </div>
+                <p class="text-[14px] font-extrabold text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors text-center">Add New Service</p>
+            </div>
+            `;
+        }
+
+        // Render actual service cards
+        data.forEach(service => {
+            const clickAction = isMyProfile 
+                ? `window.openManageServiceModal('${service.id}', '${service.title.replace(/'/g, "\\'")}', '${(service.description || '').replace(/'/g, "\\'")}', '${service.url}', '${service.icon_name}', ${service.open_in_app})`
+                : `window.openServiceLink('${service.url}', ${service.open_in_app})`;
+
+            html += `
+            <div onclick="${clickAction}" class="w-[180px] min-h-[150px] rounded-[24px] border border-surface-variant/60 dark:border-neutral-800 bg-surface dark:bg-neutral-900 flex flex-col p-4 shrink-0 snap-start cursor-pointer active:scale-[0.98] transition-all shadow-sm hover:shadow-md hover:border-primary/40 group text-left relative overflow-hidden">
+                
+                <!-- Icon -->
+                <div class="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
+                    <span class="material-symbols-outlined text-[22px]">${service.icon_name}</span>
+                </div>
+                
+                <!-- Content -->
+                <div class="flex flex-col flex-1 mb-4">
+                    <p class="text-[15px] font-extrabold text-on-surface dark:text-gray-100 leading-snug line-clamp-1 mb-1">${service.title}</p>
+                    ${service.description ? `<p class="text-[12px] font-medium text-on-surface-variant dark:text-gray-500 line-clamp-2 leading-snug">${service.description}</p>` : ''}
+                </div>
+                
+                <!-- Footer Action -->
+                <div class="mt-auto pt-3 border-t border-surface-variant/40 dark:border-neutral-800 w-full flex items-center justify-between text-[11px] font-extrabold ${isMyProfile ? 'text-on-surface-variant dark:text-gray-400' : 'text-primary'} uppercase tracking-wider">
+                    <span>${isMyProfile ? 'Edit Service' : 'Open Link'}</span>
+                    <span class="material-symbols-outlined text-[14px] transition-transform ${isMyProfile ? '' : 'group-hover:translate-x-1'}">${isMyProfile ? 'edit' : 'arrow_forward'}</span>
+                </div>
+
+            </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error("Error fetching services:", err);
+    }
+};
+
+// --- 3. Modal Controls ---
+window.openManageServiceModal = function(id = '', title = '', desc = '', url = '', icon = 'link', openInApp = true) {
+    const modal = document.getElementById('modal-manage-service');
+    const card = document.getElementById('manage-service-card');
+    
+    document.getElementById('manage-service-title').textContent = id ? 'Edit Service' : 'Add Service';
+    document.getElementById('service-edit-id').value = id;
+    document.getElementById('service-title-input').value = title;
+    document.getElementById('service-desc-input').value = desc; // 🚀 Set Description
+    document.getElementById('service-url-input').value = url;
+    document.getElementById('service-icon-value').value = icon;
+    document.getElementById('service-selected-icon').textContent = icon;
+    document.getElementById('service-inapp-toggle').checked = openInApp;
+    
+    const deleteBtn = document.getElementById('service-delete-btn');
+    if (id) deleteBtn.classList.remove('hidden');
+    else deleteBtn.classList.add('hidden');
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    modal.style.pointerEvents = 'auto';
+    
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        card.style.transform = ''; 
+        card.classList.remove('translate-y-full');
+    }, 10);
+};
+
+window.closeManageServiceModal = function() {
+    const modal = document.getElementById('modal-manage-service');
+    const card = document.getElementById('manage-service-card');
+    
+    modal.style.pointerEvents = 'none';
+    modal.classList.add('opacity-0');
+    card.style.transform = ''; 
+    card.classList.add('translate-y-full');
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
+};
+
+// --- 4. Database Mutations ---
+window.saveService = async function() {
+    const btn = document.getElementById('service-save-btn');
+    const id = document.getElementById('service-edit-id').value;
+    const title = document.getElementById('service-title-input').value.trim();
+    const desc = document.getElementById('service-desc-input').value.trim(); // 🚀 Get Description
+    const url = document.getElementById('service-url-input').value.trim();
+    const icon = document.getElementById('service-icon-value').value;
+    const openInApp = document.getElementById('service-inapp-toggle').checked;
+
+    if (!title || !url) return import('./ui.js').then(({ showToast }) => showToast('Title and URL are required.', 'warning'));
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
+
+    try {
+        const payload = { page_id: currentUserProfile.id, title, description: desc, url, icon_name: icon, open_in_app: openInApp };
+
+        if (id) {
+            const { error } = await supabase.from('page_services').update(payload).eq('id', id);
+            if (error) throw error;
+            import('./ui.js').then(({ showToast }) => showToast('Service updated.', 'success'));
+        } else {
+            const { error } = await supabase.from('page_services').insert(payload);
+            if (error) throw error;
+            import('./ui.js').then(({ showToast }) => showToast('Service added!', 'success'));
+        }
+
+        closeManageServiceModal();
+        fetchPageServices(currentUserProfile.id, true);
+
+    } catch (error) {
+        console.error(error);
+        import('./ui.js').then(({ showToast }) => showToast('Failed to save service.', 'error'));
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Service';
+    }
+};
+window.deleteService = async function() {
+    const id = document.getElementById('service-edit-id').value;
+    if (!id) return;
+
+    if (!confirm("Remove this link?")) return;
+
+    try {
+        const { error } = await supabase.from('page_services').delete().eq('id', id);
+        if (error) throw error;
+        import('./ui.js').then(({ showToast }) => showToast('Link removed.', 'success'));
+        
+        closeManageServiceModal();
+        fetchPageServices(currentUserProfile.id, true);
+    } catch (e) {
+        import('./ui.js').then(({ showToast }) => showToast('Failed to delete.', 'error'));
+    }
+};
+
+// --- 5. Icon Picker Controls ---
+window.openServiceIconPicker = function() {
+    const modal = document.getElementById('modal-service-icon-picker');
+    const card = document.getElementById('service-icon-picker-card');
+    const grid = document.getElementById('service-icon-grid');
+
+    grid.innerHTML = SERVICE_ICONS.map(icon => `
+        <div onclick="window.selectServiceIcon('${icon}')" class="aspect-square rounded-2xl bg-surface-variant/20 hover:bg-primary/20 hover:text-primary dark:bg-neutral-800 flex items-center justify-center cursor-pointer active:scale-90 transition-all text-on-surface dark:text-gray-200 border border-transparent hover:border-primary/30">
+            <span class="material-symbols-outlined text-[28px]">${icon}</span>
+        </div>
+    `).join('');
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    modal.style.pointerEvents = 'auto';
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        card.classList.remove('translate-y-full');
+    }, 10);
+};
+
+window.closeServiceIconPicker = function() {
+    const modal = document.getElementById('modal-service-icon-picker');
+    const card = document.getElementById('service-icon-picker-card');
+    
+    modal.style.pointerEvents = 'none';
+    modal.classList.add('opacity-0');
+    card.classList.add('translate-y-full');
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
+};
+
+window.selectServiceIcon = function(iconName) {
+    document.getElementById('service-selected-icon').textContent = iconName;
+    document.getElementById('service-icon-value').value = iconName;
+    closeServiceIconPicker();
+};
