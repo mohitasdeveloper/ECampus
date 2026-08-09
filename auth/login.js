@@ -96,7 +96,6 @@ async function processSuccessfulLogin(session) {
 }
 
 // 🔐 HANDLE LOGIN
-// 🔐 HANDLE LOGIN
 async function handleLogin(event) {
     event.preventDefault();
 
@@ -122,10 +121,8 @@ async function handleLogin(event) {
             if (error) {
                 console.error("Login error:", error);
                 
-                // Supabase bundles "User not found" and "Wrong password" into one error.
-                // We prompt them to create an account if they hit this.
                 const msg = error.message.includes("Invalid login credentials") 
-                    ? "Account not found or invalid password. Please create an account first." 
+                    ? "Invalid details or account not found. Please create an account first." 
                     : error.message;
                     
                 showMessage(msg);
@@ -146,18 +143,29 @@ async function handleLogin(event) {
                 }
             );
 
+            // Handle hard errors (like 401 Unauthorized, 404 Not Found, or Network drops)
             if (error) {
                 console.error("Function error:", error);
-                // Replaced "Server error. Try again." with a softer, user-friendly message
-                showMessage("Connection issue. Please try again later.");
+                
+                const errMsg = (error.message || "").toLowerCase();
+                
+                // If it's a genuine network timeout or fetch failure
+                if (errMsg.includes("fetch") || errMsg.includes("network") || errMsg.includes("failed to fetch")) {
+                    showMessage("Connection issue. Please check your internet and try again.");
+                } else {
+                    // Otherwise, treat it as an incorrect credentials/account missing error
+                    showMessage("Invalid details or account not found. Please create an account first.");
+                }
+                
                 setLoading(loginButton, false);
                 return;
             }
 
+            // Handle soft errors returned in the response body
             if (data?.error) {
-                // Catch custom edge function "not found" errors and map them
-                const msg = data.error.toLowerCase().includes("not found") 
-                    ? "Account not found. Please create an account first." 
+                const softErrMsg = data.error.toLowerCase();
+                const msg = (softErrMsg.includes("not found") || softErrMsg.includes("invalid"))
+                    ? "Invalid details or account not found. Please create an account first." 
                     : data.error;
                     
                 showMessage(msg);
@@ -189,6 +197,7 @@ async function handleLogin(event) {
         setLoading(loginButton, false);
     }
 }
+
 // 🔁 Check existing session on load
 async function checkUserSession() {
     try {
