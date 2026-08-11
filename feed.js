@@ -14,14 +14,13 @@ function initQuillEditor() {
         theme: 'snow',
         placeholder: 'What\'s on your mind? (@ to mention)',
         modules: {
-            // 🚀 Simplified Toolbar: Only basic text formatting
             toolbar: [
                 ['bold', 'italic', 'underline', 'strike']
             ],
             mention: {
                 allowedChars: /^[A-Za-z\sÅÄÖåäö]*$/,
                 mentionDenotationChars: ["@"],
-                source: async function (searchTerm, renderList, mentionChar) {
+                source: async function (searchTerm, renderList) {
                     if (searchTerm.length === 0) {
                         renderList([], searchTerm);
                         return;
@@ -70,6 +69,16 @@ const FEED_SKELETON = `
     </div>
 `.repeat(3);
 
+function getPollTimeLeft(dateStr) {
+    if (!dateStr) return '';
+    const diff = new Date(dateStr) - new Date();
+    if (diff <= 0) return 'Ended';
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    if (h >= 24) return `${Math.floor(h / 24)}d`;
+    if (h > 0) return `${h}h`;
+    return `${Math.floor(diff / (1000 * 60))}m`;
+}
+
 export function initFeed(user) {
     currentUser = user;
     
@@ -86,20 +95,15 @@ export function initFeed(user) {
         initQuillEditor();
     });
 
-document.body.addEventListener('click', (e) => {
+    document.body.addEventListener('click', (e) => {
         const commentBtn = e.target.closest('.comment-btn');
-        const pollOption = e.target.closest('.poll-option-btn');
         const profileLink = e.target.closest('.profile-link');
         const optionsBtn = e.target.closest('.post-options-btn');
         const commentOptionsBtn = e.target.closest('.comment-options-btn');
         const mentionLink = e.target.closest('.mention');
-        
-        // 🚀 Safely detect the post comment button
         const sendCommentBtn = e.target.closest('#send-comment-btn'); 
 
-        // Removed duplicate likeBtn listener here
         if (commentBtn) window.openCommentsModal(commentBtn.dataset.postId);
-        if (pollOption) window.handlePollVote(pollOption.dataset.postId, parseInt(pollOption.dataset.optionIndex), pollOption.dataset.isMultiple === 'true');
         if (profileLink) window.viewUserProfile(profileLink.dataset.userId);
         
         if (optionsBtn) {
@@ -109,7 +113,9 @@ document.body.addEventListener('click', (e) => {
                 optionsBtn.dataset.isVerified === 'true',
                 optionsBtn.dataset.hideLikes === 'true',
                 optionsBtn.dataset.disableComments === 'true',
-                optionsBtn.dataset.isArchived === 'true'
+                optionsBtn.dataset.isArchived === 'true',
+                optionsBtn.dataset.postType,
+                optionsBtn.dataset.isPollActive === 'true'
             );
         }
         
@@ -119,7 +125,6 @@ document.body.addEventListener('click', (e) => {
             window.viewUserProfile(mentionLink.dataset.id);
         }
 
-        // 🚀 Trigger the submitComment function!
         if (sendCommentBtn && !sendCommentBtn.disabled) {
             submitComment(sendCommentBtn.dataset.postId);
         }
@@ -128,7 +133,6 @@ document.body.addEventListener('click', (e) => {
     document.getElementById('submit-post-btn')?.addEventListener('click', submitPost);
     document.getElementById('submit-report-post-btn')?.addEventListener('click', submitPostReport);
     
-    // 🚀 FIX: Delay evaluation of closeCommentsModal to prevent the ReferenceError Crash!
     document.getElementById('close-post-comments-btn')?.addEventListener('click', () => {
         if (typeof window.closeCommentsModal === 'function') window.closeCommentsModal();
     });
@@ -162,7 +166,6 @@ function getTickHtml(tickType) {
 }
 
 function setupCreatePostPermissions() {
-    // 🚀 Allow everyone to use Text and Image posts. Restrict Polls/Events to special users.
     if (currentUser?.special_post) {
         document.querySelectorAll('.post-type-tab').forEach(tab => tab.classList.remove('hidden'));
     } else {
@@ -222,8 +225,8 @@ async function submitPost() {
     if (!window.checkVerification('create a post')) return;
     
     const postType = document.getElementById('current-post-type').value;
-    const contentHTML = quillEditor.root.innerHTML;
-    const plainText = quillEditor.getText().trim();
+    const contentHTML = quillEditor ? quillEditor.root.innerHTML : '';
+    const plainText = quillEditor ? quillEditor.getText().trim() : '';
     
     if (!plainText && postType === 'text') {
         showToast('Please write something to post.', 'warning');
@@ -241,13 +244,15 @@ async function submitPost() {
 
         const viewersAccess = document.getElementById('post-viewers-value')?.value || 'all';
         const mentionedIds = [];
-        quillEditor.getContents().ops.forEach(op => {
-            if (op.insert && op.insert.mention) {
-                mentionedIds.push(op.insert.mention.id);
-            }
-        });
+        if (quillEditor) {
+            quillEditor.getContents().ops.forEach(op => {
+                if (op.insert && op.insert.mention) {
+                    mentionedIds.push(op.insert.mention.id);
+                }
+            });
+        }
 
-       let basePayload = { 
+        let basePayload = { 
             user_id: currentUser.id, 
             post_type: postType, 
             content: contentHTML,
@@ -271,43 +276,70 @@ async function submitPost() {
         if (postType === 'poll') {
             const inputs = document.querySelectorAll('.poll-opt-input');
             const rawOptions = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
-            if(rawOptions.length < 2) throw new Error("Polls need at least 2 options.");
+            if (rawOptions.length < 2) throw new Error("Polls need at least 2 options.");
             
             const formattedOptions = rawOptions.map((opt, index) => ({ id: (index + 1).toString(), text: opt }));
+            
+            const votersVisibility = document.getElementById('poll-voters-access')?.value || 'all';
+            let allowedVoterIds = [];
+            if (votersVisibility === 'custom') {
+                allowedVoterIds = currentUser.custom_voters_list || [];
+                if (allowedVoterIds.length === 0) throw new Error("Your Custom Voters List is empty. Please set it up in Settings first.");
+            }
+
+            const isQuiz = document.getElementById('poll-is-quiz')?.checked || false;
+            let correctOptionId = null;
+            if (isQuiz) {
+                const correctIndex = document.getElementById('poll-correct-option-index')?.value;
+                if (!correctIndex || correctIndex < 1 || correctIndex > formattedOptions.length) {
+                    throw new Error("Please enter a valid Correct Option Number for the quiz.");
+                }
+                correctOptionId = correctIndex.toString();
+            }
+
             const pollPayload = {
                 post_id: newPostId,
                 options: formattedOptions,
-                is_multiple_choice: document.getElementById('poll-is-multiple').checked,
-                can_undo_vote: document.getElementById('poll-can-undo').checked,
-                voters_list_visibility: document.getElementById('poll-voters-visibility').value,
-                deadline_type: document.getElementById('poll-deadline-type').value
+                is_multiple_choice: document.getElementById('poll-is-multiple')?.checked || false,
+                can_undo_vote: document.getElementById('poll-can-undo')?.checked || false,
+                voters_list_visibility: document.getElementById('poll-voters-visibility')?.checked ? 'hidden' : 'public',
+                voters_access: votersVisibility === 'custom' ? 'selected' : votersVisibility,
+                allowed_voter_ids: allowedVoterIds,
+                deadline_type: document.getElementById('poll-deadline-type')?.value === 'post_expiry' ? 'time' : (document.getElementById('poll-deadline-type')?.value || 'time'),
+                is_quiz: isQuiz,
+                correct_option_id: correctOptionId,
+                extra_info: document.getElementById('poll-explanation')?.value.trim() || null
             };
 
-            if (pollPayload.deadline_type === 'voter_count') {
-                const countVal = parseInt(document.getElementById('poll-deadline-count').value);
+            if (document.getElementById('poll-deadline-type')?.value === 'time') {
+                const timeVal = document.getElementById('poll-deadline-time')?.value;
+                if (!timeVal) throw new Error("Please select a valid deadline time.");
+                pollPayload.deadline_time = new Date(timeVal).toISOString();
+            } else if (pollPayload.deadline_type === 'voter_count') {
+                const countVal = parseInt(document.getElementById('poll-deadline-count')?.value);
                 if (!countVal || countVal < 1) throw new Error("Please enter a valid target vote count.");
                 pollPayload.deadline_count = countVal;
             }
 
             const { error: pollError } = await supabase.from('post_polls').insert(pollPayload);
             if (pollError) throw pollError;
-        } 
+        }
         else if (postType === 'event') {
-            const dateVal = document.getElementById('event-date').value;
+            const dateVal = document.getElementById('event-date')?.value;
             if (!dateVal) throw new Error("Please select an event date and time.");
 
             const eventPayload = {
                 post_id: newPostId,
                 event_date: new Date(dateVal).toISOString(),
-                event_location: document.getElementById('event-location').value.trim() || null,
-                enable_rsvp: document.getElementById('event-enable-rsvp').checked,
-                rsvp_list_visibility: document.getElementById('event-rsvp-visibility').value,
-                show_register_btn: document.getElementById('event-show-register').checked,
-                register_url: document.getElementById('event-register-url').value.trim() || null
+                event_location: document.getElementById('event-location')?.value.trim() || null,
+                enable_rsvp: document.getElementById('event-enable-rsvp')?.checked || false,
+                rsvp_list_visibility: document.getElementById('event-rsvp-visibility')?.value || 'public',
+                show_register_btn: document.getElementById('event-show-register')?.checked || false,
+                register_url: document.getElementById('event-register-url')?.value.trim() || null
             };
 
             const fileInput = document.getElementById('event-image-upload');
-            if (fileInput.files[0]) eventPayload.event_image_url = await uploadToCloudinary(fileInput.files[0]);
+            if (fileInput?.files[0]) eventPayload.event_image_url = await uploadToCloudinary(fileInput.files[0]);
 
             const { error: eventError } = await supabase.from('post_events').insert(eventPayload);
             if (eventError) throw eventError;
@@ -318,7 +350,7 @@ async function submitPost() {
         }
 
         window.closeCreatePostView();
-        quillEditor.setContents([]);
+        if (quillEditor) quillEditor.setContents([]);
         if (document.getElementById('post-image-upload')) document.getElementById('post-image-upload').value = '';
         if (document.getElementById('event-image-upload')) document.getElementById('event-image-upload').value = '';
         
@@ -341,7 +373,8 @@ let hasMorePosts = true;
 window.refreshMainFeed = async function() {
     currentFeedPage = 0;
     hasMorePosts = true;
-    document.getElementById('feed-posts-container').innerHTML = FEED_SKELETON;
+    const container = document.getElementById('feed-posts-container');
+    if (container) container.innerHTML = FEED_SKELETON;
     await fetchPosts(true);
 };
 
@@ -393,10 +426,11 @@ async function fetchPosts(isRefresh = false) {
         if (hasMorePosts) setupIntersectionObserver();
 
     } catch (error) {
+        console.error("Supabase Feed Error:", error);
         if (isRefresh) {
-            document.getElementById('feed-posts-container').innerHTML = `<p class="text-center py-10 text-error">Failed to load feed.</p>`;
+            const container = document.getElementById('feed-posts-container');
+            if (container) container.innerHTML = `<p class="text-center py-10 text-error">Failed to load feed.</p>`;
         } else {
-            // 🚀 FIX: Re-attach the observer on failure so the user can scroll to try again!
             showToast('Network error. Scroll down to retry.', 'error');
             if (hasMorePosts) setupIntersectionObserver();
         }
@@ -407,6 +441,7 @@ async function fetchPosts(isRefresh = false) {
 
 function setupIntersectionObserver() {
     const container = document.getElementById('feed-posts-container');
+    if (!container) return;
     let sentinel = document.getElementById('feed-bottom-sentinel');
     if (sentinel) sentinel.remove();
 
@@ -428,6 +463,8 @@ function setupIntersectionObserver() {
 
 function renderPosts(posts, isRefresh = false) {
     const container = document.getElementById('feed-posts-container');
+    if (!container) return;
+
     if (posts.length === 0 && isRefresh) {
         container.innerHTML = `<div class="py-12 flex flex-col items-center justify-center opacity-40"><span class="material-symbols-outlined text-[42px] mb-2">photo_camera</span><p class="text-sm font-medium text-on-surface-variant">The feed is empty.</p></div>`;
         return;
@@ -443,7 +480,6 @@ function renderPosts(posts, isRefresh = false) {
         const savedPosts = post.saved_posts || [];
         const isSaved = savedPosts.some(s => s.user_id === currentUser.id);
         
-        // 🚀 NEW: EXACT LIKES BEHAVIOR
         let likedByHtml = '';
         if (likeCount > 0) {
             if (post.hide_likes) {
@@ -456,13 +492,12 @@ function renderPosts(posts, isRefresh = false) {
             }
         }
 
-        // 🚀 NEW: DISABLE COMMENTS BEHAVIOR
         let commentsSectionHtml = '';
         if (!post.disable_comments) {
             const comments = (post.post_comments || []).filter(c => !c.is_deleted);
             const commentCount = comments.length;
             let commentsHtml = '';
-           if (commentCount > 0) {
+            if (commentCount > 0) {
                 const previewCount = commentCount > 1 ? `View all ${commentCount} comments` : 'View 1 comment';
                 commentsHtml = `<p data-post-id="${post.id}" class="comment-btn text-[14px] text-on-surface-variant dark:text-gray-400 mt-1 cursor-pointer active:opacity-70">${previewCount}</p>`;
                 
@@ -487,21 +522,28 @@ function renderPosts(posts, isRefresh = false) {
         const optimizedAvatar = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(rawAvatarUrl, 'avatar') : rawAvatarUrl;
         const headerIcon = `<img loading="lazy" src="${optimizedAvatar}" data-user-id="${user.id}" class="profile-link w-8 h-8 rounded-full border border-surface-variant shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0">`;
 
-        let cleanCaptionContent = '';
-        if (post.content && post.content.trim() !== '' && post.content !== '<p><br></p>') {
-            cleanCaptionContent = post.content.replace(/^<p>/, '').replace(/<\/p>$/, '').trim();
+        // 🚀 FIX: Robust empty post stripper (Removes invisible Quill spaces)
+        let cleanCaptionContent = post.content || '';
+        const plainTextCheck = cleanCaptionContent.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, '').trim();
+        if (plainTextCheck === '' && !cleanCaptionContent.includes('<img') && !cleanCaptionContent.includes('<iframe')) {
+            cleanCaptionContent = '';
+        } else {
+            cleanCaptionContent = cleanCaptionContent.replace(/^(<p><br><\/p>\s*)+/, '').replace(/(<p><br><\/p>\s*)+$/, '').trim();
         }
 
-      let contentHtml = '';
+        let isPollActive = false;
+        let contentHtml = '';
+
         if (post.post_type === 'text') {
-            if (cleanCaptionContent !== '') contentHtml = `<div class="px-4 py-8 mt-2 mb-2 bg-surface-variant/10 dark:bg-neutral-900/40 rounded-2xl mx-3 flex items-center justify-center border border-surface-variant/30 dark:border-neutral-800"><div class="text-[16px] sm:text-[18px] font-medium text-on-surface dark:text-gray-100 leading-relaxed whitespace-pre-wrap rich-text-content text-center w-full">${post.content}</div></div>`;
-            cleanCaptionContent = ''; 
+            if (cleanCaptionContent !== '') {
+                contentHtml = `<div class="px-4 py-8 mt-2 mb-2 bg-surface-variant/10 dark:bg-neutral-900/40 rounded-2xl mx-3 flex items-center justify-center border border-surface-variant/30 dark:border-neutral-800"><div class="text-[16px] sm:text-[18px] font-medium text-on-surface dark:text-gray-100 leading-relaxed whitespace-pre-wrap rich-text-content text-center w-full">${cleanCaptionContent}</div></div>`;
+                cleanCaptionContent = ''; // Clear it so it doesn't render twice
+            }
         }
         else if (post.post_type === 'image') {
             contentHtml = `<div class="w-full bg-surface-variant/20 dark:bg-neutral-900 flex items-center justify-center border-y border-surface-variant/40 dark:border-neutral-800 mt-2"><img loading="lazy" src="${typeof optimizeImageUrl === 'function' ? optimizeImageUrl(post.media_url, 'feed') : post.media_url}" class="w-full h-auto max-h-[80vh] object-cover"></div>`;
         }
-     else if (post.post_type === 'event') {
-            // 🚀 HOTFIX: Handle Supabase 1-to-1 object responses
+        else if (post.post_type === 'event') {
             const event = Array.isArray(post.post_events) ? post.post_events[0] : post.post_events;
             if (event) {
                 const optimizedEventMedia = typeof optimizeImageUrl === 'function' && event.event_image_url ? optimizeImageUrl(event.event_image_url, 'feed') : event.event_image_url;
@@ -532,50 +574,166 @@ function renderPosts(posts, isRefresh = false) {
                 `;
             }
         }
-       else if (post.post_type === 'poll') {
-            // 🚀 HOTFIX: Handle Supabase 1-to-1 object responses
+        else if (post.post_type === 'poll') {
             const poll = Array.isArray(post.post_polls) ? post.post_polls[0] : post.post_polls;
             if (poll) {
+                const currentUserId = currentUser ? currentUser.id : null;
+                const isAuthor = currentUserId === post.user_id;
+                
                 const votes = post.post_poll_votes || [];
                 const totalVotes = votes.length;
-                const myVotes = votes.filter(v => v.user_id === currentUser.id).map(v => v.option_id);
+                const myVotes = votes.filter(v => v.user_id === currentUserId).map(v => v.option_id);
                 const userHasVoted = myVotes.length > 0;
-                const isExpired = post.poll_expires_at && new Date(post.poll_expires_at) < new Date();
-                const showResults = userHasVoted || isExpired || post.poll_is_anon;
+
+                let isExpired = poll.is_ended_early;
+                if (!isExpired && poll.deadline_type === 'time' && poll.deadline_time) {
+                    isExpired = new Date(poll.deadline_time) < new Date();
+                } else if (!isExpired && poll.deadline_type === 'voter_count' && poll.deadline_count) {
+                    isExpired = totalVotes >= poll.deadline_count;
+                } else if (!isExpired && poll.deadline_type === 'time' && post.expires_at) { 
+                    isExpired = new Date(post.expires_at) < new Date();
+                }
+                
+                isPollActive = !isExpired; 
+                
+                // 🚀 FIX: Separated Results (Percentages) from Quiz Answers (Green/Red Highlights)
+                const showResults = userHasVoted || isExpired || isAuthor;
+                const showQuizAnswers = userHasVoted || isExpired; // Hide answers from author until they vote or it ends
+
+                const isQuiz = poll.is_quiz;
+                const correctOptId = poll.correct_option_id;
+
+                let canVote = true;
+                let restrictionReason = '';
+                if (!isExpired && !isAuthor) {
+                    if (poll.voters_access === 'selected') {
+                        if (!poll.allowed_voter_ids || !poll.allowed_voter_ids.includes(currentUserId)) {
+                            canVote = false;
+                            restrictionReason = '🔒 Voting restricted to Custom List';
+                        }
+                    }
+                }
+
+                if (isExpired) {
+                    canVote = false;
+                    restrictionReason = '🔒 Poll has ended';
+                }
 
                 const optionsHtml = (poll.options || []).map((opt) => {
                     const optVotes = votes.filter(v => v.option_id === opt.id).length;
                     const percentage = totalVotes === 0 ? 0 : Math.round((optVotes / totalVotes) * 100);
                     const iVotedForThis = myVotes.includes(opt.id);
                     
+                    let optBorderClass = 'border-surface-variant/50 dark:border-neutral-700';
+                    let optBgClass = 'bg-surface-variant/30 dark:bg-surface-variant/10';
+                    let checkIconHtml = '';
+
+                    // 🚀 FIX: Only show green/red highlights if showQuizAnswers is true
+                    if (isQuiz && showQuizAnswers) {
+                        if (opt.id === correctOptId) {
+                            optBorderClass = 'border-green-500';
+                            optBgClass = 'bg-green-500/10';
+                            checkIconHtml = `<span class="material-symbols-outlined text-green-500 text-[18px]">check_circle</span>`;
+                        } else if (iVotedForThis) {
+                            optBorderClass = 'border-red-500';
+                            optBgClass = 'bg-red-500/10';
+                            checkIconHtml = `<span class="material-symbols-outlined text-red-500 text-[18px]">cancel</span>`;
+                        }
+                    } else if (iVotedForThis) {
+                        optBorderClass = 'border-primary';
+                    }
+
+                    let selectorHtml = '';
+                    if (!isQuiz || !showQuizAnswers) { 
+                        if (poll.is_multiple_choice) {
+                            selectorHtml = `<div class="w-4 h-4 rounded-sm border-2 ${iVotedForThis ? 'border-primary bg-primary flex items-center justify-center' : 'border-surface-variant/80'}">${iVotedForThis ? '<span class="material-symbols-outlined text-white text-[12px] font-bold">check</span>' : ''}</div>`;
+                        } else {
+                            selectorHtml = `<div class="w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80'}">${iVotedForThis ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}</div>`;
+                        }
+                    }
+
+                    let clickAction = '';
+                    let cursorClass = 'cursor-default';
+                    let opacityClass = canVote || iVotedForThis ? 'opacity-100' : 'opacity-60 grayscale-[50%]';
+
+                    if (canVote) {
+                        if (iVotedForThis && poll.can_undo_vote) {
+                            clickAction = `onclick="window.handlePollVote('${post.id}', '${opt.id}', true)"`;
+                            cursorClass = 'cursor-pointer hover:bg-surface-variant/40';
+                        } else if (!iVotedForThis && (poll.is_multiple_choice || !userHasVoted || poll.can_undo_vote)) {
+                            clickAction = `onclick="window.handlePollVote('${post.id}', '${opt.id}', false)"`;
+                            cursorClass = 'cursor-pointer hover:bg-surface-variant/40';
+                        }
+                    } else if (!canVote && !iVotedForThis) {
+                        clickAction = `onclick="import('./ui.js').then(({ showToast }) => showToast('${restrictionReason}', 'warning'))"`;
+                    }
+
                     return `
-                    <div class="poll-option-btn cursor-default relative w-full bg-surface-variant/30 dark:bg-surface-variant/10 border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 overflow-hidden transition-all mb-2">
-                        <div class="poll-progress-bar absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults ? percentage : 0}%"></div>
+                    <div ${clickAction} class="relative w-full ${optBgClass} border ${optBorderClass} rounded-xl p-3 overflow-hidden transition-all mb-2 ${cursorClass} ${opacityClass}">
+                        <div class="absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults && !isQuiz ? percentage : 0}%"></div>
                         <div class="relative flex justify-between items-center text-[13px] font-bold text-on-surface dark:text-gray-100 z-10">
-                            <span class="flex items-center gap-2">
-                                <span class="poll-check-circle w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80'}">${iVotedForThis ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}</span>
-                                ${opt.text}
-                            </span>
-                            <span class="poll-percentage ${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
+                            <span class="flex items-center gap-2">${selectorHtml} ${opt.text}</span>
+                            <div class="flex items-center gap-2">
+                                ${checkIconHtml}
+                                <span class="${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
+                            </div>
                         </div>
                     </div>`;
                 }).join('');
 
-                contentHtml = `
-                    <div class="px-3 py-3 border-y border-surface-variant/40 dark:border-neutral-800 bg-surface-variant/5 dark:bg-neutral-900/30 mt-2">
-                        <div class="poll-options-wrapper space-y-2 mb-2">${optionsHtml}</div>
-                        <div class="flex justify-between text-[11px] font-medium text-on-surface-variant dark:text-gray-400">
-                            <span><span class="poll-total-votes">${totalVotes}</span> votes</span>
+                let extraInfoHtml = '';
+                if (showQuizAnswers && poll.extra_info) { // 🚀 FIX: Explanation only shows when voted/ended
+                    extraInfoHtml = `
+                        <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-[12.5px] text-on-surface dark:text-gray-200 animate-fadeIn">
+                            <span class="font-extrabold text-blue-600 dark:text-blue-400 block mb-0.5">${isQuiz ? 'Explanation' : 'Note'}</span>
+                            ${poll.extra_info}
+                        </div>
+                    `;
+                }
+
+                let quizBadge = isQuiz ? `<span class="bg-blue-500/10 text-blue-600 dark:text-blue-500 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-widest mb-2 inline-block shadow-sm">Quiz</span>` : '';
+                
+                const totalVotesText = poll.voters_list_visibility === 'hidden' && !isAuthor 
+                    ? `Votes hidden` 
+                    : `<span class="${poll.voters_list_visibility === 'public' || isAuthor ? 'cursor-pointer hover:underline text-primary font-bold' : ''}" onclick="if('${poll.voters_list_visibility}' === 'public' || '${isAuthor}' === 'true') window.openPollVoters('${post.id}')">${totalVotes} votes</span>`;
+
+                let metaLabels = [];
+                if (!poll.can_undo_vote) metaLabels.push('🔒 Cannot undo');
+                if (poll.deadline_type === 'voter_count') metaLabels.push(`🎯 Target: ${poll.deadline_count}`);
+                if (!isExpired && poll.deadline_type === 'time' && poll.deadline_time) metaLabels.push(`⏳ Ends in ${getPollTimeLeft(poll.deadline_time)}`);
+                
+                const metaHtml = metaLabels.length > 0 ? `<div class="text-[10px] font-bold text-on-surface-variant dark:text-gray-500 mt-3 pt-2 border-t border-surface-variant/30 dark:border-neutral-700 flex flex-wrap gap-x-3 gap-y-1 justify-center">${metaLabels.map(m => `<span>${m}</span>`).join('')}</div>` : '';
+
+                const restrictionBannerHtml = restrictionReason ? `<div class="bg-surface-variant/20 dark:bg-neutral-800/50 text-[11px] font-bold text-on-surface-variant dark:text-gray-400 p-2 rounded-lg mb-3 text-center border border-surface-variant/40 dark:border-neutral-700">${restrictionReason}</div>` : '';
+
+               contentHtml = `
+                    <div class="poll-container-wrapper px-3 py-3 border-y border-surface-variant/40 dark:border-neutral-800 bg-surface-variant/5 dark:bg-neutral-900/30 mt-2">
+                        ${quizBadge}
+                        ${restrictionBannerHtml}
+                        <div class="space-y-2 mb-2">${optionsHtml}</div>
+                        ${extraInfoHtml}
+                        <div class="flex justify-between items-center mt-3 text-[11px] font-medium text-on-surface-variant dark:text-gray-400">
+                            ${totalVotesText}
                             <span>${isExpired ? 'Ended' : 'Ongoing'}</span>
                         </div>
+                        ${metaHtml}
                     </div>
                 `;
             }
         }
 
-        let captionHtml = '';
+        // 🚀 Skip rendering if it's an empty, broken post
+        if (contentHtml === '' && cleanCaptionContent === '' && post.post_type === 'text') return '';
+
+        let topCaptionHtml = '';
+        let bottomCaptionHtml = '';
+
         if (cleanCaptionContent !== '') {
-            captionHtml = `<div class="px-3 text-[14px] text-on-surface dark:text-gray-100 leading-snug mt-1"><span data-user-id="${user.id}" class="profile-link font-bold mr-1 cursor-pointer hover:underline">${user.full_name}</span><span class="rich-text-content inline">${cleanCaptionContent}</span></div>`;
+            if (post.post_type === 'image') {
+                bottomCaptionHtml = `<div class="px-3 text-[14px] text-on-surface dark:text-gray-100 leading-snug mt-1.5 mb-1"><span data-user-id="${user.id}" class="profile-link font-bold mr-1 cursor-pointer hover:underline">${user.full_name}</span><span class="rich-text-content inline">${cleanCaptionContent}</span></div>`;
+            } else {
+                topCaptionHtml = `<div class="px-3 text-[15px] text-on-surface dark:text-gray-100 leading-snug mt-2 mb-1"><span class="rich-text-content inline">${cleanCaptionContent}</span></div>`;
+            }
         }
 
         return `
@@ -587,14 +745,15 @@ function renderPosts(posts, isRefresh = false) {
                 <div class="flex-1 min-w-0">
                     <h4 data-user-id="${user.id}" class="profile-link font-bold text-[14px] text-on-surface dark:text-gray-100 leading-tight cursor-pointer hover:text-primary transition-colors flex items-center gap-1 truncate">${user.full_name} ${verifiedBadge}</h4>
                 </div>
-                <button data-post-id="${post.id}" data-user-id="${user.id}" data-is-verified="${post.is_verified}" data-hide-likes="${post.hide_likes}" data-disable-comments="${post.disable_comments}" class="post-options-btn text-on-surface dark:text-gray-100 p-1.5 active:opacity-60 transition-opacity">
+                <button data-post-id="${post.id}" data-user-id="${user.id}" data-is-verified="${post.is_verified}" data-hide-likes="${post.hide_likes}" data-disable-comments="${post.disable_comments}" data-is-archived="${post.is_archived || false}" data-post-type="${post.post_type}" data-is-poll-active="${isPollActive}" class="post-options-btn text-on-surface dark:text-gray-100 p-1.5 active:opacity-60 transition-opacity">
                     <span class="material-symbols-outlined text-[20px]">more_vert</span>
                 </button>
             </div>
             
+            ${topCaptionHtml}
             ${contentHtml}
             
-           <div class="flex items-center justify-between px-3 py-2 mt-1">
+            <div class="flex items-center justify-between px-3 py-2 mt-1">
                 <div class="flex items-center gap-3.5">
                     <button onclick="window.handleLike('${post.id}', this)" data-post-id="${post.id}" data-liked="${userHasLiked}" class="like-btn flex items-center justify-center transition-all duration-200 active:scale-75 ${userHasLiked ? 'text-red-500 hover:text-red-600' : 'text-on-surface dark:text-gray-100 hover:opacity-70'}">
                         <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' ${userHasLiked ? 1 : 0};">favorite</span> 
@@ -610,7 +769,9 @@ function renderPosts(posts, isRefresh = false) {
             </div>
             
             ${likeCount > 0 ? `<div class="px-3 mb-1 text-[14px] text-on-surface dark:text-gray-100">${likedByHtml}</div>` : ''}
-            ${captionHtml}
+            
+            ${bottomCaptionHtml}
+            
             ${commentsSectionHtml}
             <p class="px-3 text-[11px] text-on-surface-variant dark:text-gray-500 mt-2 uppercase tracking-wide">${timeAgo(post.created_at)}</p>
         </div>
@@ -620,13 +781,12 @@ function renderPosts(posts, isRefresh = false) {
     if (isRefresh) container.innerHTML = htmlString;
     else container.insertAdjacentHTML('beforeend', htmlString);
 }
-// 🚀 NEW: Spam Lock to prevent 409 Conflict Errors
 window._likeLocks = window._likeLocks || {};
 
 window.handleLike = async function(postId, btnElement) {
     if (!currentUser || window._likeLocks[postId]) return; 
-    if (!window.checkVerification('like posts')) return; // 🚀 Soft Restrict Check
-    window._likeLocks[postId] = true; // Lock the function
+    if (!window.checkVerification('like posts')) return;
+    window._likeLocks[postId] = true;
     
     const isLiked = btnElement.classList.contains('text-red-500');
     const nextLikedState = !isLiked;
@@ -650,7 +810,6 @@ window.handleLike = async function(postId, btnElement) {
                 likeBtn.classList.remove('text-on-surface', 'dark:text-gray-100', 'hover:text-on-surface-variant');
                 likeBtn.classList.add('text-red-500');
                 iconSpan.style.fontVariationSettings = "'FILL' 1";
-                
                 iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
                 void iconSpan.offsetWidth; 
                 iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
@@ -662,7 +821,7 @@ window.handleLike = async function(postId, btnElement) {
             }
         }
     });
-// Zero-Refresh removal for the "Liked" panel
+
     const likedPanel = document.getElementById('panel-liked-posts');
     if (!nextLikedState && likedPanel && !likedPanel.classList.contains('translate-x-full')) {
         const postCard = btnElement.closest(`div[data-post-id="${postId}"]`);
@@ -678,19 +837,17 @@ window.handleLike = async function(postId, btnElement) {
             await supabase.from('post_likes').delete().match({ post_id: postId, user_id: currentUser.id });
         } else {
             const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: currentUser.id });
-            // 🚀 FIX: Ignore the 409 error silently if it happens
             if (error && error.code !== '23505') throw error; 
         }
     } catch (error) {
         console.error("Like error:", error);
     } finally {
-        // Unlock after 300ms
         setTimeout(() => { window._likeLocks[postId] = false; }, 300);
     }
 };
 
 window.handlePollVote = async function(postId, optionId, isUndo) {
-    if (!window.checkVerification('vote on polls')) return; // 🚀 Soft Restrict Check
+    if (!window.checkVerification('vote on polls')) return; 
     if (isVoting) return; 
     isVoting = true;
     
@@ -700,16 +857,19 @@ window.handlePollVote = async function(postId, optionId, isUndo) {
     try {
         const { error } = await supabase.rpc('cast_poll_vote', {
             p_post_id: postId,
-            p_option_id: optionId,
+            p_user_id: currentUser.id, // 🚀 NEW: Explicitly pass the correct public profile ID
+            p_option_id: String(optionId),
             p_is_undo: isUndo
         });
 
         if (error) {
-            showToast(error.message, 'error');
+            import('./ui.js').then(({ showToast }) => showToast(error.message, 'error'));
             throw error;
         }
 
-        if (typeof window.refreshMainFeed === 'function') {
+        if (typeof window.updatePollUI === 'function') {
+            await window.updatePollUI(postId);
+        } else if (typeof window.refreshMainFeed === 'function') {
             await window.refreshMainFeed(); 
         }
     } catch (error) {
@@ -718,9 +878,175 @@ window.handlePollVote = async function(postId, optionId, isUndo) {
         if (postEl) postEl.style.opacity = '1';
         isVoting = false; 
     }
-}
+};
+// 🚀 SMOOTH UPDATE ENGINE
+window.updatePollUI = async function(postId) {
+    const postEls = document.querySelectorAll(`div[data-post-id="${postId}"]`);
+    if (!postEls.length) return;
+    
+    try {
+        const [pollRes, votesRes, postRes] = await Promise.all([
+            supabase.from('post_polls').select('*').eq('post_id', postId).single(),
+            supabase.from('post_poll_votes').select('*').eq('post_id', postId),
+            supabase.from('posts').select('expires_at, user_id').eq('id', postId).single()
+        ]);
 
-window.openPollVoters = async (postId, optionIndex) => {
+        if (pollRes.error || postRes.error) return;
+
+        const poll = pollRes.data;
+        const votes = votesRes.data || [];
+        const post = postRes.data;
+        const currentUserId = currentUser ? currentUser.id : null;
+        const isAuthor = currentUserId === post.user_id;
+
+        const totalVotes = votes.length;
+        const myVotes = votes.filter(v => v.user_id === currentUserId).map(v => v.option_id);
+        const userHasVoted = myVotes.length > 0;
+
+        let isExpired = poll.is_ended_early;
+        if (!isExpired && poll.deadline_type === 'time' && poll.deadline_time) {
+            isExpired = new Date(poll.deadline_time) < new Date();
+        } else if (!isExpired && poll.deadline_type === 'voter_count' && poll.deadline_count) {
+            isExpired = totalVotes >= poll.deadline_count;
+        } else if (!isExpired && poll.deadline_type === 'time' && post.expires_at) { 
+            isExpired = new Date(post.expires_at) < new Date();
+        }
+
+        const showResults = userHasVoted || isExpired || isAuthor;
+        const showQuizAnswers = userHasVoted || isExpired; // 🚀 Hide from author until voted/ended
+
+        const isQuiz = poll.is_quiz;
+        const correctOptId = poll.correct_option_id;
+
+        let canVote = true;
+        let restrictionReason = '';
+        if (!isExpired && !isAuthor) {
+            if (poll.voters_access === 'selected') {
+                if (!poll.allowed_voter_ids || !poll.allowed_voter_ids.includes(currentUserId)) {
+                    canVote = false;
+                    restrictionReason = '🔒 Voting restricted to Custom List';
+                }
+            }
+        }
+        if (isExpired) {
+            canVote = false;
+            restrictionReason = '🔒 Poll has ended';
+        }
+
+        const optionsHtml = (poll.options || []).map((opt) => {
+            const optVotes = votes.filter(v => v.option_id === opt.id).length;
+            const percentage = totalVotes === 0 ? 0 : Math.round((optVotes / totalVotes) * 100);
+            const iVotedForThis = myVotes.includes(opt.id);
+            
+            let optBorderClass = 'border-surface-variant/50 dark:border-neutral-700';
+            let optBgClass = 'bg-surface-variant/30 dark:bg-surface-variant/10';
+            let checkIconHtml = '';
+
+            if (isQuiz && showQuizAnswers) {
+                if (opt.id === correctOptId) {
+                    optBorderClass = 'border-green-500';
+                    optBgClass = 'bg-green-500/10';
+                    checkIconHtml = `<span class="material-symbols-outlined text-green-500 text-[18px]">check_circle</span>`;
+                } else if (iVotedForThis) {
+                    optBorderClass = 'border-red-500';
+                    optBgClass = 'bg-red-500/10';
+                    checkIconHtml = `<span class="material-symbols-outlined text-red-500 text-[18px]">cancel</span>`;
+                }
+            } else if (iVotedForThis) {
+                optBorderClass = 'border-primary';
+            }
+
+            let selectorHtml = '';
+            if (!isQuiz || !showQuizAnswers) { 
+                if (poll.is_multiple_choice) {
+                    selectorHtml = `<div class="w-4 h-4 rounded-sm border-2 ${iVotedForThis ? 'border-primary bg-primary flex items-center justify-center' : 'border-surface-variant/80'}">${iVotedForThis ? '<span class="material-symbols-outlined text-white text-[12px] font-bold">check</span>' : ''}</div>`;
+                } else {
+                    selectorHtml = `<div class="w-4 h-4 rounded-full border-2 ${iVotedForThis ? 'border-primary flex items-center justify-center' : 'border-surface-variant/80'}">${iVotedForThis ? '<span class="w-2 h-2 rounded-full bg-primary"></span>' : ''}</div>`;
+                }
+            }
+
+            let clickAction = '';
+            let cursorClass = 'cursor-default';
+            let opacityClass = canVote || iVotedForThis ? 'opacity-100' : 'opacity-60 grayscale-[50%]';
+
+            if (canVote) {
+                if (iVotedForThis && poll.can_undo_vote) {
+                    clickAction = `onclick="window.handlePollVote('${postId}', '${opt.id}', true)"`;
+                    cursorClass = 'cursor-pointer hover:bg-surface-variant/40';
+                } else if (!iVotedForThis && (poll.is_multiple_choice || !userHasVoted || poll.can_undo_vote)) {
+                    clickAction = `onclick="window.handlePollVote('${postId}', '${opt.id}', false)"`;
+                    cursorClass = 'cursor-pointer hover:bg-surface-variant/40';
+                }
+            } else if (!canVote && !iVotedForThis) {
+                clickAction = `onclick="import('./ui.js').then(({ showToast }) => showToast('${restrictionReason}', 'warning'))"`;
+            }
+
+            return `
+            <div ${clickAction} class="relative w-full ${optBgClass} border ${optBorderClass} rounded-xl p-3 overflow-hidden transition-all mb-2 ${cursorClass} ${opacityClass}">
+                <div class="absolute left-0 top-0 bottom-0 bg-primary/20 rounded-r-xl transition-all duration-700 ease-out" style="width: ${showResults && !isQuiz ? percentage : 0}%"></div>
+                <div class="relative flex justify-between items-center text-[13px] font-bold text-on-surface dark:text-gray-100 z-10">
+                    <span class="flex items-center gap-2">${selectorHtml} ${opt.text}</span>
+                    <div class="flex items-center gap-2">
+                        ${checkIconHtml}
+                        <span class="${showResults ? 'opacity-100' : 'opacity-0'} transition-opacity">${percentage}%</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        let extraInfoHtml = '';
+        if (showQuizAnswers && poll.extra_info) {
+            extraInfoHtml = `
+                <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-[12.5px] text-on-surface dark:text-gray-200 animate-fadeIn">
+                    <span class="font-extrabold text-blue-600 dark:text-blue-400 block mb-0.5">${isQuiz ? 'Explanation' : 'Note'}</span>
+                    ${poll.extra_info}
+                </div>
+            `;
+        }
+
+        let quizBadge = isQuiz ? `<span class="bg-blue-500/10 text-blue-600 dark:text-blue-500 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-widest mb-2 inline-block shadow-sm">Quiz</span>` : '';
+        
+        const totalVotesText = poll.voters_list_visibility === 'hidden' && !isAuthor 
+            ? `Votes hidden` 
+            : `<span class="${poll.voters_list_visibility === 'public' || isAuthor ? 'cursor-pointer hover:underline text-primary font-bold' : ''}" onclick="if('${poll.voters_list_visibility}' === 'public' || '${isAuthor}' === 'true') window.openPollVoters('${postId}')">${totalVotes} votes</span>`;
+
+        let metaLabels = [];
+        if (!poll.can_undo_vote) metaLabels.push('🔒 Cannot undo');
+        if (poll.deadline_type === 'voter_count') metaLabels.push(`🎯 Target: ${poll.deadline_count}`);
+        if (!isExpired && poll.deadline_type === 'time' && poll.deadline_time) metaLabels.push(`⏳ Ends in ${getPollTimeLeft(poll.deadline_time)}`);
+        
+        const metaHtml = metaLabels.length > 0 ? `<div class="text-[10px] font-bold text-on-surface-variant dark:text-gray-500 mt-3 pt-2 border-t border-surface-variant/30 dark:border-neutral-700 flex flex-wrap gap-x-3 gap-y-1 justify-center">${metaLabels.map(m => `<span>${m}</span>`).join('')}</div>` : '';
+
+        const restrictionBannerHtml = restrictionReason ? `<div class="bg-surface-variant/20 dark:bg-neutral-800/50 text-[11px] font-bold text-on-surface-variant dark:text-gray-400 p-2 rounded-lg mb-3 text-center border border-surface-variant/40 dark:border-neutral-700">${restrictionReason}</div>` : '';
+
+        postEls.forEach(postEl => {
+            const pollContainer = postEl.querySelector('.poll-container-wrapper');
+            if (pollContainer) {
+                pollContainer.innerHTML = `
+                    ${quizBadge}
+                    ${restrictionBannerHtml}
+                    <div class="space-y-2 mb-2">${optionsHtml}</div>
+                    ${extraInfoHtml}
+                    <div class="flex justify-between items-center mt-3 text-[11px] font-medium text-on-surface-variant dark:text-gray-400">
+                        ${totalVotesText}
+                        <span>${isExpired ? 'Ended' : 'Ongoing'}</span>
+                    </div>
+                    ${metaHtml}
+                `;
+            }
+            
+            // 🚀 FIX: Update the 3-dot menu data so "End Poll" disappears instantly!
+            const optionsBtn = postEl.querySelector('.post-options-btn');
+            if (optionsBtn) {
+                optionsBtn.dataset.isPollActive = (!isExpired).toString();
+            }
+        });
+    } catch(e) {
+        console.error("Poll update error:", e);
+    }
+};
+
+window.openPollVoters = async (postId, optionId = null) => {
     const modal = document.getElementById('modal-poll-voters');
     const list = document.getElementById('poll-voters-list');
     if (!modal || !list) return;
@@ -730,37 +1056,75 @@ window.openPollVoters = async (postId, optionIndex) => {
     list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading voters...</p>`;
 
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('post_poll_votes')
             .select('users(id, full_name, profile_img_url, tick_type)')
-            .eq('post_id', postId)
-            .eq('option_index', optionIndex);
+            .eq('post_id', postId);
+            
+        if (optionId) {
+            query = query.eq('option_id', optionId);
+        }
 
+        const { data, error } = await query;
         if (error) throw error;
-        if (data.length === 0) {
+
+        const uniqueUsers = [];
+        const seenIds = new Set();
+        for (const v of data) {
+            if (v.users && !seenIds.has(v.users.id)) {
+                seenIds.add(v.users.id);
+                uniqueUsers.push(v.users);
+            }
+        }
+
+        if (uniqueUsers.length === 0) {
             list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">No votes yet.</p>`;
             return;
         }
 
-        list.innerHTML = data.map(v => `
-            <div class="flex items-center gap-3 p-3 bg-surface-variant/10 dark:bg-neutral-800 rounded-2xl border border-surface-variant/30 dark:border-neutral-700">
-                <img onclick="window.viewUserProfile('${v.users.id}')" src="${v.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.users.full_name)}`}" class="w-10 h-10 rounded-full object-cover cursor-pointer">
-                <p onclick="window.viewUserProfile('${v.users.id}')" class="font-bold text-sm text-on-surface dark:text-gray-100 flex items-center gap-1 cursor-pointer hover:text-primary transition-colors">${v.users.full_name} ${getTickHtml(v.users.tick_type)}</p>
+        const getTick = (type) => {
+            if (!type || type.toLowerCase().trim() === 'none') return '';
+            return `<span class="material-symbols-outlined text-[14px] ml-1" style="color: ${type.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
+        };
+
+        list.innerHTML = uniqueUsers.map(u => `
+            <div class="flex items-center gap-3 p-3 hover:bg-surface-variant/20 dark:hover:bg-neutral-800/50 rounded-2xl transition-colors active:scale-[0.98]">
+                <div class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onclick="document.getElementById('modal-poll-voters').classList.replace('flex','hidden'); setTimeout(() => window.viewUserProfile('${u.id}'), 200);">
+                    <img src="${u.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=e1e3e4`}" class="w-11 h-11 rounded-full object-cover border border-surface-variant/50 dark:border-neutral-800 shadow-sm shrink-0">
+                    <div class="flex-1 min-w-0 truncate">
+                        <p class="text-[14.5px] font-extrabold text-on-surface dark:text-gray-100 flex items-center gap-1">${u.full_name} ${getTick(u.tick_type)}</p>
+                    </div>
+                </div>
             </div>
         `).join('');
     } catch (e) {
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load voters.</p>`;
+        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load voters. The list might be hidden.</p>`;
         console.error("Voters load error:", e);
     }
 };
 
-window.openPostOptions = function(postId, postOwnerId, isVerified, hideLikes, disableComments) {
+window.openPostOptions = function(postId, postOwnerId, isVerified, hideLikes, disableComments, isArchived, postType, isPollActive) {
     const isOwner = currentUser.id === postOwnerId;
     let buttonsHtml = '';
 
     if (isOwner) {
+        const archiveBtn = isArchived ? 
+            `<button onclick="window.unarchivePost('${postId}')" class="w-full flex items-center gap-4 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-2xl font-bold transition-colors">
+                <span class="material-symbols-outlined">unarchive</span> Unarchive Post
+            </button>` :
+            `<button onclick="window.archivePost('${postId}')" class="w-full flex items-center gap-4 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-2xl font-bold transition-colors">
+                <span class="material-symbols-outlined">archive</span> Archive Post
+            </button>`;
+
+        const endPollBtn = (postType === 'poll' && isPollActive) ? 
+            `<button onclick="window.endPollEarly('${postId}')" class="w-full flex items-center gap-4 p-4 text-orange-500 hover:bg-orange-500/10 rounded-2xl font-bold transition-colors">
+                <span class="material-symbols-outlined">stop_circle</span> End Poll Now
+            </button>` : '';
+
         buttonsHtml = `
             <div class="flex flex-col">
+                ${endPollBtn}
+                ${archiveBtn}
                 <button onclick="window.togglePostSetting('${postId}', 'hide_likes', ${!hideLikes})" class="w-full flex items-center gap-4 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-2xl font-bold transition-colors">
                     <span class="material-symbols-outlined">${hideLikes ? 'visibility' : 'visibility_off'}</span> ${hideLikes ? 'Unhide like count' : 'Hide like count'}
                 </button>
@@ -786,7 +1150,17 @@ window.openPostOptions = function(postId, postOwnerId, isVerified, hideLikes, di
     window.openActionSheet(buttonsHtml);
 };
 
-// 🚀 NEW: Engine to process post setting updates instantly
+window.endPollEarly = async function(postId) {
+    window.closeActionSheet();
+    const { error } = await supabase.from('post_polls').update({ is_ended_early: true }).eq('post_id', postId);
+    if (error) {
+        import('./ui.js').then(({ showToast }) => showToast('Failed to end poll.', 'error'));
+    } else {
+        import('./ui.js').then(({ showToast }) => showToast('Poll ended successfully.', 'success'));
+        if (typeof window.updatePollUI === 'function') window.updatePollUI(postId);
+    }
+};
+
 window.togglePostSetting = async function(postId, column, value) {
     window.closeActionSheet();
     const updatePayload = {};
@@ -864,24 +1238,31 @@ window.deletePost = function(postId) {
 window.openReportPostModal = (postId) => {
     window.closeActionSheet();
     const modal = document.getElementById('modal-report-post');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    document.getElementById('submit-report-post-btn').dataset.postId = postId;
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+    const btn = document.getElementById('submit-report-post-btn');
+    if (btn) btn.dataset.postId = postId;
 };
 
 window.closeReportPostModal = () => {
     const modal = document.getElementById('modal-report-post');
-    modal.classList.remove('flex');
-    modal.classList.add('hidden');
-    document.getElementById('report-post-reason').value = '';
-    document.getElementById('report-post-description').value = '';
+    if (modal) {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
+    const reason = document.getElementById('report-post-reason');
+    if (reason) reason.value = '';
+    const desc = document.getElementById('report-post-description');
+    if (desc) desc.value = '';
 };
 
 async function submitPostReport() {
     const btn = document.getElementById('submit-report-post-btn');
-    const postId = btn.dataset.postId;
-    const reason = document.getElementById('report-post-reason').value;
-    const desc = document.getElementById('report-post-description').value.trim();
+    const postId = btn?.dataset.postId;
+    const reason = document.getElementById('report-post-reason')?.value;
+    const desc = document.getElementById('report-post-description')?.value.trim();
 
     if (!reason) {
         showToast('Please select a reason.', 'warning');
@@ -922,17 +1303,12 @@ function handleTouchMove(e) {
         return; 
     }
     
-    // 🚀 FIX: Increased threshold to 20 to prevent accidental cancellation on shaky fingers
     if (Math.abs(moveX - touchStartX) > 20 || Math.abs(moveY - touchStartY) > 20) {
         clearTimeout(longPressTimer);
     }
 }
 
-// ==========================================
 // COMMENTS 
-// ==========================================
-
-// 🚀 FULL SCREEN MODAL TRANSITIONS
 window.closeCommentsModal = function() {
     const modal = document.getElementById('modal-post-comments');
     const bottomNav = document.querySelector('nav');
@@ -953,39 +1329,46 @@ window.closeCommentsModal = function() {
     currentMentionIds = [];
 };
 
-// ==========================================
-// NATIVE COMMENTS, REPLIES & MENTIONS
-// ==========================================
 let activeReplyCommentId = null;
 let currentMentionIds = [];
 
 window.cancelReply = function() {
     activeReplyCommentId = null;
-    document.getElementById('replying-to-indicator').classList.add('hidden');
-    document.getElementById('post-comment-input').focus();
+    const indicator = document.getElementById('replying-to-indicator');
+    if (indicator) indicator.classList.add('hidden');
+    const input = document.getElementById('post-comment-input');
+    if (input) input.focus();
 };
 
 window.prepareReply = function(commentId, userName) {
     activeReplyCommentId = commentId;
-    document.getElementById('replying-to-name').textContent = userName;
-    document.getElementById('replying-to-indicator').classList.remove('hidden');
+    const nameEl = document.getElementById('replying-to-name');
+    if (nameEl) nameEl.textContent = userName;
+    const indicator = document.getElementById('replying-to-indicator');
+    if (indicator) indicator.classList.remove('hidden');
     
     const input = document.getElementById('post-comment-input');
-    input.value = `@${userName} `; // Auto-tag the person
-    input.focus();
-    document.getElementById('send-comment-btn').disabled = false;
+    if (input) {
+        input.value = `@${userName} `; 
+        input.focus();
+    }
+    const sendBtn = document.getElementById('send-comment-btn');
+    if (sendBtn) sendBtn.disabled = false;
 };
 
 document.getElementById('post-comment-input')?.addEventListener('input', function(e) {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
     
-    document.getElementById('send-comment-btn').disabled = this.value.trim() === '';
+    const sendBtn = document.getElementById('send-comment-btn');
+    if (sendBtn) sendBtn.disabled = this.value.trim() === '';
     handleNativeMentions(this.value, this);
 });
 
-async function handleNativeMentions(text, inputElement) {
+async function handleNativeMentions(text) {
     const list = document.getElementById('comment-mention-list');
+    if (!list) return;
+
     const match = text.match(/@([a-zA-Z0-9_]+)$/); 
     
     if (match) {
@@ -1021,13 +1404,14 @@ async function handleNativeMentions(text, inputElement) {
 
 window.insertMention = function(userId, fullName) {
     const input = document.getElementById('post-comment-input');
-    // Replace standard spaces with non-breaking spaces (\u00A0)
-    const safeName = fullName.replace(/ /g, '\u00A0'); 
-    input.value = input.value.replace(/@[a-zA-Z0-9_]+$/, `@${safeName} `);
-    currentMentionIds.push(userId); 
-    
-    document.getElementById('comment-mention-list').classList.add('hidden');
-    input.focus();
+    if (input) {
+        const safeName = fullName.replace(/ /g, '\u00A0'); 
+        input.value = input.value.replace(/@[a-zA-Z0-9_]+$/, `@${safeName} `);
+        currentMentionIds.push(userId); 
+        input.focus();
+    }
+    const list = document.getElementById('comment-mention-list');
+    if (list) list.classList.add('hidden');
 };
 
 window.openCommentsModal = async function(postId) {
@@ -1041,17 +1425,22 @@ window.openCommentsModal = async function(postId) {
         myAvatar.src = typeof optimizeImageUrl === 'function' ? optimizeImageUrl(currentUser.profile_img_url, 'avatar') : currentUser.profile_img_url;
     }
     
-    document.getElementById('send-comment-btn').dataset.postId = postId;
+    const sendBtn = document.getElementById('send-comment-btn');
+    if (sendBtn) sendBtn.dataset.postId = postId;
     window.cancelReply(); 
-    input.value = '';
-    input.style.height = 'auto';
+    if (input) {
+        input.value = '';
+        input.style.height = 'auto';
+    }
     currentMentionIds = [];
 
     if (bottomNav) bottomNav.style.display = 'none'; 
-    modal.classList.replace('hidden', 'flex');
-    setTimeout(() => modal.classList.remove('translate-x-full'), 10);
+    if (modal) {
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => modal.classList.remove('translate-x-full'), 10);
+    }
     
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading comments...</p>`;
+    if (list) list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading comments...</p>`;
 
     try {
         const { data, error } = await supabase.from('post_comments')
@@ -1061,20 +1450,22 @@ window.openCommentsModal = async function(postId) {
         if (error) throw error;
 
         if (data.length === 0) {
-            list.innerHTML = `<div class="py-10 flex flex-col items-center opacity-40"><span class="material-symbols-outlined text-[42px] mb-2">chat_bubble</span><p class="text-[14px] font-bold">No comments yet.</p><p class="text-[12px]">Start the conversation.</p></div>`;
+            if (list) list.innerHTML = `<div class="py-10 flex flex-col items-center opacity-40"><span class="material-symbols-outlined text-[42px] mb-2">chat_bubble</span><p class="text-[14px] font-bold">No comments yet.</p><p class="text-[12px]">Start the conversation.</p></div>`;
             return;
         }
 
         const parents = data.filter(c => !c.parent_comment_id);
         const replies = data.filter(c => c.parent_comment_id);
 
-        list.innerHTML = parents.map(comment => {
-            const commentReplies = replies.filter(r => r.parent_comment_id === comment.id);
-            return renderSingleComment(comment, false) + commentReplies.map(r => renderSingleComment(r, true)).join('');
-        }).join('');
+        if (list) {
+            list.innerHTML = parents.map(comment => {
+                const commentReplies = replies.filter(r => r.parent_comment_id === comment.id);
+                return renderSingleComment(comment, false) + commentReplies.map(r => renderSingleComment(r, true)).join('');
+            }).join('');
+        }
 
     } catch (error) {
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load comments.</p>`;
+        if (list) list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load comments.</p>`;
     }
 };
 
@@ -1082,7 +1473,6 @@ function renderSingleComment(comment, isReply) {
     const paddingLeft = isReply ? 'ml-12' : ''; 
     const parentIdAttr = isReply ? `data-parent-id="${comment.parent_comment_id}"` : '';
     
-   // 🚀 NEW: Interactive Comment Mentions
     let formattedContent = comment.content.replace(/@([\w\u00A0]+)/g, '<span onclick="event.stopPropagation(); window.searchAndOpenProfile(\'$1\')" class="text-primary font-bold hover:underline cursor-pointer select-none">@$1</span>');
     formattedContent = formattedContent.replace(/\u00A0/g, ' ');
 
@@ -1093,8 +1483,6 @@ function renderSingleComment(comment, isReply) {
 
     return `
         <div class="flex items-start gap-3 mb-4 ${paddingLeft}" data-comment-id="${comment.id}" ${parentIdAttr}>
-            
-            <!-- 🚀 FIX: Close Modal BEFORE routing to profile -->
             <img onclick="window.closeCommentsModal(); setTimeout(() => window.viewUserProfile('${comment.users.id}'), 200);" src="${comment.users.profile_img_url}" class="w-8 h-8 rounded-full object-cover shrink-0 cursor-pointer mt-1 border border-surface-variant/50">
             
             <div class="comment-body flex-1 min-w-0 flex flex-col cursor-pointer select-none active:opacity-60 transition-opacity" 
@@ -1103,10 +1491,7 @@ function renderSingleComment(comment, isReply) {
                  oncontextmenu="event.preventDefault(); window.openCommentActionSheet('${comment.id}', '${comment.user_id}'); return false;">
                  
                 <p class="text-[13px] text-on-surface dark:text-gray-100 leading-snug">
-                    
-                    <!-- 🚀 FIX: Close Modal BEFORE routing to profile -->
                     <span onclick="event.stopPropagation(); window.closeCommentsModal(); setTimeout(() => window.viewUserProfile('${comment.users.id}'), 200);" class="font-extrabold mr-1 hover:underline text-on-surface dark:text-gray-100">${comment.users.full_name}</span>
-                    
                     ${formattedContent}
                 </p>
                 <div class="flex items-center gap-4 mt-1">
@@ -1124,7 +1509,7 @@ function renderSingleComment(comment, isReply) {
         </div>
     `;
 }
-// 🚀 HIGHLIGHTED ACTION SHEET
+
 window.openCommentActionSheet = function(commentId, commentOwnerId) {
     if (typeof longPressTimer !== 'undefined') clearTimeout(longPressTimer);
     window.isLongPressing = false;
@@ -1133,13 +1518,12 @@ window.openCommentActionSheet = function(commentId, commentOwnerId) {
     const card = document.getElementById('comment-options-card');
     const highlightContainer = document.getElementById('highlighted-comment-container');
     
-    // Create Visual Highlight of the comment
     const originalComment = document.querySelector(`div[data-comment-id="${commentId}"]`);
     if (originalComment && highlightContainer) {
         const clone = originalComment.cloneNode(true);
         clone.className = "flex items-start gap-3"; 
         const likeBtn = clone.querySelector('button');
-        if (likeBtn) likeBtn.parentElement.remove(); // Remove heart in the popup preview
+        if (likeBtn) likeBtn.parentElement.remove();
         highlightContainer.innerHTML = '';
         highlightContainer.appendChild(clone);
     }
@@ -1165,29 +1549,32 @@ window.openCommentActionSheet = function(commentId, commentOwnerId) {
         `;
     }
 
-    card.innerHTML = buttonsHtml;
+    if (card) card.innerHTML = buttonsHtml;
 
     const modal = document.getElementById('modal-comment-options');
     const wrapper = document.getElementById('comment-options-wrapper');
-    modal.classList.replace('hidden', 'flex');
-    modal.style.pointerEvents = 'auto';
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        wrapper.classList.remove('scale-95');
-    }, 10);
+    if (modal && wrapper) {
+        modal.classList.replace('hidden', 'flex');
+        modal.style.pointerEvents = 'auto';
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            wrapper.classList.remove('scale-95');
+        }, 10);
+    }
 };
 
-
 async function submitComment(postId) {
-    if (!window.checkVerification('comment on posts')) return; // 🚀 Soft Restrict Check
+    if (!window.checkVerification('comment on posts')) return; 
     
     const input = document.getElementById('post-comment-input');
-    const content = input.value.trim();
+    const content = input ? input.value.trim() : '';
     if (!content) return;
 
     const btn = document.getElementById('send-comment-btn');
-    btn.disabled = true;
-    btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>`;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>`;
+    }
 
     const payload = {
         post_id: postId,
@@ -1202,14 +1589,15 @@ async function submitComment(postId) {
     if (error) {
         showToast('Failed to post comment.', 'error');
     } else {
-        input.value = '';
-        input.style.height = 'auto';
+        if (input) {
+            input.value = '';
+            input.style.height = 'auto';
+        }
         window.cancelReply();
         currentMentionIds = [];
         
         openCommentsModal(postId); 
         
-        // 🚀 CRITICAL FIX: Safe Counter Update
         const commentBtns = document.querySelectorAll(`.comment-btn[data-post-id="${postId}"]`);
         commentBtns.forEach(commentBtn => {
             const html = commentBtn.innerHTML;
@@ -1224,28 +1612,30 @@ async function submitComment(postId) {
         });
     }
     
-    btn.disabled = false;
-    btn.innerHTML = 'Post';
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = 'Post';
+    }
 }
+
 window.closeCommentActionSheet = function() {
     const modal = document.getElementById('modal-comment-options');
     const wrapper = document.getElementById('comment-options-wrapper');
     
-    modal.style.pointerEvents = 'none';
-    modal.classList.add('opacity-0');
-    wrapper.classList.add('scale-95');
-    setTimeout(() => modal.classList.replace('flex', 'hidden'), 200);
+    if (modal && wrapper) {
+        modal.style.pointerEvents = 'none';
+        modal.classList.add('opacity-0');
+        wrapper.classList.add('scale-95');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 200);
+    }
 };
 
-// 🚀 NEW: Smooth Cascade Deletion
 window.deleteComment = async (commentId) => {
     window.closeCommentActionSheet();
     
-    // 1. Identify main comment and all its replies
     const commentEl = document.querySelector(`div[data-comment-id="${commentId}"]`);
     const replyEls = document.querySelectorAll(`div[data-parent-id="${commentId}"]`);
     
-    // 2. Smoothly animate them out
     const elementsToRemove = [commentEl, ...Array.from(replyEls)].filter(Boolean);
     elementsToRemove.forEach(el => {
         el.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
@@ -1255,14 +1645,12 @@ window.deleteComment = async (commentId) => {
         setTimeout(() => el.remove(), 300); 
     });
 
-    // 3. Delete from database (Concurrent Cascade)
-    const [mainRes, repliesRes] = await Promise.all([
+    const [mainRes] = await Promise.all([
         supabase.from('post_comments').update({ is_deleted: true }).eq('id', commentId),
         supabase.from('post_comments').update({ is_deleted: true }).eq('parent_comment_id', commentId)
     ]);
     
     if (mainRes.error) {
-        // Revert UI if DB fails
         elementsToRemove.forEach(el => { el.style.display = 'flex'; el.style.opacity = '1'; el.style.transform = 'scale(1)'; });
         showToast('Failed to delete comment.', 'error');
     } else {
@@ -1283,7 +1671,7 @@ window.handleCommentLike = async function(commentId, btnElement) {
     if (isLiked) {
         btnElement.classList.remove('text-red-500');
         btnElement.classList.add('text-on-surface-variant', 'dark:text-gray-500');
-        iconSpan.style.fontVariationSettings = "'FILL' 0";
+        if (iconSpan) iconSpan.style.fontVariationSettings = "'FILL' 0";
         
         if (countSpan) {
             let count = parseInt(countSpan.textContent) || 1;
@@ -1293,11 +1681,12 @@ window.handleCommentLike = async function(commentId, btnElement) {
     } else {
         btnElement.classList.remove('text-on-surface-variant', 'dark:text-gray-500');
         btnElement.classList.add('text-red-500');
-        iconSpan.style.fontVariationSettings = "'FILL' 1";
-        
-        iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
-        void iconSpan.offsetWidth; 
-        iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
+        if (iconSpan) {
+            iconSpan.style.fontVariationSettings = "'FILL' 1";
+            iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
+            void iconSpan.offsetWidth; 
+            iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
+        }
         
         if (countSpan) {
             countSpan.textContent = (parseInt(countSpan.textContent) || 0) + 1;
@@ -1319,9 +1708,7 @@ window.handleCommentLike = async function(commentId, btnElement) {
         setTimeout(() => { window._commentLikeLocks[commentId] = false; }, 300);
     }
 };
-// ==========================================
-// LIKES MODAL TOUCH PHYSICS (Swipe to Close)
-// ==========================================
+
 function setupLikesModalTouchPhysics() {
     const card = document.getElementById('likes-modal-card');
     if (!card) return;
@@ -1374,18 +1761,22 @@ window.openLikesModal = async function(postId) {
     modal.classList.replace('hidden', 'flex');
     setTimeout(() => {
         modal.classList.remove('opacity-0');
-        card.style.transform = ''; 
-        card.classList.remove('translate-y-full');
+        if (card) {
+            card.style.transform = ''; 
+            card.classList.remove('translate-y-full');
+        }
     }, 10);
 
-    container.innerHTML = `
-        <div class="flex items-center gap-3 p-3 animate-pulse">
-            <div class="w-11 h-11 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
-            <div class="flex-1 space-y-2">
-                <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded w-1/3"></div>
-                <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded w-1/4"></div>
-            </div>
-        </div>`.repeat(5);
+    if (container) {
+        container.innerHTML = `
+            <div class="flex items-center gap-3 p-3 animate-pulse">
+                <div class="w-11 h-11 rounded-full bg-surface-variant/50 dark:bg-neutral-800 shrink-0"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="h-3.5 bg-surface-variant/50 dark:bg-neutral-800 rounded w-1/3"></div>
+                    <div class="h-2.5 bg-surface-variant/50 dark:bg-neutral-800 rounded w-1/4"></div>
+                </div>
+            </div>`.repeat(5);
+    }
 
     try {
         const { data: likes, error } = await supabase
@@ -1396,7 +1787,7 @@ window.openLikesModal = async function(postId) {
 
         if (error) throw error;
         if (likes.length === 0) {
-            container.innerHTML = `<div class="py-12 flex flex-col items-center opacity-50"><span class="material-symbols-outlined text-4xl mb-2">favorite</span><p class="text-sm font-bold">No likes yet.</p></div>`;
+            if (container) container.innerHTML = `<div class="py-12 flex flex-col items-center opacity-50"><span class="material-symbols-outlined text-4xl mb-2">favorite</span><p class="text-sm font-bold">No likes yet.</p></div>`;
             return;
         }
 
@@ -1405,25 +1796,27 @@ window.openLikesModal = async function(postId) {
             return `<span class="material-symbols-outlined text-[14px]" style="color: ${type.trim()}; font-variation-settings: 'FILL' 1;">verified</span>`;
         };
 
-        container.innerHTML = likes.map(like => {
-            const u = like.users;
-            const avatar = u.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=e1e3e4`;
-            
-            return `
-                <div class="flex items-center justify-between p-3 hover:bg-surface-variant/20 dark:hover:bg-neutral-800/50 rounded-2xl transition-colors active:scale-[0.98]">
-                    <div class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onclick="closeLikesModal(); setTimeout(() => viewUserProfile('${u.id}'), 200);">
-                        <img src="${avatar}" class="w-11 h-11 rounded-full object-cover border border-surface-variant/50 dark:border-neutral-800 shadow-sm shrink-0">
-                        <div class="flex-1 min-w-0 truncate">
-                            <p class="text-[14.5px] font-extrabold text-on-surface dark:text-gray-100 flex items-center gap-1">${u.full_name} ${getTick(u.tick_type)}</p>
+        if (container) {
+            container.innerHTML = likes.map(like => {
+                const u = like.users;
+                const avatar = u.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=e1e3e4`;
+                
+                return `
+                    <div class="flex items-center justify-between p-3 hover:bg-surface-variant/20 dark:hover:bg-neutral-800/50 rounded-2xl transition-colors active:scale-[0.98]">
+                        <div class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onclick="closeLikesModal(); setTimeout(() => viewUserProfile('${u.id}'), 200);">
+                            <img src="${avatar}" class="w-11 h-11 rounded-full object-cover border border-surface-variant/50 dark:border-neutral-800 shadow-sm shrink-0">
+                            <div class="flex-1 min-w-0 truncate">
+                                <p class="text-[14.5px] font-extrabold text-on-surface dark:text-gray-100 flex items-center gap-1">${u.full_name} ${getTick(u.tick_type)}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
+        }
 
     } catch (err) {
         console.error("Likes fetch error:", err);
-        container.innerHTML = `<div class="py-10 text-center text-error text-sm font-bold">Failed to load likes.</div>`;
+        if (container) container.innerHTML = `<div class="py-10 text-center text-error text-sm font-bold">Failed to load likes.</div>`;
     }
 };
 
@@ -1431,51 +1824,16 @@ window.closeLikesModal = function() {
     const modal = document.getElementById('modal-likes-list');
     const card = document.getElementById('likes-modal-card');
     
-    modal.style.pointerEvents = 'none';
-    modal.classList.add('opacity-0');
-    card.style.transform = ''; 
-    card.classList.add('translate-y-full');
-    
-    setTimeout(() => { 
-        modal.classList.replace('flex', 'hidden'); 
-        modal.style.pointerEvents = 'auto'; 
-    }, 300); 
-};
-
-// ==========================================
-// VIEWERS: POLLS & EVENTS
-// ==========================================
-window.openPollVoters = async (postId, optionId) => {
-    const modal = document.getElementById('modal-poll-voters');
-    const list = document.getElementById('poll-voters-list');
-    if (!modal || !list) return;
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">Loading voters...</p>`;
-
-    try {
-        const { data, error } = await supabase
-            .from('post_poll_votes')
-            .select('users(id, full_name, profile_img_url, tick_type)')
-            .eq('post_id', postId)
-            .eq('option_id', optionId);
-
-        if (error) throw error;
-        if (data.length === 0) {
-            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">No votes yet.</p>`;
-            return;
-        }
-
-        list.innerHTML = data.map(v => `
-            <div class="flex items-center gap-3 p-3 bg-surface-variant/10 dark:bg-neutral-800 rounded-2xl border border-surface-variant/30 dark:border-neutral-700">
-                <img onclick="window.viewUserProfile('${v.users.id}')" src="${v.users.profile_img_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.users.full_name)}`}" class="w-10 h-10 rounded-full object-cover cursor-pointer">
-                <p onclick="window.viewUserProfile('${v.users.id}')" class="font-bold text-sm text-on-surface dark:text-gray-100 flex items-center gap-1 cursor-pointer hover:text-primary transition-colors">${v.users.full_name} ${window.getTickHtml ? window.getTickHtml(v.users.tick_type) : ''}</p>
-            </div>
-        `).join('');
-    } catch (e) {
-        list.innerHTML = `<p class="text-sm italic text-center py-8 text-error">Failed to load voters. The list might be hidden by the author.</p>`;
-        console.error("Voters load error:", e);
+    if (modal && card) {
+        modal.style.pointerEvents = 'none';
+        modal.classList.add('opacity-0');
+        card.style.transform = ''; 
+        card.classList.add('translate-y-full');
+        
+        setTimeout(() => { 
+            modal.classList.replace('flex', 'hidden'); 
+            modal.style.pointerEvents = 'auto'; 
+        }, 300); 
     }
 };
 
@@ -1512,13 +1870,10 @@ window.openEventRsvps = async (postId) => {
     }
 };
 
-// ==========================================
-// SECURE EVENT RSVP ENGINE
-// ==========================================
 window.isRsvping = false;
 
 window.handleRSVP = async function(postId, isCurrentlyAttending) {
-    if (!window.checkVerification('RSVP to events')) return; // 🚀 Soft Restrict Check
+    if (!window.checkVerification('RSVP to events')) return; 
     if (window.isRsvping) return;
     window.isRsvping = true;
     
@@ -1561,13 +1916,10 @@ window.searchAndOpenProfile = async function(fullName) {
         }
     } catch(e) { console.error(e); }
 };
-// ==========================================
-// SAVING & ARCHIVING ENGINE
-// ==========================================
+
 window._saveLocks = window._saveLocks || {};
 
 window.handleSavePost = async function(postId, btnElement) {
-    // Safety check: Use currentUser from feed, or fallback to currentUserProfile from main
     const activeUser = currentUser || (typeof currentUserProfile !== 'undefined' ? currentUserProfile : null);
     if (!activeUser || window._saveLocks[postId]) return;
     window._saveLocks[postId] = true;
@@ -1575,7 +1927,6 @@ window.handleSavePost = async function(postId, btnElement) {
     const isSaved = btnElement.classList.contains('text-primary');
     const nextSavedState = !isSaved;
 
-    // Optimistic UI Update across feed/profile
     document.querySelectorAll(`.save-btn[data-post-id="${postId}"]`).forEach(btn => {
         btn.dataset.saved = nextSavedState.toString();
         const iconSpan = btn.querySelector('.material-symbols-outlined');
@@ -1583,19 +1934,22 @@ window.handleSavePost = async function(postId, btnElement) {
         if (nextSavedState) {
             btn.classList.remove('text-on-surface', 'dark:text-gray-100', 'hover:text-on-surface-variant');
             btn.classList.add('text-primary');
-            iconSpan.style.fontVariationSettings = "'FILL' 1";
-            iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
-            void iconSpan.offsetWidth;
-            iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
+            if (iconSpan) {
+                iconSpan.style.fontVariationSettings = "'FILL' 1";
+                iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
+                void iconSpan.offsetWidth;
+                iconSpan.classList.add('animate-[pulse_0.3s_ease-out]');
+            }
         } else {
             btn.classList.remove('text-primary');
             btn.classList.add('text-on-surface', 'dark:text-gray-100', 'hover:text-on-surface-variant');
-            iconSpan.style.fontVariationSettings = "'FILL' 0";
-            iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
+            if (iconSpan) {
+                iconSpan.style.fontVariationSettings = "'FILL' 0";
+                iconSpan.classList.remove('animate-[pulse_0.3s_ease-out]');
+            }
         }
     });
 
-    // Zero-Refresh Removal from Saved Panel
     const savedPanel = document.getElementById('panel-saved-posts');
     if (!nextSavedState && savedPanel && !savedPanel.classList.contains('translate-x-full')) {
         const postCard = btnElement.closest(`div[data-post-id="${postId}"]`);
@@ -1617,7 +1971,7 @@ window.handleSavePost = async function(postId, btnElement) {
     finally { setTimeout(() => { window._saveLocks[postId] = false; }, 300); }
 };
 
-window.openPostOptions = function(postId, postOwnerId, isVerified, hideLikes, disableComments, isArchived) {
+window.openPostOptions = function(postId, postOwnerId, isVerified, hideLikes, disableComments, isArchived, postType, isPollActive) {
     const isOwner = currentUser.id === postOwnerId;
     let buttonsHtml = '';
 
@@ -1630,8 +1984,14 @@ window.openPostOptions = function(postId, postOwnerId, isVerified, hideLikes, di
                 <span class="material-symbols-outlined">archive</span> Archive Post
             </button>`;
 
+        const endPollBtn = (postType === 'poll' && isPollActive) ? 
+            `<button onclick="window.endPollEarly('${postId}')" class="w-full flex items-center gap-4 p-4 text-orange-500 hover:bg-orange-500/10 rounded-2xl font-bold transition-colors">
+                <span class="material-symbols-outlined">stop_circle</span> End Poll Now
+            </button>` : '';
+
         buttonsHtml = `
             <div class="flex flex-col">
+                ${endPollBtn}
                 ${archiveBtn}
                 <button onclick="window.togglePostSetting('${postId}', 'hide_likes', ${!hideLikes})" class="w-full flex items-center gap-4 p-4 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-2xl font-bold transition-colors">
                     <span class="material-symbols-outlined">${hideLikes ? 'visibility' : 'visibility_off'}</span> ${hideLikes ? 'Unhide like count' : 'Hide like count'}
@@ -1658,10 +2018,34 @@ window.openPostOptions = function(postId, postOwnerId, isVerified, hideLikes, di
     window.openActionSheet(buttonsHtml);
 };
 
+window.endPollEarly = async function(postId) {
+    window.closeActionSheet();
+    const { error } = await supabase.from('post_polls').update({ is_ended_early: true }).eq('post_id', postId);
+    if (error) {
+        import('./ui.js').then(({ showToast }) => showToast('Failed to end poll.', 'error'));
+    } else {
+        import('./ui.js').then(({ showToast }) => showToast('Poll ended successfully.', 'success'));
+        if (typeof window.updatePollUI === 'function') window.updatePollUI(postId);
+    }
+};
+
+window.togglePostSetting = async function(postId, column, value) {
+    window.closeActionSheet();
+    const updatePayload = {};
+    updatePayload[column] = value;
+    
+    const { error } = await supabase.from('posts').update(updatePayload).eq('id', postId);
+    if (error) {
+        showToast('Failed to update setting.', 'error');
+    } else {
+        showToast('Setting updated.', 'success');
+        if (typeof window.refreshMainFeed === 'function') window.refreshMainFeed();
+    }
+};
+
 window.archivePost = async function(postId) {
     window.closeActionSheet();
     
-    // Instant DOM Removal from Feed/Profile
     document.querySelectorAll(`div[data-post-id="${postId}"]`).forEach(el => {
         el.style.transition = 'all 0.3s ease';
         el.style.transform = 'scale(0.9)';
@@ -1677,7 +2061,6 @@ window.archivePost = async function(postId) {
 window.unarchivePost = async function(postId) {
     window.closeActionSheet();
     
-    // Zero-Refresh removal from Archived Panel
     const archivedPanel = document.getElementById('panel-archived-posts');
     if (archivedPanel && !archivedPanel.classList.contains('translate-x-full')) {
         document.querySelectorAll(`div[data-post-id="${postId}"]`).forEach(el => {
@@ -1694,4 +2077,56 @@ window.unarchivePost = async function(postId) {
         showToast('Post restored to profile.', 'success');
         if (typeof window.refreshMyProfile === 'function') window.refreshMyProfile();
     }
+};
+
+window.togglePollDeadlineInputs = function() {
+    const typeEl = document.getElementById('poll-deadline-type');
+    const type = typeEl ? typeEl.value : 'post_expiry';
+    const timeInput = document.getElementById('poll-deadline-time');
+    const countInput = document.getElementById('poll-deadline-count');
+    if (timeInput) timeInput.classList.toggle('hidden', type !== 'time');
+    if (countInput) countInput.classList.toggle('hidden', type !== 'voter_count');
+};
+
+window.openPollAccessSelector = function() {
+    const buttons = `
+        <div class="px-4 py-3 border-b border-surface-variant/40 dark:border-neutral-800 text-center">
+            <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Who can vote?</p>
+        </div>
+        <button onclick="setPollAccess('all', 'Everyone')" class="w-full text-left px-5 py-4 border-b border-surface-variant/40 font-bold text-[15px] hover:bg-surface-variant/30 transition-colors">Everyone</button>
+        <button onclick="setPollAccess('connections', 'Only My Connections')" class="w-full text-left px-5 py-4 border-b border-surface-variant/40 font-bold text-[15px] hover:bg-surface-variant/30 transition-colors">Only My Connections</button>
+        <button onclick="setPollAccess('custom', 'My Custom List')" class="w-full text-left px-5 py-4 font-bold text-[15px] hover:bg-surface-variant/30 transition-colors text-primary flex justify-between">My Custom List <span class="material-symbols-outlined text-[18px]">lock</span></button>
+    `;
+    window.openActionSheet(buttons);
+};
+
+window.setPollAccess = function(val, label) {
+    const accessEl = document.getElementById('poll-voters-access');
+    const labelEl = document.getElementById('poll-voters-access-label');
+    const shortcut = document.getElementById('manage-custom-list-shortcut');
+    if (accessEl) accessEl.value = val;
+    if (labelEl) labelEl.textContent = label;
+    if (shortcut) shortcut.classList.toggle('hidden', val !== 'custom');
+    window.closeActionSheet();
+};
+
+window.openPollDeadlineSelector = function() {
+    const buttons = `
+        <div class="px-4 py-3 border-b border-surface-variant/40 dark:border-neutral-800 text-center">
+            <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">End Poll Automatically</p>
+        </div>
+        <button onclick="setPollDeadline('post_expiry', 'When the post expires')" class="w-full text-left px-5 py-4 border-b border-surface-variant/40 font-bold text-[15px] hover:bg-surface-variant/30 transition-colors">When the post expires</button>
+        <button onclick="setPollDeadline('time', 'At a specific date & time')" class="w-full text-left px-5 py-4 border-b border-surface-variant/40 font-bold text-[15px] hover:bg-surface-variant/30 transition-colors">At a specific date & time</button>
+        <button onclick="setPollDeadline('voter_count', 'After a set number of votes')" class="w-full text-left px-5 py-4 font-bold text-[15px] hover:bg-surface-variant/30 transition-colors">After a set number of votes</button>
+    `;
+    window.openActionSheet(buttons);
+};
+
+window.setPollDeadline = function(val, label) {
+    const deadlineEl = document.getElementById('poll-deadline-type');
+    const labelEl = document.getElementById('poll-deadline-type-label');
+    if (deadlineEl) deadlineEl.value = val;
+    if (labelEl) labelEl.textContent = label;
+    window.togglePollDeadlineInputs();
+    window.closeActionSheet();
 };
