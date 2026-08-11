@@ -34,7 +34,7 @@
     <!-- Supabase & HTML2Canvas for sharing posts as image -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="main.js?v=1" type="module" defer></script>
+<script src="main.js?v=2" type="module" defer></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -129,27 +129,36 @@
         <span id="ptr-spinner" class="material-symbols-outlined text-primary text-[20px]">refresh</span>
         <span id="ptr-text" class="text-[13px] font-bold text-on-surface dark:text-gray-100">Pull to refresh</span>
     </div>
-    <!-- ========================================== -->
+   <!-- ========================================== -->
     <!-- NATIVE APP SPLASH SCREEN                   -->
     <!-- ========================================== -->
-    <div id="app-splash-screen" class="fixed inset-0 z-[9999] bg-surface dark:bg-[#121212] flex flex-col items-center justify-center transition-opacity duration-500">
-        <!-- Center Logo Area -->
-        <div class="flex-1 flex flex-col items-center justify-center mt-12">
-            <!-- Pulsing Logo (New Transparent PNG) -->
-            <img src="https://i.ibb.co/1tx99nVT/EC-nobg.png" class="w-28 h-28 mb-4 animate-pulse drop-shadow-xl object-contain" alt="Logo">
-            
-            <!-- App Name -->
-            <span style="font-family:'Courgette',cursive;" class="text-[56px] leading-tight bg-gradient-to-r from-[#00C853] via-[#00A2FF] to-[#2962FF] bg-clip-text text-transparent select-none drop-shadow-sm pb-1">
-                ECampus
-            </span>
-        </div>
+    <div id="app-splash-screen" class="fixed inset-0 z-[9999] bg-surface dark:bg-[#121212] flex items-center justify-center transition-opacity duration-500 overflow-hidden">
         
-        <!-- Instagram Style Footer -->
-        <div class="pb-10 flex flex-col items-center safe-pb">
-            <span class="text-[13px] text-on-surface-variant/70 dark:text-gray-500 font-medium mb-1 tracking-wide">from</span>
-            <span class="text-[17px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-400 tracking-widest uppercase">
-                BKBNC
-            </span>
+        <!-- 🚀 NEW FULL-SCREEN IMAGE (Hidden until fully loaded) -->
+        <img src="https://i.postimg.cc/JzzJDQsJ/s.png" 
+             onload="this.classList.remove('opacity-0'); document.getElementById('splash-original').classList.add('opacity-0');" 
+             class="absolute inset-0 w-full h-full object-cover z-20 transition-opacity duration-300 opacity-0 pointer-events-none select-none" 
+             alt="ECampus Splash">
+
+        <!-- 🚀 ORIGINAL SPLASH SCREEN (Shows instantly as a fallback) -->
+        <div id="splash-original" class="absolute inset-0 flex flex-col items-center justify-center z-10 transition-opacity duration-300 w-full h-full">
+            <!-- Center Logo Area -->
+            <div class="flex-1 flex flex-col items-center justify-center mt-12 w-full">
+                <!-- Pulsing Logo -->
+                <img src="https://i.ibb.co/1tx99nVT/EC-nobg.png" class="w-28 h-28 mb-4 animate-pulse drop-shadow-xl object-contain" alt="Logo">
+                <!-- App Name -->
+                <span style="font-family:'Courgette',cursive;" class="text-[56px] leading-tight bg-gradient-to-r from-[#00C853] via-[#00A2FF] to-[#2962FF] bg-clip-text text-transparent select-none drop-shadow-sm pb-1">
+                    ECampus
+                </span>
+            </div>
+            
+            <!-- Instagram Style Footer -->
+            <div class="pb-10 flex flex-col items-center safe-pb w-full">
+                <span class="text-[13px] text-on-surface-variant/70 dark:text-gray-500 font-medium mb-1 tracking-wide">from</span>
+                <span class="text-[17px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-400 tracking-widest uppercase">
+                    BKBNC
+                </span>
+            </div>
         </div>
     </div>
    <!-- 🚀 GLOBAL TOAST CONTAINER (Moved outside to fix z-index stacking over modals) -->
@@ -473,7 +482,7 @@
                 </div>
             </details>
 
-            <!-- SECTION 2: CONNECTIONS -->
+     <!-- SECTION 2: CONNECTIONS -->
             <details class="group bg-surface-variant/10 dark:bg-neutral-900/30 rounded-2xl border border-surface-variant/30 dark:border-neutral-800 overflow-hidden">
                 <summary class="flex items-center justify-between p-4 cursor-pointer list-none transition-colors hover:bg-surface-variant/20 dark:hover:bg-neutral-800/50">
                     <div class="flex items-center gap-3 text-on-surface dark:text-gray-200">
@@ -486,12 +495,18 @@
                     <button onclick="handleProfileStatsClick(); closeSettingsSidebar();" class="w-full flex items-center justify-between p-3 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[14px]">
                         <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[20px]">people</span> <span id="sidebar-stats-text">Connections</span></div>
                     </button>
+                    
+                    <!-- 🚀 NEW: Permanent Custom Voters List Button -->
+                    <button onclick="openSettingsSubPanel('settings-custom-list-panel');" class="w-full flex items-center justify-between p-3 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[14px]">
+                        <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[20px]">checklist</span> Custom Voters List</div>
+                        <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
+                    </button>
+
                     <button onclick="openBlockedUsersModal(); closeSettingsSidebar();" class="w-full flex items-center justify-between p-3 hover:bg-surface-variant/30 dark:hover:bg-neutral-800 rounded-xl text-on-surface dark:text-gray-200 transition-colors text-left font-bold text-[14px]">
                         <div class="flex items-center gap-3"><span class="material-symbols-outlined text-[20px]">block</span> Blocked Users</div>
                     </button>
                 </div>
             </details>
-
             <!-- SECTION 3: SETTINGS & PRIVACY -->
             <details class="group bg-surface-variant/10 dark:bg-neutral-900/30 rounded-2xl border border-surface-variant/30 dark:border-neutral-800 overflow-hidden">
                 <summary class="flex items-center justify-between p-4 cursor-pointer list-none transition-colors hover:bg-surface-variant/20 dark:hover:bg-neutral-800/50">
@@ -545,6 +560,7 @@
                     </button>
                 </div>
             </details>
+
 
 <!-- SECTION 4: HELP & SUPPORT -->
             <details class="group bg-surface-variant/10 dark:bg-neutral-900/30 rounded-2xl border border-surface-variant/30 dark:border-neutral-800 overflow-hidden">
@@ -964,54 +980,101 @@
                 </div>
             </div>
 
-            <!-- Poll Input -->
-            <div id="input-poll" class="post-input-section hidden mb-6 space-y-4 bg-surface-variant/10 dark:bg-neutral-800/50 p-4 rounded-2xl border border-surface-variant/30 dark:border-neutral-800">
-                <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Poll Options</h4>
-                <div id="poll-options-container" class="space-y-3">
-                    <input type="text" class="poll-opt-input w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary" placeholder="Option 1">
-                    <input type="text" class="poll-opt-input w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary" placeholder="Option 2">
+          <!-- Ultimate Poll Input V3 -->
+            <div id="input-poll" class="post-input-section hidden mb-6 space-y-4">
+                
+                <!-- Options Builder -->
+                <div class="bg-surface-variant/5 dark:bg-neutral-800/30 p-4 rounded-3xl border border-surface-variant/40 dark:border-neutral-800">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-[12px] font-extrabold text-primary uppercase tracking-wider">Poll Options</h4>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="poll-is-multiple" class="w-4 h-4 rounded text-primary focus:ring-primary border-surface-variant dark:border-neutral-700 dark:bg-neutral-800">
+                            <span class="text-[12px] font-bold text-on-surface dark:text-gray-200">Multiple Choice</span>
+                        </label>
+                    </div>
+                    <div id="poll-options-container" class="space-y-3">
+                        <input type="text" class="poll-opt-input w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] text-on-surface dark:text-gray-100 outline-none focus:border-primary transition-colors" placeholder="Option 1">
+                        <input type="text" class="poll-opt-input w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] text-on-surface dark:text-gray-100 outline-none focus:border-primary transition-colors" placeholder="Option 2">
+                    </div>
+                    <button onclick="addPollOptionUI()" class="text-primary font-bold text-[13px] flex items-center gap-1 mt-3 active:scale-95 transition-transform bg-primary/10 px-3 py-1.5 rounded-lg">
+                        <span class="material-symbols-outlined text-[18px]">add</span> Add Option
+                    </button>
                 </div>
-                <button onclick="addPollOptionUI()" class="text-primary font-bold text-sm flex items-center gap-1 mt-2">
-                    <span class="material-symbols-outlined text-[18px]">add</span> Add Option
-                </button>
 
-                <!-- Advanced Poll Settings -->
-                <details class="group mt-4 border-t border-surface-variant/30 dark:border-neutral-700 pt-4">
-                    <summary class="flex justify-between items-center font-bold text-sm cursor-pointer text-on-surface dark:text-gray-200 list-none">
-                        <span>Advanced Settings</span>
-                        <span class="transition group-open:rotate-180 material-symbols-outlined">expand_more</span>
-                    </summary>
+                <!-- 🚀 RESTORED: Quiz Mode Toggle -->
+                <div class="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                            <span class="material-symbols-outlined text-[20px]">school</span>
+                            <span class="text-[13.5px] font-extrabold">Make it a Quiz</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="poll-is-quiz" onchange="document.getElementById('quiz-settings-container').classList.toggle('hidden', !this.checked)" class="sr-only peer">
+                            <div class="w-9 h-5 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-blue-500 peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                        </label>
+                    </div>
+                    <div id="quiz-settings-container" class="hidden space-y-3 mt-3 animate-fadeIn">
+                        <input type="number" id="poll-correct-option-index" placeholder="Correct Option Number (e.g., 1 or 2)" min="1" class="w-full bg-surface dark:bg-[#121212] border border-blue-500/30 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-blue-500">
+                        <textarea id="poll-explanation" placeholder="Explanation (Revealed after voting)..." rows="2" class="w-full bg-surface dark:bg-[#121212] border border-blue-500/30 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-blue-500 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Modern Settings Toggles -->
+                <div class="bg-surface-variant/5 dark:bg-neutral-800/30 rounded-3xl border border-surface-variant/40 dark:border-neutral-800 overflow-hidden divide-y divide-surface-variant/40 dark:divide-neutral-800">
+                    <div class="flex items-center justify-between p-4">
+                        <span class="text-[14px] font-bold text-on-surface dark:text-gray-100">Allow Vote Undo</span>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="poll-can-undo" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between p-4">
+                        <div class="flex flex-col">
+                            <span class="text-[14px] font-bold text-on-surface dark:text-gray-100">Anonymous Voting</span>
+                            <span class="text-[11px] text-on-surface-variant dark:text-gray-500">Hide the voters list from everyone.</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="poll-voters-visibility" class="sr-only peer">
+                            <div class="w-11 h-6 bg-surface-variant dark:bg-neutral-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 🚀 RESTORED & UPGRADED: Advanced Restrictions & Deadlines (Native Selectors) -->
+                <div class="bg-surface-variant/5 dark:bg-neutral-800/30 p-4 rounded-3xl border border-surface-variant/40 dark:border-neutral-800 space-y-4">
                     
-                    <div class="space-y-4 mt-4 animate-fadeIn">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[13px] font-medium text-on-surface dark:text-gray-300">Allow Multiple Choice</span>
-                            <input type="checkbox" id="poll-is-multiple" class="w-5 h-5 rounded text-primary focus:ring-primary border-surface-variant dark:border-neutral-700 dark:bg-neutral-800">
+                    <div>
+                        <label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 block">Who can vote?</label>
+                        <div onclick="window.openPollAccessSelector()" class="w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] cursor-pointer flex justify-between items-center text-on-surface dark:text-white active:scale-[0.98] transition-all">
+                            <span id="poll-voters-access-label" class="font-medium">Everyone</span>
+                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant">expand_more</span>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[13px] font-medium text-on-surface dark:text-gray-300">Allow Vote Undo</span>
-                            <input type="checkbox" id="poll-can-undo" class="w-5 h-5 rounded text-primary focus:ring-primary border-surface-variant dark:border-neutral-700 dark:bg-neutral-800">
-                        </div>
+                        <input type="hidden" id="poll-voters-access" value="all">
                         
-                        <div class="space-y-1">
-                            <label class="text-[11px] font-bold text-on-surface-variant uppercase">Voters List Visibility</label>
-                            <select id="poll-voters-visibility" class="w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-200 outline-none">
-                                <option value="public">Public (Everyone can see who voted)</option>
-                                <option value="hidden">Hidden (Only I can see voters)</option>
-                            </select>
-                        </div>
-
-                        <div class="space-y-1">
-                            <label class="text-[11px] font-bold text-on-surface-variant uppercase">End Poll Condition</label>
-                            <select id="poll-deadline-type" class="w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-200 outline-none">
-                                <option value="time">When the Post Expires</option>
-                                <option value="voter_count">After a specific number of votes</option>
-                            </select>
-                            <input type="number" id="poll-deadline-count" placeholder="Target Vote Count (e.g., 50)" class="hidden w-full mt-2 bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3 text-[13px] text-on-surface dark:text-gray-100 outline-none focus:border-primary">
+                     <!-- Shortcut to Settings -->
+                        <div id="manage-custom-list-shortcut" class="hidden mt-2 flex justify-end">
+                            <button onclick="openSettingsSubPanel('settings-custom-list-panel');" class="text-[11px] font-bold text-primary flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
+                                <span class="material-symbols-outlined text-[14px]">edit</span> Manage Custom List
+                            </button>
                         </div>
                     </div>
+
+                    <div>
+                        <label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 block">End Poll Automatically</label>
+                        <div onclick="window.openPollDeadlineSelector()" class="w-full bg-surface dark:bg-[#121212] border border-surface-variant/50 dark:border-neutral-700 rounded-xl p-3.5 text-[14px] cursor-pointer flex justify-between items-center text-on-surface dark:text-white active:scale-[0.98] transition-all">
+                            <span id="poll-deadline-type-label" class="font-medium">When the post expires</span>
+                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant">expand_more</span>
+                        </div>
+                        <input type="hidden" id="poll-deadline-type" value="post_expiry">
+                        
+                        <!-- Dynamic Deadline Inputs -->
+                        <input type="datetime-local" id="poll-deadline-time" class="hidden w-full mt-2 bg-surface dark:bg-[#121212] border border-primary/50 rounded-xl p-3 text-[13px] outline-none">
+                        <input type="number" id="poll-deadline-count" placeholder="Target Vote Count (e.g., 50)" class="hidden w-full mt-2 bg-surface dark:bg-[#121212] border border-primary/50 rounded-xl p-3 text-[13px] outline-none">
+                    </div>
+                </div>
+            </div>
                 </details>
             </div>
-
             <!-- Event Input -->
             <div id="input-event" class="post-input-section hidden mb-6 space-y-4 bg-surface-variant/10 dark:bg-neutral-800/50 p-4 rounded-2xl border border-surface-variant/30 dark:border-neutral-800">
                 <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Event Details</h4>
@@ -1933,6 +1996,44 @@
             <h3 class="text-lg font-extrabold text-on-surface dark:text-gray-100 mb-4 text-center shrink-0">Select Icon</h3>
             <div id="service-icon-grid" class="flex-1 overflow-y-auto hide-scrollbar grid grid-cols-5 gap-3 pr-1 content-start">
                 <!-- Icons injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- FULL-SCREEN MODAL: CUSTOM VOTERS LIST          -->
+    <!-- ============================================== -->
+    <div id="settings-custom-list-panel" class="fixed inset-0 w-full h-[100dvh] transition-transform duration-300 translate-x-full bg-surface dark:bg-[#121212] z-[300] flex flex-col">
+        
+        <div class="w-full max-w-screen-md mx-auto flex flex-col h-full relative">
+            <!-- Header -->
+            <div class="pt-[max(1rem,env(safe-area-inset-top))] pb-4 border-b border-surface-variant/40 dark:border-neutral-800 flex items-center px-4 shrink-0 bg-surface/90 dark:bg-[#121212]/90 backdrop-blur-xl">
+                <button onclick="closeSettingsSubPanel('settings-custom-list-panel')" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 text-on-surface dark:text-gray-100 transition-colors flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[28px]">arrow_back</span>
+                </button>
+                <h2 class="text-xl font-extrabold ml-2 text-on-surface dark:text-gray-100 tracking-tight">Custom Voters List</h2>
+            </div>
+            
+            <!-- Body -->
+            <div class="flex-1 overflow-y-auto px-5 py-6 flex flex-col">
+                <p class="text-[13px] text-on-surface-variant dark:text-gray-400 mb-4 leading-relaxed">
+                    Add connections to this list. When creating a poll, you can restrict voting to ONLY the people on this list.
+                </p>
+                
+                <div class="relative mb-6 shrink-0">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[20px]">person_add</span>
+                    </div>
+                    <input type="text" id="custom-list-search" oninput="window.searchUsersForCustomList(this.value)" class="w-full bg-surface-variant/30 dark:bg-neutral-900/50 border border-surface-variant/50 dark:border-neutral-700 text-on-surface dark:text-gray-100 text-[14px] rounded-xl focus:ring-primary focus:border-primary block pl-10 p-3 outline-none transition-colors" placeholder="Search connections to add...">
+                    
+                    <!-- Search Results Dropdown -->
+                    <div id="custom-list-search-results" class="absolute top-full left-0 right-0 mt-1 bg-surface-container-lowest dark:bg-[#1e1e1e] border border-surface-variant/50 dark:border-neutral-700 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden z-20"></div>
+                </div>
+
+                <h4 class="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider mb-2 shrink-0">People in List</h4>
+                <div id="custom-list-container" class="space-y-2 flex-1 overflow-y-auto hide-scrollbar pb-10">
+                    <!-- Injected via JS -->
+                </div>
             </div>
         </div>
     </div>
