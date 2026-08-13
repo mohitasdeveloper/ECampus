@@ -628,7 +628,6 @@ function capturePhoto() {
     }, 'image/webp', 0.9);
 }
 let animationFrameId = null;
-
 function startRecording() {
     if (!currentCameraStream) return;
     isRecording = true;
@@ -651,49 +650,15 @@ function startRecording() {
     circle.style.transition = 'stroke-dashoffset 30s linear';
     circle.style.strokeDashoffset = '0';
 
+  // 🚀 STABILITY FIX: Record the raw hardware stream directly. Do not use Canvas capture.
     let streamToRecord = currentCameraStream;
 
-    // 🚀 CRITICAL FIX: To capture LIVE, dynamic zooming in and out on video, 
-    // we must record a Canvas stream instead of the raw camera feed!
-    if (!isHardwareZoomActive) {
+    // 🚀 FIX: If software zoom was used, reset it for video since it won't be recorded natively!
+    if (!isHardwareZoomActive && videoZoomScale > 1) {
+        videoZoomScale = 1;
         const video = document.getElementById('hotpost-camera-feed');
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
-        const ctx = canvas.getContext('2d');
-
-        const drawFrame = () => {
-            if (!isRecording) return;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            
-            if (currentFacingMode === 'user') {
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-            }
-
-            // Dynamically apply current zoom level frame-by-frame
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.scale(videoZoomScale, videoZoomScale);
-            ctx.translate(-canvas.width / 2, -canvas.height / 2);
-            
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            ctx.restore();
-            
-            animationFrameId = requestAnimationFrame(drawFrame);
-        };
-        drawFrame(); // Start the loop
-
-        const canvasStream = canvas.captureStream(30); // 30 FPS
-        const audioTracks = currentCameraStream.getAudioTracks();
-
-        // Merge Canvas Video Track with Original Audio
-        if (audioTracks.length > 0) {
-            streamToRecord = new MediaStream([canvasStream.getVideoTracks()[0], audioTracks[0]]);
-        } else {
-            streamToRecord = canvasStream;
-        }
+        if (video) video.style.transform = currentFacingMode === 'user' ? `scaleX(-1) scale(1)` : `scale(1)`;
+        import('./ui.js').then(({ showToast }) => showToast('Software zoom is disabled for videos to maintain quality.', 'info'));
     }
 
     let options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
@@ -712,8 +677,6 @@ function startRecording() {
     };
     
     mediaRecorder.onstop = () => {
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
-
         const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
         currentPhotoBlob = blob;
         
@@ -724,10 +687,10 @@ function startRecording() {
         videoEl.src = currentPreviewObjectURL;
         
         videoEl.onloadeddata = () => {
-            // 🚀 Because the dynamic zoom is physically baked frame-by-frame into the file,
-            // we RESET the UI scale to 1 so it doesn't double-zoom the review screen!
-            imgTransform = { scale: 1, x: 0, y: 0 };
-            videoEl.style.transform = `translate(0px, 0px) scale(1)`;
+            // Apply the software zoom purely via CSS instead of burning it into the file
+            const reviewScale = isHardwareZoomActive ? 1 : videoZoomScale;
+            imgTransform = { scale: reviewScale, x: 0, y: 0 };
+            videoEl.style.transform = `translate(0px, 0px) scale(${reviewScale})`;
              
             videoEl.play().catch(e => console.error("Playback blocked:", e));
             showPreviewUI();
@@ -838,16 +801,16 @@ function showPreviewUI() {
     document.getElementById('editor-tools-container').classList.remove('hidden');
     document.getElementById('editor-tools-container').classList.add('flex');
     
-    if (currentMediaType === 'video') {
+   if (currentMediaType === 'video') {
         document.getElementById('hotpost-preview-img').classList.add('hidden');
         const vidEl = document.getElementById('hotpost-preview-video');
         vidEl.classList.remove('hidden');
         
-        // 🚀 Ensure audio plays and show the Mute toggle button
-        vidEl.muted = false;
+        // 🚀 FIX: Start muted so iOS/Android WebViews allow autoplay!
+        vidEl.muted = true;
         const muteBtn = document.getElementById('hotpost-mute-btn');
         muteBtn.classList.remove('hidden');
-        muteBtn.querySelector('span').textContent = 'volume_up';
+        muteBtn.querySelector('span').textContent = 'volume_off';
     } else {
         document.getElementById('hotpost-preview-video').classList.add('hidden');
         document.getElementById('hotpost-preview-img').classList.remove('hidden');
@@ -895,11 +858,11 @@ function activateTextTool(textId = null) {
     textarea.removeEventListener('input', adjustHeight);
     textarea.addEventListener('input', adjustHeight);
 
-    updateTextUIPreview();
-    setTimeout(() => {
-        textarea.focus();
-        adjustHeight(); 
-    }, 50);
+ updateTextUIPreview();
+    
+    // 🚀 FIX: Call focus synchronously so mobile browsers don't block the keyboard
+    textarea.focus();
+    adjustHeight(); 
 }
 
 // 🚀 RESTORED MISSING FUNCTION: Handles Live UI Updates for Fonts, Alignment & Colors
@@ -1717,7 +1680,8 @@ function renderHotpostCircles() {
     container.innerHTML = ''; 
 
     const addCircle = document.createElement('div');
-    addCircle.className = 'hotpost-circle flex flex-col items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform relative z-20';
+    // 🚀 FIX: Disable pointer events if uploading to prevent double-taps
+    addCircle.className = `hotpost-circle flex flex-col items-center gap-1.5 shrink-0 transition-transform relative z-20 ${isUploadingBackground ? 'pointer-events-none opacity-80' : 'cursor-pointer active:scale-95'}`;
     
     if (isUploadingBackground) {
         addCircle.innerHTML = `
@@ -2409,23 +2373,50 @@ function switchDetailsTab(tabName) {
     document.getElementById(`details-tab-${tabName}`).classList.remove('text-on-surface-variant', 'dark:text-gray-400');
 }
 
-async function fetchStoryViewers(hotpostId) {
+let currentViewersPostId = null;
+let currentViewersPage = 0;
+const VIEWERS_PER_PAGE = 30;
+
+async function fetchStoryViewers(hotpostId, isLoadMore = false) {
     const list = document.getElementById('hotpost-viewers-list');
-    list.innerHTML = ACTIVITY_SKELETON; 
+    
+    if (!isLoadMore) {
+        currentViewersPostId = hotpostId;
+        currentViewersPage = 0;
+        list.innerHTML = ACTIVITY_SKELETON; 
+        
+        const oldBtn = document.getElementById('load-more-viewers-btn');
+        if (oldBtn) oldBtn.remove();
+        
+        // Fetch the total count quickly for the tab header
+        supabase.from('hotpost_views').select('id', { count: 'exact', head: true }).eq('hotpost_id', hotpostId).eq('is_deleted', false)
+            .then(({ count }) => {
+                document.getElementById('details-tab-viewers').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">visibility</span> ${count || 0}`;
+            });
+    } else {
+        const loadBtn = document.getElementById('load-more-viewers-btn');
+        if (loadBtn) loadBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span>`;
+    }
+
     try {
+        const from = currentViewersPage * VIEWERS_PER_PAGE;
+        const to = from + VIEWERS_PER_PAGE - 1;
+
         const { data, error } = await supabase.from('hotpost_views')
             .select('viewed_at, users!hotpost_views_viewer_id_fkey(id, full_name, profile_img_url, tick_type)')
-            .eq('hotpost_id', hotpostId).eq('is_deleted', false).order('viewed_at', { ascending: false });
+            .eq('hotpost_id', currentViewersPostId).eq('is_deleted', false).order('viewed_at', { ascending: false })
+            .range(from, to);
         
         if (error) throw error;
-        document.getElementById('details-tab-viewers').innerHTML = `<span class="material-symbols-outlined text-[16px] mr-1 align-middle">visibility</span> ${data.length}`;
         
-        if (data.length === 0) { list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">No views yet.</p>`; return; }
+        if (!isLoadMore && data.length === 0) { 
+            list.innerHTML = `<p class="text-sm italic text-center py-8 text-on-surface-variant dark:text-gray-400">No views yet.</p>`; 
+            return; 
+        }
         
         const getTick = (type) => (type && type.toLowerCase().trim() !== 'none') ? `<span class="material-symbols-outlined text-[14px]" style="color: ${type.trim()}; font-variation-settings: 'FILL' 1;">verified</span>` : '';
 
-        // 🚀 FIX: Added "window." to the function calls
-        list.innerHTML = data.map(v => `
+        const viewersHtml = data.map(v => `
             <div onclick="window.closeActivityPanel(); window.closeHotpostViewer(); setTimeout(() => window.viewUserProfile('${v.users.id}'), 150);" class="flex items-center justify-between py-3 px-2 hover:bg-surface-variant/10 dark:hover:bg-neutral-800/30 rounded-xl cursor-pointer active:scale-[0.98] transition-all">
                 <div class="flex items-center gap-3.5">
                     <img src="${v.users.profile_img_url}" class="w-12 h-12 rounded-full object-cover border border-surface-variant/30">
@@ -2434,8 +2425,34 @@ async function fetchStoryViewers(hotpostId) {
                 <p class="text-[12px] font-medium text-on-surface-variant dark:text-gray-500">${timeAgo(v.viewed_at)}</p>
             </div>
         `).join('');
-    } catch (e) { list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed.</p>`; }
+
+        if (!isLoadMore) {
+            list.innerHTML = viewersHtml;
+        } else {
+            const oldBtn = document.getElementById('load-more-viewers-btn');
+            if (oldBtn) oldBtn.remove();
+            list.insertAdjacentHTML('beforeend', viewersHtml);
+        }
+
+        if (data.length === VIEWERS_PER_PAGE) {
+            currentViewersPage++;
+            list.insertAdjacentHTML('beforeend', `
+                <button id="load-more-viewers-btn" onclick="window.fetchStoryViewers(null, true)" class="w-full py-3 mt-2 mb-4 text-sm font-bold text-primary bg-primary/10 rounded-xl active:scale-95 transition-transform flex justify-center items-center">
+                    Load More
+                </button>
+            `);
+        }
+
+    } catch (e) { 
+        console.error(e);
+        if (!isLoadMore) list.innerHTML = `<p class="text-sm text-center py-8 text-error">Failed to load viewers.</p>`; 
+        else {
+            const oldBtn = document.getElementById('load-more-viewers-btn');
+            if(oldBtn) oldBtn.innerHTML = "Error loading. Tap to retry.";
+        }
+    }
 }
+window.fetchStoryViewers = fetchStoryViewers;
 
 async function fetchStoryLikes(hotpostId) {
     const list = document.getElementById('hotpost-likes-list');
