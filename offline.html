@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ECampus - Offline Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #1f2937;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .status {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .status.offline {
+            color: #dc2626;
+        }
+
+        .status.online {
+            color: #059669;
+        }
+
+        .signal-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .signal-indicator.offline {
+            background-color: #dc2626;
+        }
+
+        .signal-indicator.online {
+            background-color: #059669;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .features {
+            background: #f3f4f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: left;
+        }
+
+        .features h3 {
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #059669;
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-retry {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-retry:active {
+            transform: scale(0.95);
+        }
+
+        .btn-retry:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-cache {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-cache:active {
+            transform: scale(0.95);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .timer {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 15px;
+        }
+
+        .cached-data {
+            background: #ecfdf5;
+            border-left: 4px solid #059669;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #047857;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📡</div>
+        
+        <h1>Offline Mode</h1>
+        
+        <div class="status offline" id="statusText">
+            <span class="signal-indicator offline"></span>
+            <span>No internet connection detected</span>
+        </div>
+
+        <div class="features">
+            <h3>What You Can Do:</h3>
+            <ul class="feature-list">
+                <li>View cached course materials</li>
+                <li>Access your offline notes</li>
+                <li>Read downloaded assignments</li>
+                <li>Check your schedule</li>
+            </ul>
+        </div>
+
+        <div class="cached-data" id="cachedInfo" style="display: none;">
+            Last synced: <span id="lastSync">--</span>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-retry" id="retryBtn" onclick="retryConnection()">
+                <span class="loading" id="loadingSpinner" style="display: none;"></span>
+                <span id="retryText">Check Connection</span>
+            </button>
+            <button class="btn-cache" id="cacheBtn" onclick="openCachedApp()" style="display: none;">
+                Use Offline
+            </button>
+        </div>
+
+        <div class="timer" id="timerText"></div>
+    </div>
+
+    <script>
+        const LIVE_APP_URL = 'https://mohitasdeveloper.github.io/ECampus/';
+        const OFFLINE_FALLBACK = '/index.html';
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
+        let isRetrying = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateOnlineStatus();
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            
+            // Show cached info if available
+            const lastSync = localStorage.getItem('lastSyncTime');
+            if (lastSync) {
+                document.getElementById('cachedInfo').style.display = 'block';
+                document.getElementById('lastSync').textContent = new Date(parseInt(lastSync)).toLocaleString();
+                document.getElementById('cacheBtn').style.display = 'inline-block';
+            }
+        });
+
+        function updateOnlineStatus() {
+            const statusEl = document.getElementById('statusText');
+            const statusClass = navigator.onLine ? 'online' : 'offline';
+            const statusText = navigator.onLine 
+                ? '<span class="signal-indicator online"></span><span>Connection restored!</span>'
+                : '<span class="signal-indicator offline"></span><span>No internet connection detected</span>';
+            statusEl.className = `status ${statusClass}`;
+            statusEl.innerHTML = statusText;
+        }
+
+        function handleOnline() {
+            updateOnlineStatus();
+            document.getElementById('retryText').textContent = 'Reconnecting...';
+            document.getElementById('retryBtn').disabled = true;
+            setTimeout(() => {
+                window.location.replace(LIVE_APP_URL);
+            }, 1000);
+        }
+
+        function handleOffline() {
+            updateOnlineStatus();
+            document.getElementById('retryBtn').disabled = false;
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('retryText').textContent = 'Check Connection';
+        }
+
+        async function retryConnection() {
+            if (isRetrying || !navigator.onLine) return;
+
+            isRetrying = true;
+            retryCount++;
+            
+            const retryBtn = document.getElementById('retryBtn');
+            const spinner = document.getElementById('loadingSpinner');
+            const retryText = document.getElementById('retryText');
+
+            retryBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+            retryText.textContent = 'Checking...';
+
+            try {
+                // Try to fetch from the live server
+                const response = await fetch(LIVE_APP_URL, { 
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    cache: 'no-store'
+                });
+                
+                // If we get here, connection is established
+                window.location.replace(LIVE_APP_URL);
+            } catch (error) {
+                spinner.style.display = 'none';
+                
+                if (retryCount < MAX_RETRIES) {
+                    retryText.textContent = `Retry (${retryCount}/${MAX_RETRIES})`;
+                    retryBtn.disabled = false;
+                    showTimer(5);
+                } else {
+                    retryText.textContent = 'Unable to Connect';
+                    retryBtn.disabled = true;
+                    document.getElementById('cacheBtn').style.display = 'inline-block';
+                }
+            }
+
+            isRetrying = false;
+        }
+
+        function openCachedApp() {
+            // Navigate to the offline version
+            window.location.replace(OFFLINE_FALLBACK);
+        }
+
+        function showTimer(seconds) {
+            const timerEl = document.getElementById('timerText');
+            let remaining = seconds;
+            
+            const countdown = setInterval(() => {
+                if (remaining > 0) {
+                    timerEl.textContent = `Retrying in ${remaining}s...`;
+                    remaining--;
+                } else {
+                    clearInterval(countdown);
+                    timerEl.textContent = '';
+                }
+            }, 1000);
+        }
+
+        // Auto-retry after 10 seconds
+        setTimeout(() => {
+            if (!navigator.onLine && retryCount < MAX_RETRIES) {
+                retryConnection();
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
