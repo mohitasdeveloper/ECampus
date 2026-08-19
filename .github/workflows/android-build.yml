@@ -1,0 +1,423 @@
+name: ECampus Offline-First Android Build
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android Packages
+    runs-on: ubuntu-latest
+
+    env:
+      KEYSTORE_PASSWORD: "ECampusSecurePassword2026"
+      KEY_ALIAS: "ecampus_key"
+      KEY_PASSWORD: "ECampusSecurePassword2026"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Create Web Assets Directory
+        run: |
+          mkdir -p www
+          
+          # Copy local HTML files
+          cp index.html www/index.html
+          cp offline.html www/offline.html
+          cp sw.js www/sw.js
+          
+          # Create manifest.json for PWA
+          cat << 'EOF' > www/manifest.json
+          {
+            "name": "ECampus",
+            "short_name": "ECampus",
+            "description": "ECampus - Campus Management System",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "theme_color": "#059669",
+            "background_color": "#ffffff",
+            "orientation": "portrait-primary",
+            "icons": [
+              {
+                "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23059669' width='192' height='192'/><text x='50%' y='50%' font-size='120' fill='white' text-anchor='middle' dy='.35em' font-family='Arial' font-weight='bold'>E</text></svg>",
+                "sizes": "192x192",
+                "type": "image/svg+xml",
+                "purpose": "any"
+              },
+              {
+                "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23059669' width='512' height='512'/><text x='50%' y='50%' font-size='320' fill='white' text-anchor='middle' dy='.35em' font-family='Arial' font-weight='bold'>E</text></svg>",
+                "sizes": "512x512",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+              }
+            ]
+          }
+          EOF
+          
+          # Create app configuration
+          cat << 'EOF' > www/app-config.json
+          {
+            "version": "2.0.1",
+            "buildDate": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "offlineEnabled": true,
+            "cacheBusting": true,
+            "features": {
+              "offline": true,
+              "pushNotifications": true,
+              "camera": true,
+              "fileShare": true
+            }
+          }
+          EOF
+
+      - name: Download & Optimize Web Assets
+        run: |
+          # Create assets directory
+          mkdir -p www/assets
+          
+          # Download and cache app logo
+          curl -L "https://i.ibb.co/SwZ0jG2F/EC.png" \
+            -o www/assets/logo.png \
+            --compressed \
+            --max-time 10 || echo "Logo download failed, using placeholder"
+          
+          # If logo doesn't exist, create SVG placeholder
+          if [ ! -f www/assets/logo.png ]; then
+            cat << 'EOF' > www/assets/logo.svg
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+              <rect fill="#059669" width="200" height="200"/>
+              <text x="100" y="120" font-size="100" fill="white" text-anchor="middle" font-weight="bold" font-family="Arial">E</text>
+            </svg>
+            EOF
+          fi
+
+      - name: Install Dependencies & Plugins
+        run: |
+          npm install
+          npx cap add android
+
+      - name: Generate App Assets
+        run: |
+          npm install -g @capacitor/assets
+          
+          # Create icon and splash directories
+          mkdir -p assets
+          
+          # Use existing logo or create placeholder
+          if [ -f www/assets/logo.png ]; then
+            cp www/assets/logo.png assets/icon.png
+            cp www/assets/logo.png assets/splash.png
+          else
+            # Create SVG icon
+            cat << 'EOF' > assets/icon.svg
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+              <rect fill="#059669" width="1024" height="1024"/>
+              <text x="512" y="650" font-size="600" fill="white" text-anchor="middle" font-weight="bold" font-family="Arial">E</text>
+            </svg>
+            EOF
+            cp assets/icon.svg assets/icon.png
+            cp assets/icon.svg assets/splash.png
+          fi
+          
+          # Generate assets for Android
+          npx @capacitor/assets generate --android || echo "Asset generation completed with warnings"
+
+      - name: Write Complete AndroidManifest.xml
+        run: |
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          cat << 'EOF' > $MANIFEST_PATH
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.mohit.ecampus">
+
+              <!-- Permissions -->
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+              <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+              
+              <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="false"
+                  android:networkSecurityConfig="@xml/network_security_config">
+
+                  <!-- Firebase Configuration -->
+                  <meta-data 
+                      android:name="com.google.firebase.messaging.default_notification_channel_id" 
+                      android:value="default" />
+                  <meta-data 
+                      android:name="android.webkit.WebView.EnableSafeBrowsing" 
+                      android:value="true" />
+
+                  <!-- Main Activity -->
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name=".MainActivity"
+                      android:label="@string/title_activity_main"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+
+                      <!-- Main launcher intent -->
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <!-- FCM Push Notification intent -->
+                      <intent-filter>
+                          <action android:name="FCM_PLUGIN_ACTIVITY" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                      </intent-filter>
+
+                      <!-- Deep linking intent filter -->
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data 
+                              android:scheme="https" 
+                              android:host="mohitasdeveloper.github.io" 
+                              android:pathPrefix="/ECampus/" />
+                      </intent-filter>
+                  </activity>
+
+                  <!-- File Provider for sharing -->
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+              </application>
+
+          </manifest>
+          EOF
+
+      - name: Inject WebView Configurations
+        run: |
+          JAVA_PATH="android/app/src/main/java/com/mohit/ecampus/MainActivity.java"
+          cat << 'EOF' > $JAVA_PATH
+          package com.mohit.ecampus;
+
+          import android.os.Bundle;
+          import android.webkit.CookieManager;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  
+                  // Configure WebView before loading
+                  WebView webView = getBridge().getWebView();
+                  configureWebView(webView);
+              }
+
+              @Override
+              public void onStart() {
+                  super.onStart();
+                  WebView webView = getBridge().getWebView();
+                  configureWebView(webView);
+              }
+
+              private void configureWebView(WebView webView) {
+                  if (webView == null) return;
+
+                  WebSettings settings = webView.getSettings();
+                  
+                  // Enable JavaScript
+                  settings.setJavaScriptEnabled(true);
+                  
+                  // Allow mixed content (HTTP + HTTPS)
+                  settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+                  
+                  // Enable cookies
+                  CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+                  
+                  // Performance optimizations
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  
+                  // Remove scroll bars
+                  webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
+                  
+                  // Enable service worker support
+                  settings.setJavaScriptCanOpenWindowsAutomatically(true);
+              }
+          }
+          EOF
+
+      - name: Create Network Security Config
+        run: |
+          mkdir -p android/app/src/main/res/xml
+          cat << 'EOF' > android/app/src/main/res/xml/network_security_config.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <base-config cleartextTrafficPermitted="false">
+                  <trust-anchors>
+                      <certificates src="system" />
+                  </trust-anchors>
+              </base-config>
+              
+              <!-- Allow localhost for development -->
+              <domain-config cleartextTrafficPermitted="true">
+                  <domain includeSubdomains="true">localhost</domain>
+                  <domain includeSubdomains="true">127.0.0.1</domain>
+              </domain-config>
+              
+              <!-- GitHub Pages domain -->
+              <domain-config cleartextTrafficPermitted="false">
+                  <domain includeSubdomains="true">mohitasdeveloper.github.io</domain>
+              </domain-config>
+          </network-security-config>
+          EOF
+
+      - name: Inject Firebase Configuration
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+
+      - name: Sync Capacitor & Configure Build
+        run: |
+          npx cap sync android
+          
+          # Add Firebase plugin to build.gradle
+          BUILD_GRADLE="android/build.gradle"
+          if grep -q "google-services" $BUILD_GRADLE; then
+            echo "Firebase plugin already configured"
+          else
+            sed -i '/dependencies {/a \        classpath "com.google.gms:google-services:4.4.2"' $BUILD_GRADLE
+          fi
+          
+          # Add Firebase plugin to app build.gradle
+          APP_BUILD_GRADLE="android/app/build.gradle"
+          if grep -q "com.google.gms.google-services" $APP_BUILD_GRADLE; then
+            echo "Firebase app plugin already configured"
+          else
+            echo "" >> $APP_BUILD_GRADLE
+            echo "apply plugin: 'com.google.gms.google-services'" >> $APP_BUILD_GRADLE
+          fi
+
+      - name: Decode Permanent Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+
+      - name: Setup Gradle Signing Properties
+        run: |
+          echo "RELEASE_STORE_FILE=release.keystore" >> android/gradle.properties
+          echo "RELEASE_STORE_PASSWORD=${{ env.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "RELEASE_KEY_ALIAS=${{ env.KEY_ALIAS }}" >> android/gradle.properties
+          echo "RELEASE_KEY_PASSWORD=${{ env.KEY_PASSWORD }}" >> android/gradle.properties
+
+      - name: Configure Version & Signing
+        run: |
+          GRADLE_PATH="android/app/build.gradle"
+          APP_VARS_PATH="android/variables.gradle"
+          
+          # Set target SDK to latest (API 36)
+          if [ -f "$APP_VARS_PATH" ]; then
+            sed -i "s/targetSdkVersion = .*/targetSdkVersion = 36/g" $APP_VARS_PATH
+            sed -i "s/compileSdkVersion = .*/compileSdkVersion = 36/g" $APP_VARS_PATH
+          fi
+          sed -i "s/targetSdkVersion .*/targetSdkVersion 36/g" $GRADLE_PATH
+          sed -i "s/compileSdkVersion .*/compileSdkVersion 36/g" $GRADLE_PATH
+          
+          # Set version code and name
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" $GRADLE_PATH
+          sed -i "s/versionName \"1.0\"/versionName \"2.0.1\"/g" $GRADLE_PATH
+          
+          # Add signing configuration
+          sed -i '/buildTypes {/i \    signingConfigs {\n        release {\n            storeFile file(RELEASE_STORE_FILE)\n            storePassword RELEASE_STORE_PASSWORD\n            keyAlias RELEASE_KEY_ALIAS\n            keyPassword RELEASE_KEY_PASSWORD\n        }\n    }' $GRADLE_PATH
+          sed -i '/minifyEnabled/i \            signingConfig signingConfigs.release' $GRADLE_PATH
+
+      - name: Make Gradle Executable
+        run: chmod +x ./android/gradlew
+
+      - name: Build Debug & Signed Release Packages
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleRelease --stacktrace
+          ./gradlew bundleRelease --stacktrace
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ECampus-Debug-APK
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+      - name: Upload Signed Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ECampus-Release-APK
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+      - name: Upload Signed Release AAB (for Play Store)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ECampus-Release-AAB
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+
+      - name: Create Release Summary
+        if: success()
+        run: |
+          echo "## ECampus Build Summary" > build-summary.md
+          echo "" >> build-summary.md
+          echo "**Build Date:** $(date)" >> build-summary.md
+          echo "**Version:** 2.0.1" >> build-summary.md
+          echo "**Build Number:** ${{ github.run_number }}" >> build-summary.md
+          echo "" >> build-summary.md
+          echo "### Generated Artifacts" >> build-summary.md
+          echo "- Debug APK: ECampus-Debug-APK" >> build-summary.md
+          echo "- Release APK: ECampus-Release-APK" >> build-summary.md
+          echo "- Release AAB: ECampus-Release-AAB (for Play Store)" >> build-summary.md
+          echo "" >> build-summary.md
+          echo "### Features" >> build-summary.md
+          echo "✅ Offline-first architecture" >> build-summary.md
+          echo "✅ Service Worker caching" >> build-summary.md
+          echo "✅ Local asset bundling" >> build-summary.md
+          echo "✅ Firebase Push Notifications" >> build-summary.md
+          echo "✅ Progressive Web App (PWA) support" >> build-summary.md
+
+      - name: Upload Build Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Summary
+          path: build-summary.md

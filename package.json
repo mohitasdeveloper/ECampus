@@ -1,0 +1,49 @@
+{
+  "name": "com.mohit.ecampus",
+  "version": "2.0.1",
+  "description": "ECampus - Offline-First Web & Android App",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:web && npm run sync:cap",
+    "build:web": "node scripts/build-web.js",
+    "sync:cap": "npx cap sync android",
+    "open:android": "npx cap open android",
+    "prebuild:android": "npm run build:web && npm run sync:cap",
+    "dev:sw": "node scripts/validate-sw.js",
+    "health-check": "node scripts/health-check.js",
+    "clean": "rm -rf www/ android/app/build/",
+    "dev:test": "npx http-server www -p 8000 -c-1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/browser": "^7.0.0",
+    "@capacitor/camera": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/device": "^7.0.0",
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/keyboard": "^7.0.0",
+    "@capacitor/network": "^7.0.0",
+    "@capacitor/push-notifications": "^7.0.0",
+    "@capacitor/share": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "capacitor",
+    "android",
+    "offline-first",
+    "pwa"
+  ],
+  "author": "Mohit Mali",
+  "license": "MIT"
+}

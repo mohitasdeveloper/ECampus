@@ -3,6 +3,9 @@
 
 <head>
     <meta name="google-site-verification" content="jR7v1WAlR72z9LNG_wGNM-V2djUTiHsRpDEvIB0ynZo" />
+        <meta name="theme-color" content="#059669">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>ECampus</title>
@@ -112,6 +115,19 @@
 .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
 .rich-text-content a { color: #006e1c; text-decoration: underline; }
 .dark .rich-text-content a { color: #78dc77; }
+    </style>
+        <style>
+        .offline-banner {
+            background: #fee2e2;
+            color: #7f1d1d;
+            padding: 10px;
+            text-align: center;
+            display: none;
+            font-weight: 500;
+        }
+        .offline-banner.show {
+            display: block;
+        }
     </style>
 </head>
 
@@ -2295,6 +2311,43 @@ document.addEventListener('click', function(event) {
         showOfflineScreen();
     }
 }, true);
+    </script>
+        <!-- Offline Status Banner -->
+    <div class="offline-banner" id="offlineBanner">
+        📡 Offline Mode - Limited features available
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        // Connection detection
+        let isOnline = navigator.onLine;
+        
+        function updateConnectionStatus() {
+            isOnline = navigator.onLine;
+            const banner = document.getElementById('offlineBanner');
+            if (!banner) return;
+            
+            if (isOnline) {
+                banner.classList.remove('show');
+            } else {
+                banner.classList.add('show');
+            }
+        }
+        
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        window.addEventListener('load', updateConnectionStatus);
+        
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => {
+                    console.log('✓ Service Worker registered');
+                    // Check for updates every minute
+                    setInterval(() => reg.update(), 60000);
+                })
+                .catch(err => console.error('✗ Service Worker failed:', err));
+        }
     </script>
 </body>
 
